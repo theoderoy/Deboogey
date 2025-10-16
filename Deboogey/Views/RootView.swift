@@ -16,12 +16,14 @@ struct IdentifiableString: Identifiable { let id = UUID(); let value: String }
 struct RootView: View {
     @State private var alertMessage: String? = nil
     @State private var showingLadybugLauncher = false
+    @Environment(\.sipEnabled) private var sipEnabled
 
     var body: some View {
         VStack {
             Text(appName ?? "DEBOOGEY_DEVELOPMENT_STATE")
                 .font(.largeTitle)
                 .fontWeight(.black)
+            
             Button(action: {
                 do {
                     let output = try ws_overlayAlert.runOverlayHelper(arguments: ["enable"])
@@ -40,6 +42,14 @@ struct RootView: View {
                 .frame(maxWidth: 220)
             }
             .buttonStyle(.borderedProminent)
+            .disabled(sipEnabled)
+            
+            if sipEnabled == true {
+                Text("This feature is unavailable when csrutil is enabled.").foregroundStyle(.secondary)
+                    .padding(3)
+                    .padding(.bottom, 8)
+            }
+            
             Button(action: {
                 showingLadybugLauncher = true
             }) {
@@ -53,6 +63,7 @@ struct RootView: View {
                 .frame(maxWidth: 220)
             }
             .buttonStyle(.borderedProminent)
+            
             Link(destination: URL(string: "https://github.com/theoderoy")!) {
                 Text("github.com/theoderoy")
                     .foregroundStyle(.secondary)
