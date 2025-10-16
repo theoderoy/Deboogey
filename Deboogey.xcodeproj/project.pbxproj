@@ -1,0 +1,552 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		F05C72362E9D688C00C13AEC /* deboogeyLadybugHelper in Resources */ = {isa = PBXBuildFile; fileRef = F05C722D2E9D687A00C13AEC /* deboogeyLadybugHelper */; };
+		F07EDA9B2E9CC6EC00AE8D4A /* ws_overlayHelper in Resources */ = {isa = PBXBuildFile; fileRef = F07EDA942E9CC69200AE8D4A /* ws_overlayHelper */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		F05C72342E9D688300C13AEC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F07EDA7A2E9CC3B200AE8D4A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F05C722C2E9D687A00C13AEC;
+			remoteInfo = deboogeyLadybugHelper;
+		};
+		F0A6F90C2E9CCF8400AFAC9F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F07EDA7A2E9CC3B200AE8D4A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F07EDA932E9CC69200AE8D4A;
+			remoteInfo = ws_overlayHelper;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		F05C722B2E9D687A00C13AEC /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		F07EDA922E9CC69200AE8D4A /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		F05C722D2E9D687A00C13AEC /* deboogeyLadybugHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = deboogeyLadybugHelper; sourceTree = BUILT_PRODUCTS_DIR; };
+		F07EDA822E9CC3B200AE8D4A /* Deboogey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Deboogey.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F07EDA942E9CC69200AE8D4A /* ws_overlayHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ws_overlayHelper; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		F05C722E2E9D687A00C13AEC /* deboogeyLadybugHelper */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = deboogeyLadybugHelper;
+			sourceTree = "<group>";
+		};
+		F07EDA842E9CC3B200AE8D4A /* Deboogey */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Deboogey;
+			sourceTree = "<group>";
+		};
+		F07EDA952E9CC69200AE8D4A /* ws_overlayHelper */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ws_overlayHelper;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F05C722A2E9D687A00C13AEC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F07EDA7F2E9CC3B200AE8D4A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F07EDA912E9CC69200AE8D4A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		F07EDA792E9CC3B200AE8D4A = {
+			isa = PBXGroup;
+			children = (
+				F07EDA842E9CC3B200AE8D4A /* Deboogey */,
+				F07EDA952E9CC69200AE8D4A /* ws_overlayHelper */,
+				F05C722E2E9D687A00C13AEC /* deboogeyLadybugHelper */,
+				F07EDA832E9CC3B200AE8D4A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F07EDA832E9CC3B200AE8D4A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F07EDA822E9CC3B200AE8D4A /* Deboogey.app */,
+				F07EDA942E9CC69200AE8D4A /* ws_overlayHelper */,
+				F05C722D2E9D687A00C13AEC /* deboogeyLadybugHelper */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F05C722C2E9D687A00C13AEC /* deboogeyLadybugHelper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F05C72332E9D687A00C13AEC /* Build configuration list for PBXNativeTarget "deboogeyLadybugHelper" */;
+			buildPhases = (
+				F05C72292E9D687A00C13AEC /* Sources */,
+				F05C722A2E9D687A00C13AEC /* Frameworks */,
+				F05C722B2E9D687A00C13AEC /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F05C722E2E9D687A00C13AEC /* deboogeyLadybugHelper */,
+			);
+			name = deboogeyLadybugHelper;
+			packageProductDependencies = (
+			);
+			productName = deboogeyLadybugHelper;
+			productReference = F05C722D2E9D687A00C13AEC /* deboogeyLadybugHelper */;
+			productType = "com.apple.product-type.tool";
+		};
+		F07EDA812E9CC3B200AE8D4A /* Deboogey */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F07EDA8D2E9CC3B300AE8D4A /* Build configuration list for PBXNativeTarget "Deboogey" */;
+			buildPhases = (
+				F07EDA7E2E9CC3B200AE8D4A /* Sources */,
+				F07EDA7F2E9CC3B200AE8D4A /* Frameworks */,
+				F07EDA802E9CC3B200AE8D4A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F05C72352E9D688300C13AEC /* PBXTargetDependency */,
+				F0A6F90D2E9CCF8400AFAC9F /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F07EDA842E9CC3B200AE8D4A /* Deboogey */,
+			);
+			name = Deboogey;
+			packageProductDependencies = (
+			);
+			productName = Deboogey;
+			productReference = F07EDA822E9CC3B200AE8D4A /* Deboogey.app */;
+			productType = "com.apple.product-type.application";
+		};
+		F07EDA932E9CC69200AE8D4A /* ws_overlayHelper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F07EDA982E9CC69200AE8D4A /* Build configuration list for PBXNativeTarget "ws_overlayHelper" */;
+			buildPhases = (
+				F07EDA902E9CC69200AE8D4A /* Sources */,
+				F07EDA912E9CC69200AE8D4A /* Frameworks */,
+				F07EDA922E9CC69200AE8D4A /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F07EDA952E9CC69200AE8D4A /* ws_overlayHelper */,
+			);
+			name = ws_overlayHelper;
+			packageProductDependencies = (
+			);
+			productName = ws_overlayHelper;
+			productReference = F07EDA942E9CC69200AE8D4A /* ws_overlayHelper */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F07EDA7A2E9CC3B200AE8D4A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2610;
+				LastUpgradeCheck = 2610;
+				TargetAttributes = {
+					F05C722C2E9D687A00C13AEC = {
+						CreatedOnToolsVersion = 26.1;
+					};
+					F07EDA812E9CC3B200AE8D4A = {
+						CreatedOnToolsVersion = 26.1;
+					};
+					F07EDA932E9CC69200AE8D4A = {
+						CreatedOnToolsVersion = 26.1;
+					};
+				};
+			};
+			buildConfigurationList = F07EDA7D2E9CC3B200AE8D4A /* Build configuration list for PBXProject "Deboogey" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = F07EDA792E9CC3B200AE8D4A;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F07EDA832E9CC3B200AE8D4A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F07EDA812E9CC3B200AE8D4A /* Deboogey */,
+				F07EDA932E9CC69200AE8D4A /* ws_overlayHelper */,
+				F05C722C2E9D687A00C13AEC /* deboogeyLadybugHelper */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F07EDA802E9CC3B200AE8D4A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F05C72362E9D688C00C13AEC /* deboogeyLadybugHelper in Resources */,
+				F07EDA9B2E9CC6EC00AE8D4A /* ws_overlayHelper in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F05C72292E9D687A00C13AEC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F07EDA7E2E9CC3B200AE8D4A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F07EDA902E9CC69200AE8D4A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F05C72352E9D688300C13AEC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F05C722C2E9D687A00C13AEC /* deboogeyLadybugHelper */;
+			targetProxy = F05C72342E9D688300C13AEC /* PBXContainerItemProxy */;
+		};
+		F0A6F90D2E9CCF8400AFAC9F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F07EDA932E9CC69200AE8D4A /* ws_overlayHelper */;
+			targetProxy = F0A6F90C2E9CCF8400AFAC9F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		F05C72312E9D687A00C13AEC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F05C72322E9D687A00C13AEC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		F07EDA8B2E9CC3B300AE8D4A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.1;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		F07EDA8C2E9CC3B300AE8D4A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.1;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		F07EDA8E2E9CC3B300AE8D4A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Deboogey Internal 2";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = Internal;
+				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F07EDA8F2E9CC3B300AE8D4A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Deboogey Internal 2";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = Internal;
+				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		F07EDA992E9CC69200AE8D4A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "theoderoy.ws-overlayHelper";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F07EDA9A2E9CC69200AE8D4A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "theoderoy.ws-overlayHelper";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F05C72332E9D687A00C13AEC /* Build configuration list for PBXNativeTarget "deboogeyLadybugHelper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F05C72312E9D687A00C13AEC /* Debug */,
+				F05C72322E9D687A00C13AEC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F07EDA7D2E9CC3B200AE8D4A /* Build configuration list for PBXProject "Deboogey" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F07EDA8B2E9CC3B300AE8D4A /* Debug */,
+				F07EDA8C2E9CC3B300AE8D4A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F07EDA8D2E9CC3B300AE8D4A /* Build configuration list for PBXNativeTarget "Deboogey" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F07EDA8E2E9CC3B300AE8D4A /* Debug */,
+				F07EDA8F2E9CC3B300AE8D4A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F07EDA982E9CC69200AE8D4A /* Build configuration list for PBXNativeTarget "ws_overlayHelper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F07EDA992E9CC69200AE8D4A /* Debug */,
+				F07EDA9A2E9CC69200AE8D4A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = F07EDA7A2E9CC3B200AE8D4A /* Project object */;
+}

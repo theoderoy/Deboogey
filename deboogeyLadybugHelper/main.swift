@@ -1,0 +1,107 @@
+//
+//  main.swift
+//  deboogeyLadybugHelper
+//
+//  Created by Théo De Roy on 13/10/2025.
+//
+
+import Foundation
+
+// MARK: - Defaults Write
+
+enum ToggleAction: String {
+    case enable
+    case disable
+}
+
+struct DefaultsToggler {
+    static func writeToggle(action: ToggleAction, domain: String) throws -> (stdout: String, stderr: String, status: Int32) {
+        let defaultsPath = "/usr/bin/defaults"
+        let value = (action == .enable) ? "true" : "false"
+
+        let args = ["write", domain, "_NS_4445425547", "-bool", value]
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: defaultsPath)
+        process.arguments = args
+
+        let outPipe = Pipe()
+        let errPipe = Pipe()
+        process.standardOutput = outPipe
+        process.standardError = errPipe
+        process.standardInput = FileHandle.nullDevice
+
+        try process.run()
+        process.waitUntilExit()
+
+        let stdoutStr = String(data: outPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let stderrStr = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        return (stdout: stdoutStr, stderr: stderrStr, status: process.terminationStatus)
+    }
+}
+
+// MARK: - Arguments
+
+let args = CommandLine.arguments
+
+func printUsage() {
+    let tool = (args.first as NSString?)?.lastPathComponent ?? "deboogeyLadybugHelper"
+    let usage = """
+    Usage: \(tool) <enable|disable> <global|BUNDLE_ID>
+
+      Examples:
+        \(tool) enable global
+        \(tool) disable com.example.myapp
+
+      This writes the boolean key `_NS_4445425547` using `defaults`:
+        defaults write <domain> _NS_4445425547 -bool <true|false>
+
+      Where <domain> is:
+        - "-g" (global domain) when you pass `global`
+        - a specific bundle identifier when you pass `BUNDLE_ID`
+    """
+    print(usage)
+}
+
+func parseAction(_ string: String) -> ToggleAction? {
+    return ToggleAction(rawValue: string.lowercased())
+}
+
+func parseDomain(_ string: String) -> String? {
+    if string.lowercased() == "global" { return "-g" }
+    let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-")
+    if string.rangeOfCharacter(from: allowed.inverted) == nil, string.contains(".") {
+        return string
+    }
+    return nil
+}
+
+guard args.count == 3 else {
+    printUsage()
+    exit(EXIT_FAILURE)
+}
+
+let actionArg = args[1]
+let domainArg = args[2]
+
+guard let action = parseAction(actionArg) else {
+    fputs("Unrecognized action: \(actionArg)\n", stderr)
+    printUsage()
+    exit(EXIT_FAILURE)
+}
+
+guard let domain = parseDomain(domainArg) else {
+    fputs("Unrecognized domain: \(domainArg). Use 'global' or a bundle identifier (e.g., com.apple.TextEdit).\n", stderr)
+    printUsage()
+    exit(EXIT_FAILURE)
+}
+
+do {
+    let result = try DefaultsToggler.writeToggle(action: action, domain: domain)
+    if !result.stdout.isEmpty { fputs(result.stdout, stdout) }
+    if !result.stderr.isEmpty { fputs(result.stderr, stderr) }
+    exit(Int32(result.status))
+} catch {
+    fputs("defaults write failed: \(error)\n", stderr)
+    exit(EXIT_FAILURE)
+}
