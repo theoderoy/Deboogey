@@ -44,14 +44,19 @@ struct DefaultsToggler {
 
 let args = CommandLine.arguments
 
+func hasAutoKillFlag(_ args: [String]) -> Bool {
+    return args.contains("--autokill")
+}
+
 func printUsage() {
     let tool = (args.first as NSString?)?.lastPathComponent ?? "deboogeyLadybugHelper"
     let usage = """
-    Usage: \(tool) <enable|disable> <global|BUNDLE_ID>
+    Usage: \(tool) <enable|disable> <global|BUNDLE_ID> [--autokill]
 
       Examples:
         \(tool) enable global
         \(tool) disable com.example.myapp
+        \(tool) enable com.example.myapp --autokill
 
       This writes the boolean key `_NS_4445425547` using `defaults`:
         defaults write <domain> _NS_4445425547 -bool <true|false>
@@ -59,8 +64,22 @@ func printUsage() {
       Where <domain> is:
         - "-g" (global domain) when you pass `global`
         - a specific bundle identifier when you pass `BUNDLE_ID`
-    """
+
+      Optional flags:
+        --autokill    After applying, politely ask the target (by bundle id) to quit.
+                      No quit is attempted when this flag is omitted.
+"""
     print(usage)
+}
+
+let autoKillRequested = hasAutoKillFlag(args)
+
+let minimumArgsOK = args.count >= 3
+let positionalArgs = args.filter { $0 != "--autokill" }
+
+guard minimumArgsOK && positionalArgs.count == 3 else {
+    printUsage()
+    exit(EXIT_FAILURE)
 }
 
 func parseAction(_ string: String) -> ToggleAction? {
@@ -76,13 +95,8 @@ func parseDomain(_ string: String) -> String? {
     return nil
 }
 
-guard args.count == 3 else {
-    printUsage()
-    exit(EXIT_FAILURE)
-}
-
-let actionArg = args[1]
-let domainArg = args[2]
+let actionArg = positionalArgs[1]
+let domainArg = positionalArgs[2]
 
 guard let action = parseAction(actionArg) else {
     fputs("Unrecognized action: \(actionArg)\n", stderr)
@@ -96,12 +110,57 @@ guard let domain = parseDomain(domainArg) else {
     exit(EXIT_FAILURE)
 }
 
-do {
-    let result = try DefaultsToggler.writeToggle(action: action, domain: domain)
-    if !result.stdout.isEmpty { fputs(result.stdout, stdout) }
-    if !result.stderr.isEmpty { fputs(result.stderr, stderr) }
-    exit(Int32(result.status))
-} catch {
-    fputs("defaults write failed: \(error)\n", stderr)
-    exit(EXIT_FAILURE)
+func runDefaultsWriteAndMaybeKill(action: ToggleAction, domain: String, autoKill: Bool) {
+    do {
+        let result = try DefaultsToggler.writeToggle(action: action, domain: domain)
+        if !result.stdout.isEmpty { fputs(result.stdout, stdout) }
+        if !result.stderr.isEmpty { fputs(result.stderr, stderr) }
+
+        if autoKill {
+            let script = "tell application id \"\(domain)\" to quit"
+            let osaResult = runAppleScript(script)
+            switch osaResult {
+            case .success:
+                exit(Int32(result.status))
+            case .failure(let message):
+                fputs("Autokill failed or was cancelled: \(message)\n", stderr)
+                exit(EXIT_FAILURE)
+            }
+        } else {
+            exit(Int32(result.status))
+        }
+    } catch {
+        fputs("defaults write failed: \(error)\n", stderr)
+        exit(EXIT_FAILURE)
+    }
 }
+
+enum AppleScriptResult { case success; case failure(String) }
+
+func runAppleScript(_ script: String) -> AppleScriptResult {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+    process.arguments = ["-e", script]
+
+    let outPipe = Pipe()
+    let errPipe = Pipe()
+    process.standardOutput = outPipe
+    process.standardError = errPipe
+    process.standardInput = FileHandle.nullDevice
+
+    do {
+        try process.run()
+        process.waitUntilExit()
+        let status = process.terminationStatus
+        if status == 0 {
+            return .success
+        } else {
+            let stderrStr = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            return .failure(stderrStr.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+    } catch {
+        return .failure("osascript failed to run: \(error)")
+    }
+}
+
+runDefaultsWriteAndMaybeKill(action: action, domain: domain, autoKill: autoKillRequested)

@@ -7,82 +7,68 @@
 
 import Foundation
 
-enum ladybugLauncherError: LocalizedError {
-    case toolNotFound
-    case toolOutsideResources(path: String)
-    case toolNotExecutable(path: String)
-    case invalidBundleIdentifier(String)
-    case executionFailed(userFacing: String, details: [String: Any])
-    var errorDescription: String? {
-        switch self {
-        case .toolNotFound: return "deboogeyLadybugHelper not found at Contents/Resources within the app bundle."
-        case .toolOutsideResources(let path): return "Resolved tool path is not inside Contents/Resources. (path: \(path))"
-        case .toolNotExecutable(let path): return "deboogeyLadybugHelper exists but is not executable. (path: \(path))"
-        case .invalidBundleIdentifier(let id): return "Invalid bundle identifier: \(id)"
-        case .executionFailed(let userFacing, _): return userFacing
-        }
+struct ladybugLauncherError: Error {
+    static func executionFailed(userFacing: String, details: [String: Any]) -> ladybugLauncherError {
+        return ladybugLauncherError()
     }
 }
 
 struct ladybugLauncher {
     static func runLadybugHelper(arguments: [String]) throws -> String {
-        guard arguments.count == 2 else {
-            throw ladybugLauncherError.executionFailed(userFacing: "Invalid arguments.", details: ["arguments": arguments])
+        guard arguments.count == 2 || arguments.count == 3 else {
+            throw ladybugLauncherError.executionFailed(userFacing: "Invalid arguments. Expected: enable|disable <bundle-id|global> [--autokill]", details: ["arguments": arguments])
         }
 
         let action = arguments[0]
         guard action == "enable" || action == "disable" else {
-            throw ladybugLauncherError.executionFailed(userFacing: "Invalid arguments.", details: ["arguments": arguments])
+            throw ladybugLauncherError.executionFailed(userFacing: "Invalid arguments. First argument must be 'enable' or 'disable'", details: ["arguments": arguments])
         }
 
         let domain = arguments[1]
-        if domain != "global" {
-            let trimmed = domain.trimmingCharacters(in: .whitespacesAndNewlines)
-            let allowedChars = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-."))
-            if trimmed.isEmpty || !trimmed.contains(".") || trimmed.rangeOfCharacter(from: allowedChars.inverted) != nil {
-                throw ladybugLauncherError.invalidBundleIdentifier(domain)
+
+        if arguments.count == 3 {
+            guard arguments[2] == "--autokill" else {
+                throw ladybugLauncherError.executionFailed(userFacing: "Invalid arguments. Unknown flag: \(arguments[2])", details: ["arguments": arguments])
             }
         }
-
+        
         guard let toolPath = Bundle.main.path(forResource: "deboogeyLadybugHelper", ofType: nil) else {
-            throw ladybugLauncherError.toolNotFound
+            throw ws_overlayAlertError.toolNotFound
         }
         if !toolPath.contains("/Contents/Resources/") {
-            throw ladybugLauncherError.toolOutsideResources(path: toolPath)
+            throw ws_overlayAlertError.toolOutsideResources(path: toolPath)
         }
         if !FileManager.default.isExecutableFile(atPath: toolPath) {
-            throw ladybugLauncherError.toolNotExecutable(path: toolPath)
+            throw ws_overlayAlertError.toolNotExecutable(path: toolPath)
         }
+        #if DEBUG
+        print("[Deboogey] Using deboogeyLadybugHelper at path:\n\(toolPath)")
+        #endif
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: toolPath)
         process.arguments = arguments
-        process.standardOutput = Pipe()
-        process.standardError = Pipe()
-        process.standardInput = FileHandle.nullDevice
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
 
         do {
             try process.run()
         } catch {
-            throw ladybugLauncherError.executionFailed(userFacing: "Failed to launch deboogeyLadybugHelper.", details: ["error": error.localizedDescription])
+            throw ladybugLauncherError.executionFailed(userFacing: "Failed to start helper.", details: ["error": String(describing: error)])
         }
         process.waitUntilExit()
 
-        let stdoutStr = String(data: (process.standardOutput as! Pipe).fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        let stderrStr = String(data: (process.standardError as! Pipe).fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-
-        if process.terminationStatus != 0 {
-            throw ladybugLauncherError.executionFailed(
-                userFacing: "Helper failed (code \(process.terminationStatus)). \(stderrStr.isEmpty ? stdoutStr : stderrStr)",
-                details: [
-                    "terminationStatus": Int(process.terminationStatus),
-                    "stdout": stdoutStr,
-                    "stderr": stderrStr,
-                    "args": arguments,
-                    "toolPath": toolPath
-                ])
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: data, encoding: .utf8) else {
+            throw ladybugLauncherError.executionFailed(userFacing: "Failed to read helper output.", details: [:])
         }
 
-        return stdoutStr.isEmpty ? stderrStr : stdoutStr
+        if process.terminationStatus != 0 {
+            throw ladybugLauncherError.executionFailed(userFacing: "Helper failed.", details: ["output": output])
+        }
+
+        return output
     }
 }
