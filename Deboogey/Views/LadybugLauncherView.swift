@@ -20,107 +20,116 @@ struct LadybugLauncherView: View {
     var onRun: (_ action: String, _ domain: String) -> Void
 
     var body: some View {
-        Form {
-            Section() {
-                Picker("Action", selection: $isEnabled) {
-                    Text("Enable").tag(true)
-                    Text("Disable").tag(false)
+        VStack {
+            EducationPlayerView(name: "DEBOOGEY_EDUCATION_LADYBUG", fileExtension: "mov")
+                .aspectRatio(16.0/9.0, contentMode: .fit)
+                .clipped()
+            Form {
+                Section() {
+                    Picker("Action", selection: $isEnabled) {
+                        Text("Enable").tag(true)
+                        Text("Disable").tag(false)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
                 }
-                .pickerStyle(.segmented)
-            }
 
-            Section() {
-                Picker("Domain", selection: $selectedDomain) {
-                    Text("Global").tag("global")
-                    if let id = bundleID {
-                        Text("Deboogey").tag(id)
+                Section() {
+                    Picker("Domain", selection: $selectedDomain) {
+                        Text("Global").tag("global")
+                        if let id = bundleID {
+                            Text("Deboogey").tag(id)
+                        }
+                        Text("Custom…").tag("__custom__")
                     }
-                    Text("Custom…").tag("__custom__")
-                }
-                .onChange(of: selectedDomain) { newValue in
-                    withAnimation {
-                        showingCustomField = (newValue == "__custom__")
+                    .labelsHidden()
+                    .onChange(of: selectedDomain) { newValue in
+                        withAnimation {
+                            showingCustomField = (newValue == "__custom__")
+                        }
+                        if newValue == bundleID {
+                            autoKill = false
+                        }
                     }
-                    if newValue == bundleID {
-                        autoKill = false
+                    .onAppear {
+                        if selectedDomain == bundleID {
+                            autoKill = false
+                        }
                     }
-                }
-                .onAppear {
+
+                    if showingCustomField {
+                        TextField(text: $customBundle) { }
+                            .textFieldStyle(.roundedBorder)
+                            .foregroundStyle(.secondary)
+                    }
+                    
                     if selectedDomain == bundleID {
-                        autoKill = false
-                    }
-                }
-
-                if showingCustomField {
-                    TextField("com.example.myapp", text: $customBundle)
-                        .textFieldStyle(.roundedBorder)
-                        .foregroundStyle(.secondary)
-                }
-                
-                if selectedDomain == bundleID {
-                    Text("Deboogey automatically quits.")
-                        .foregroundStyle(.tertiary)
-                } else {
-                    Toggle(selectedDomain == "global" ? "Restart" : "Auto-Quit", isOn: $autoKill)
+                        Text("Deboogey automatically quits.")
+                            .foregroundStyle(.tertiary)
+                    } else {
+                        Toggle(isOn: $autoKill) {
+                            Text(selectedDomain == "global" ? "Restart" : (selectedDomain == "__custom__" ? "Auto-Quit" : "Auto-Quit"))
+                        }
                         .toggleStyle(.switch)
                         .disabled(selectedDomain == bundleID)
-                    if autoKill == false {
-                        Text("Quit the domain to see changes.")
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-            }
-        }
-        .disabled(isRunning)
-        .navigationTitle("Ladybug Interface")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Run") {
-                    isRunning = true
-                    let action = isEnabled ? "enable" : "disable"
-                    let domain = selectedDomain == "__custom__" ? customBundle : selectedDomain
-                    var arguments = [action, domain]
-                    if autoKill && domain != "global" { arguments.append("--autokill") }
-
-                    Task.detached {
-                        do {
-                            let output = try ladybugLauncher.runLadybugHelper(arguments: arguments)
-                            #if DEBUG
-                            print("\(output)")
-                            #endif
-                            await MainActor.run {
-                                onRun(action, domain)
-                                isRunning = false
-                                dismiss()
-                                if domain == "global" {
-                                    if autoKill {
-                                        Task.detached {
-                                            let script = "tell application \"System Events\" to restart"
-                                            let process = Process()
-                                            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-                                            process.arguments = ["-e", script]
-                                            do { try process.run() } catch { /* ignore failures */ }
-                                        }
-                                    }
-                                }
-                                if let bundleID, domain == bundleID {
-                                    NSApplication.shared.terminate(nil)
-                                }
-                            }
-                        } catch {
-                            print("Failed to run helper with arguments \(arguments): \(error)")
-                            await MainActor.run {
-                                isRunning = false
-                            }
+                        if autoKill == false {
+                            Text("Quit the domain to see changes.")
+                                .foregroundStyle(.tertiary)
                         }
                     }
                 }
-                .disabled(isRunning || (selectedDomain == "__custom__" && customBundle.isEmpty))
+            }
+            .padding(8)
+            .disabled(isRunning)
+            .navigationTitle("Ladybug Interface")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Run") {
+                        isRunning = true
+                        let action = isEnabled ? "enable" : "disable"
+                        let domain = selectedDomain == "__custom__" ? customBundle : selectedDomain
+                        var arguments = [action, domain]
+                        if autoKill && domain != "global" { arguments.append("--autokill") }
+
+                        Task.detached {
+                            do {
+                                let output = try ladybugLauncher.runLadybugHelper(arguments: arguments)
+                                #if DEBUG
+                                print("\(output)")
+                                #endif
+                                await MainActor.run {
+                                    onRun(action, domain)
+                                    isRunning = false
+                                    dismiss()
+                                    if domain == "global" {
+                                        if autoKill {
+                                            Task.detached {
+                                                let script = "tell application \"System Events\" to restart"
+                                                let process = Process()
+                                                process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+                                                process.arguments = ["-e", script]
+                                                do { try process.run() } catch { /* ignore failures */ }
+                                            }
+                                        }
+                                    }
+                                    if let bundleID, domain == bundleID {
+                                        NSApplication.shared.terminate(nil)
+                                    }
+                                }
+                            } catch {
+                                print("Failed to run helper with arguments \(arguments): \(error)")
+                                await MainActor.run {
+                                    isRunning = false
+                                }
+                            }
+                        }
+                    }
+                    .disabled(isRunning || (selectedDomain == "__custom__" && customBundle.isEmpty))
+                }
             }
         }
-        .padding()
     }
 }
