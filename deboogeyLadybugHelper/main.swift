@@ -123,7 +123,7 @@ func runDefaultsWriteAndMaybeKill(action: ToggleAction, domain: String, autoKill
             case .success:
                 exit(Int32(result.status))
             case .failure(let message):
-                fputs("Autokill failed or was cancelled: \(message)\n", stderr)
+                fputs("Auto-Quit failed or was cancelled: \(message)\n", stderr)
                 exit(EXIT_FAILURE)
             }
         } else {
