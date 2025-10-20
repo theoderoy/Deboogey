@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AppKit
 
 struct ladybugLauncherError: Error {
     static func executionFailed(userFacing: String, details: [String: Any]) -> ladybugLauncherError {
@@ -41,34 +42,87 @@ struct ladybugLauncher {
         if !FileManager.default.isExecutableFile(atPath: toolPath) {
             throw ws_overlayAlertError.toolNotExecutable(path: toolPath)
         }
-        #if DEBUG
-        print("[Deboogey] Using deboogeyLadybugHelper at path:\n\(toolPath)")
-        #endif
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: toolPath)
         process.arguments = arguments
 
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
+
+        var collectedStdout = Data()
+        var collectedStderr = Data()
+
+        stdoutPipe.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            if !data.isEmpty {
+                collectedStdout.append(data)
+                if let chunk = String(data: data, encoding: .utf8), !chunk.isEmpty {
+                    print(chunk, terminator: "")
+                }
+            }
+        }
+        stderrPipe.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            if !data.isEmpty {
+                collectedStderr.append(data)
+                FileHandle.standardError.write(data)
+            }
+        }
 
         do {
             try process.run()
         } catch {
+            stdoutPipe.fileHandleForReading.readabilityHandler = nil
+            stderrPipe.fileHandleForReading.readabilityHandler = nil
             throw ladybugLauncherError.executionFailed(userFacing: "Failed to start helper.", details: ["error": String(describing: error)])
         }
         process.waitUntilExit()
 
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: data, encoding: .utf8) else {
-            throw ladybugLauncherError.executionFailed(userFacing: "Failed to read helper output.", details: [:])
-        }
+        stdoutPipe.fileHandleForReading.readabilityHandler = nil
+        stderrPipe.fileHandleForReading.readabilityHandler = nil
+
+        let remainingOut = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+        if !remainingOut.isEmpty { collectedStdout.append(remainingOut) }
+        let remainingErr = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        if !remainingErr.isEmpty { collectedStderr.append(remainingErr) }
+
+        let stdout = String(data: collectedStdout, encoding: .utf8) ?? ""
+        let stderr = String(data: collectedStderr, encoding: .utf8) ?? ""
 
         if process.terminationStatus != 0 {
-            throw ladybugLauncherError.executionFailed(userFacing: "Helper failed.", details: ["output": output])
+            if !stderr.isEmpty {
+                let alert = NSAlert()
+                alert.alertStyle = .critical
+                alert.messageText = "Helper Error"
+                alert.informativeText = stderr
+                alert.addButton(withTitle: "OK")
+                if let window = NSApp.keyWindow {
+                    alert.beginSheetModal(for: window) { _ in }
+                } else if let window = NSApp.mainWindow {
+                    alert.beginSheetModal(for: window) { _ in }
+                } else {
+                    alert.runModal()
+                }
+            }
+            if !stdout.isEmpty {
+                print("[deboogeyLadybugHelper][stdout]:\n\(stdout)")
+            }
+            print("[deboogeyLadybugHelper] Exit status: \(process.terminationStatus). Args: \(arguments)")
+
+            throw ladybugLauncherError.executionFailed(
+                userFacing: "Helper failed.",
+                details: [
+                    "stdout": stdout,
+                    "stderr": stderr,
+                    "status": Int(process.terminationStatus),
+                    "arguments": arguments
+                ]
+            )
         }
 
-        return output
+        return stdout
     }
 }
