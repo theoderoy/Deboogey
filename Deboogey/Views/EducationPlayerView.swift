@@ -20,10 +20,13 @@ struct EducationPlayerView: NSViewRepresentable {
         playerView.showsFullScreenToggleButton = false
         playerView.videoGravity = .resizeAspectFill
         playerView.translatesAutoresizingMaskIntoConstraints = false
+        playerView.updatesNowPlayingInfoCenter = false
 
         if let url = Bundle.main.url(forResource: name, withExtension: fileExtension) {
             let playerItem = AVPlayerItem(url: url)
             let player = AVQueuePlayer(items: [playerItem])
+            player.allowsExternalPlayback = false
+            player.preventsDisplaySleepDuringVideoPlayback = false
             player.isMuted = true
             let looper = AVPlayerLooper(player: player, templateItem: playerItem)
             context.coordinator.player = player
@@ -36,7 +39,6 @@ struct EducationPlayerView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: AVPlayerView, context: Context) {
-        nsView.player?.isMuted = true
         if nsView.player?.rate == 0 {
             nsView.player?.play()
         }
@@ -51,3 +53,4 @@ struct EducationPlayerView: NSViewRepresentable {
         var looper: AVPlayerLooper?
     }
 }
+
