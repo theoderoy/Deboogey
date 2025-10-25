@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     name: Build Deboogey.app (Release)
-    runs-on: latest
+    runs-on: macos-26
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
