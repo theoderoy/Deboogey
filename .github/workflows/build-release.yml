@@ -1,4 +1,4 @@
-name: Build Deboogey.app (Release)
+name: Build Deboogey (Release)
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build Deboogey.app (Release)
+    name: Build Deboogey (Release)
     runs-on: macos-26
     steps:
       - name: Checkout repository
