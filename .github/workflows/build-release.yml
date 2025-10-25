@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     name: Build Deboogey.app (Release)
-    runs-on: macos-26
+    runs-on: latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,5 +25,5 @@ jobs:
       - name: Upload Deboogey.app artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Deboogey-app-Release
-          path: DerivedData/Build/Products/Release/Deboogey.app
+          name: Deboogey
+          path: DerivedData/Build/Products/Release/
