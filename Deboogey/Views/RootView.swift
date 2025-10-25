@@ -15,6 +15,7 @@ struct IdentifiableString: Identifiable { let id = UUID(); let value: String }
 struct RootView: View {
     @State private var alertMessage: String? = nil
     @State private var showingLadybugLauncher = false
+    @State private var showingws_overlayLauncher = false
     @Environment(\.sipEnabled) private var sipEnabled
 
     var body: some View {
@@ -24,12 +25,7 @@ struct RootView: View {
                 .fontWeight(.black)
             
             Button(action: {
-                do {
-                    let output = try ws_overlayAlert.runOverlayHelper(arguments: ["enable"])
-                    alertMessage = output.isEmpty ? "Complete." : output
-                } catch {
-                    alertMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-                }
+                showingws_overlayLauncher = true
             }) {
                 Label {
                     Text("WindowServer Diagnostics")
@@ -69,15 +65,17 @@ struct RootView: View {
                     .padding(4)
             }
         }
+        .sheet(isPresented: $showingws_overlayLauncher) {
+            NavigationStack {
+                ws_overlayLauncherView { argument in
+                    print("ws_overlayLauncherView Requested: \(argument)")
+                }
+            }
+        }
         .sheet(isPresented: $showingLadybugLauncher) {
             NavigationStack {
                 LadybugLauncherView { action, domain in
-                    do {
-                        let output = try ladybugLauncher.runLadybugHelper(arguments: [action, domain])
-                        alertMessage = output.isEmpty ? "Complete." : output
-                    } catch {
-                        alertMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-                    }
+                    print("LadybugLauncherView Requested: \(action) \(domain)")
                 }
             }
         }

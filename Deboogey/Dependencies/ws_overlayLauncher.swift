@@ -1,5 +1,5 @@
 //
-//  ws_overlayAlert.swift
+//  ws_overlayLauncher.swift
 //  Deboogey
 //
 //  Created by Théo De Roy on 13/10/2025.
@@ -8,7 +8,7 @@
 import Foundation
 import AppKit
 
-enum ws_overlayAlertError: LocalizedError {
+enum ws_overlayLauncherError: LocalizedError {
     case toolNotFound
     case toolOutsideResources(path: String)
     case toolNotExecutable(path: String)
@@ -31,71 +31,21 @@ enum ws_overlayAlertError: LocalizedError {
     }
 }
 
-struct ws_overlayAlert {
+struct ws_overlayLauncher {
     static func runOverlayHelper(arguments: [String]) throws -> String {
         if !Thread.isMainThread {
-            return try DispatchQueue.main.sync { try ws_overlayAlert.runOverlayHelper(arguments: arguments) }
+            return try DispatchQueue.main.sync { try ws_overlayLauncher.runOverlayHelper(arguments: arguments) }
         }
-
-        let alert = NSAlert()
-        alert.messageText = "WindowServer Diagnostics"
-        alert.informativeText = "Choose the overlay to enable.\n\nYou can stack these to see multiple diagnostics at once, but to revert back to stock, you'll have to kill WindowServer or log out."
-
-        let popup = NSPopUpButton(frame: .zero, pullsDown: false)
-        let options: [(title: String, arg: String)] = [
-            ("All", "all"),
-            ("Contributor Screen", "contributor"),
-            ("Foreground Tracking", "mouse"),
-            ("Foreground Debugger", "foreground"),
-            ("Framerate & Hang Sensors", "hang")
-        ]
-        popup.addItems(withTitles: options.map { $0.title })
-        popup.selectItem(at: 0)
-        popup.translatesAutoresizingMaskIntoConstraints = false
-        popup.setContentHuggingPriority(.required, for: .horizontal)
-        popup.setContentCompressionResistancePriority(.required, for: .horizontal)
-
-        let accessory = NSView()
-        accessory.translatesAutoresizingMaskIntoConstraints = false
-
-        accessory.addSubview(popup)
-        NSLayoutConstraint.activate([
-            popup.leadingAnchor.constraint(equalTo: accessory.leadingAnchor),
-            popup.trailingAnchor.constraint(equalTo: accessory.trailingAnchor),
-            popup.topAnchor.constraint(equalTo: accessory.topAnchor),
-            popup.bottomAnchor.constraint(equalTo: accessory.bottomAnchor)
-        ])
-
-        alert.accessoryView = accessory
-        alert.alertStyle = .informational
-        alert.layout()
-
-        alert.addButton(withTitle: "Run")
-        alert.buttons.first?.keyEquivalent = "\r"
-        alert.addButton(withTitle: "Cancel")
-
-        let response = alert.runModal()
-        guard response == .alertFirstButtonReturn else {
-            throw ws_overlayAlertError.executionFailed(userFacing: "Operation cancelled.", details: [:])
-        }
-
-        let selectedIndex = popup.indexOfSelectedItem
-        let chosenArg = options[selectedIndex].arg
-
-        let arguments = [chosenArg]
 
         guard let toolPath = Bundle.main.path(forResource: "ws_overlayHelper", ofType: nil) else {
-            throw ws_overlayAlertError.toolNotFound
+            throw ws_overlayLauncherError.toolNotFound
         }
         if !toolPath.contains("/Contents/Resources/") {
-            throw ws_overlayAlertError.toolOutsideResources(path: toolPath)
+            throw ws_overlayLauncherError.toolOutsideResources(path: toolPath)
         }
         if !FileManager.default.isExecutableFile(atPath: toolPath) {
-            throw ws_overlayAlertError.toolNotExecutable(path: toolPath)
+            throw ws_overlayLauncherError.toolNotExecutable(path: toolPath)
         }
-        #if DEBUG
-        print("[Deboogey] Using ws_overlayHelper at path:\n\(toolPath)")
-        #endif
 
         @inline(__always)
         func shellEscape(_ s: String) -> String {
@@ -109,7 +59,7 @@ struct ws_overlayAlert {
             .replacingOccurrences(of: "\"", with: "\\\"") + "\" with administrator privileges"
 
         guard let script = NSAppleScript(source: scriptSource) else {
-            throw ws_overlayAlertError.scriptCreationFailed
+            throw ws_overlayLauncherError.scriptCreationFailed
         }
 
         var errorDict: NSDictionary? = nil
@@ -135,9 +85,9 @@ struct ws_overlayAlert {
             #if DEBUG
             print("[Deboogey] AppleScript error (\(number)): \(detailedMessage)\nDict: \(errorDict)\nCommand: \(command)\nTool: \(toolPath)")
             #endif
-            throw ws_overlayAlertError.executionFailed(userFacing: userFacing, details: details)
+            throw ws_overlayLauncherError.executionFailed(userFacing: userFacing, details: details)
         }
 
-        throw ws_overlayAlertError.executionFailed(userFacing: "Failed to run ws_overlayHelper with administrator privileges.", details: [:])
+        throw ws_overlayLauncherError.executionFailed(userFacing: "Failed to run ws_overlayHelper with administrator privileges.", details: [:])
     }
 }
