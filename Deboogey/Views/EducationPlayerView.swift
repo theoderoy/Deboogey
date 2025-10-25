@@ -53,4 +53,3 @@ struct EducationPlayerView: NSViewRepresentable {
         var looper: AVPlayerLooper?
     }
 }
-
