@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 public struct csrutilFeatures {
     public static var isSIPEnabled: Bool = true
@@ -18,8 +19,18 @@ struct Root: App {
     init() {
         let isEnabled = csrutilChecker.isSIPEnabled()
         csrutilFeatures.isSIPEnabled = isEnabled
-        print("csrutil: \(isEnabled)")
         self._sipEnabled = State(initialValue: isEnabled)
+        print("csrutil: \(sipEnabled)")
+        
+        if sipEnabled {
+            let alert = NSAlert()
+            alert.messageText = "System write-dependent features have been disabled."
+            alert.informativeText = """
+            Some features of this app require System Integrity Protection to be disabled.\n\nThis helps protect your Mac, so disable it if you understand the risks.
+            """
+            alert.alertStyle = .informational
+            alert.runModal()
+        }
     }
 
     var body: some Scene {

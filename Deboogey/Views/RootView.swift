@@ -9,6 +9,8 @@ import SwiftUI
 
 let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
       ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
+let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
 
 struct IdentifiableString: Identifiable { let id = UUID(); let value: String }
 
@@ -20,43 +22,57 @@ struct RootView: View {
 
     var body: some View {
         VStack {
-            Text(appName ?? "DEBOOGEY_DEVELOPMENT_STATE")
-                .font(.largeTitle)
-                .fontWeight(.black)
-            
-            Group {
-                Button(action: {
-                    showingLadybugLauncher = true
-                }) {
-                    Label {
-                        Text("Ladybug Interface")
-                    } icon: {
-                        Image(systemName: "ladybug")
-                    }
-                    .font(.headline)
-                    .padding(8)
-                    .frame(maxWidth: 220)
+            HStack() {
+                VStack(spacing: 8) {
+                    Image("Icon")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 128, height: 128)
+
+                    Text(appName ?? "DEBOOGEY_DEVELOPMENT_STATE")
+                        .font(.largeTitle)
+                        .fontWeight(.black)
+                    Text((shortVersion.isEmpty ? "" : "\(shortVersion)") + (buildNumber.isEmpty ? "" : shortVersion.isEmpty ? "\(buildNumber)" : " \(buildNumber)"))
+                        .font(.subheadline)
+                        .bold()
                 }
-                .buttonStyle(.borderedProminent)
-            }
-            
-            Group {
-                Button(action: {
-                    showingws_overlayLauncher = true
-                }) {
-                    Label {
-                        Text("WindowServer Diagnostics")
-                    } icon: {
-                        Image(systemName: "macwindow")
+                VStack {
+                    Group {
+                        Button(action: {
+                            showingLadybugLauncher = true
+                        }) {
+                            Label {
+                                Text("Ladybug Interface")
+                            } icon: {
+                                Image(systemName: "ladybug")
+                            }
+                            .font(.headline)
+                            .padding(8)
+                            .frame(maxWidth: 220)
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
-                    .font(.headline)
-                    .padding(8)
-                    .frame(maxWidth: 220)
+                    
+                    Group {
+                        Button(action: {
+                            showingws_overlayLauncher = true
+                        }) {
+                            Label {
+                                Text("WindowServer Diagnostics")
+                            } icon: {
+                                Image(systemName: "macwindow")
+                            }
+                            .font(.headline)
+                            .padding(8)
+                            .frame(maxWidth: 220)
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .disabled(sipEnabled)
                 }
-                .buttonStyle(.borderedProminent)
+                .padding()
             }
-            .disabled(sipEnabled)
-            
+
             if sipEnabled == true {
                 Text("System write-dependent features have been disabled.").foregroundStyle(.secondary)
                     .padding(3)
@@ -83,7 +99,6 @@ struct RootView: View {
                 }
             }
         }
-        .padding()
     }
 }
 
