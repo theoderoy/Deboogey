@@ -24,44 +24,48 @@ struct RootView: View {
                 .font(.largeTitle)
                 .fontWeight(.black)
             
-            Button(action: {
-                showingws_overlayLauncher = true
-            }) {
-                Label {
-                    Text("WindowServer Diagnostics")
-                } icon: {
-                    Image(systemName: "macwindow")
+            Group {
+                Button(action: {
+                    showingLadybugLauncher = true
+                }) {
+                    Label {
+                        Text("Ladybug Interface")
+                    } icon: {
+                        Image(systemName: "ladybug")
+                    }
+                    .font(.headline)
+                    .padding(8)
+                    .frame(maxWidth: 220)
                 }
-                .font(.headline)
-                .padding(8)
-                .frame(maxWidth: 220)
+                .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
+            
+            Group {
+                Button(action: {
+                    showingws_overlayLauncher = true
+                }) {
+                    Label {
+                        Text("WindowServer Diagnostics")
+                    } icon: {
+                        Image(systemName: "macwindow")
+                    }
+                    .font(.headline)
+                    .padding(8)
+                    .frame(maxWidth: 220)
+                }
+                .buttonStyle(.borderedProminent)
+            }
             .disabled(sipEnabled)
             
             if sipEnabled == true {
-                Text("This feature is unavailable when csrutil is enabled.").foregroundStyle(.secondary)
+                Text("System write-dependent features have been disabled.").foregroundStyle(.secondary)
                     .padding(3)
                     .padding(.bottom, 8)
             }
             
-            Button(action: {
-                showingLadybugLauncher = true
-            }) {
-                Label {
-                    Text("Ladybug Interface")
-                } icon: {
-                    Image(systemName: "ladybug")
-                }
-                .font(.headline)
-                .padding(8)
-                .frame(maxWidth: 220)
-            }
-            .buttonStyle(.borderedProminent)
-            
             Link(destination: URL(string: "https://github.com/theoderoy")!) {
                 Text("github.com/theoderoy")
-                    .foregroundStyle(.secondary)
+                    .bold()
                     .padding(4)
             }
         }
