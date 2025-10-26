@@ -18,7 +18,9 @@ struct RootView: View {
     @State private var alertMessage: String? = nil
     @State private var showingLadybugLauncher = false
     @State private var showingws_overlayLauncher = false
+    @State private var showSystemWriteRefused = false
     @Environment(\.sipEnabled) private var sipEnabled
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         VStack {
@@ -28,7 +30,7 @@ struct RootView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 128, height: 128)
-
+                    
                     Text(appName ?? "DEBOOGEY_DEVELOPMENT_STATE")
                         .font(.largeTitle)
                         .fontWeight(.black)
@@ -72,7 +74,7 @@ struct RootView: View {
                 }
                 .padding()
             }
-
+            
             if sipEnabled == true {
                 Text("System write-dependent features have been disabled.").foregroundStyle(.secondary)
                     .padding(3)
@@ -96,6 +98,23 @@ struct RootView: View {
             NavigationStack {
                 LadybugLauncherView { action, domain in
                     print("LadybugLauncherView Requested: \(action) \(domain)")
+                }
+            }
+        }
+        .alert("System write-dependent features have been disabled.", isPresented: $showSystemWriteRefused) {
+            Button("OK", role: .cancel) { }
+            Button("Learn More") {
+                if let url = URL(string: "https://support.apple.com/guide/security/secb7ea06b49/web") {
+                    openURL(url)
+                }
+            }
+        } message: {
+            Text("Some features of this app require System Integrity Protection to be disabled.\n\nThis helps protect your Mac, so disable it if you understand the risks.")
+        }
+        .onAppear{
+            if sipEnabled == true {
+                DispatchQueue.main.async {
+                    showSystemWriteRefused = true
                 }
             }
         }
