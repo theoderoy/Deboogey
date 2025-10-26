@@ -14,12 +14,7 @@ struct SettingsRootView: View {
     var body: some View {
         TabView {
             VStack(alignment: .leading, spacing: 16) {
-<<<<<<< HEAD
-                Toggle("System-write notice on startup", isOn: $vars.pesterMeWithSipping)
-                    .disabled(!sipEnabled)
-=======
                 Toggle("System-write notice on startup (when applicable)", isOn: $vars.pesterMeWithSipping)
->>>>>>> 050299f (Include RootView footer)
             }
             .padding(20)
             .tabItem {
