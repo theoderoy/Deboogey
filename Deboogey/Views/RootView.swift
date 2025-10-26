@@ -19,6 +19,7 @@ struct RootView: View {
     @State private var showingLadybugLauncher = false
     @State private var showingws_overlayLauncher = false
     @State private var showSystemWriteRefused = false
+    @StateObject private var vars = PersistentVariables()
     @Environment(\.sipEnabled) private var sipEnabled
     @Environment(\.openURL) private var openURL
 
@@ -112,7 +113,7 @@ struct RootView: View {
             Text("Some features of this app require System Integrity Protection to be disabled.\n\nThis helps protect your Mac, so disable it if you understand the risks.")
         }
         .onAppear{
-            if sipEnabled == true {
+            if sipEnabled == true && vars.pesterMeWithSipping == true {
                 DispatchQueue.main.async {
                     showSystemWriteRefused = true
                 }

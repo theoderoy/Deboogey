@@ -25,6 +25,10 @@ struct Root: App {
             RootView()
                 .environment(\.sipEnabled, sipEnabled)
         }
+        
+        Settings {
+            SettingsRootView()
+        }
     }
 }
 
