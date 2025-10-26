@@ -117,14 +117,19 @@ func runDefaultsWriteAndMaybeKill(action: ToggleAction, domain: String, autoKill
         if !result.stderr.isEmpty { fputs(result.stderr, stderr) }
 
         if autoKill {
-            let script = "tell application id \"\(domain)\" to quit"
-            let osaResult = runAppleScript(script)
-            switch osaResult {
-            case .success:
+            if domain == "-g" {
+                fputs("Notice: Auto-Quit is ignored for the global domain. You should restart your machine to see all changes.\n", stderr)
                 exit(Int32(result.status))
-            case .failure(let message):
-                fputs("Auto-Quit failed or was cancelled: \(message)\n", stderr)
-                exit(EXIT_FAILURE)
+            } else {
+                let script = "tell application id \"\(domain)\" to quit"
+                let osaResult = runAppleScript(script)
+                switch osaResult {
+                case .success:
+                    exit(Int32(result.status))
+                case .failure(let message):
+                    fputs("Auto-Quit failed or was cancelled: \(message)\n", stderr)
+                    exit(EXIT_FAILURE)
+                }
             }
         } else {
             exit(Int32(result.status))
