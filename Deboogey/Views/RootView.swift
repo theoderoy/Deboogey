@@ -76,7 +76,7 @@ struct RootView: View {
                 .padding()
             }
             
-            if sipEnabled == true {
+            if sipEnabled == true && vars.pesterMeWithSipping == true {
                 Text("System write-dependent features have been disabled.").foregroundStyle(.secondary)
                     .padding(3)
                     .padding(.bottom, 8)
