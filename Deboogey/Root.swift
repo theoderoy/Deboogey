@@ -1,5 +1,5 @@
 //
-//  DeboogeyApp.swift
+//  Root.swift
 //  Deboogey
 //
 //  Created by Théo De Roy on 13/10/2025.
@@ -10,19 +10,13 @@ import AppKit
 
 public private(set) var isSIPEnabled: Bool = true
 
-public struct csrutilFeatures {
-    public static var isSIPEnabled: Bool = true
-}
-
 @main
 struct Root: App {
     @State private var sipEnabled: Bool = true
 
     init() {
-        let isEnabled = csrutilChecker.isSIPEnabled()
-        csrutilFeatures.isSIPEnabled = isEnabled
-        isSIPEnabled = isEnabled
-        self._sipEnabled = State(initialValue: isEnabled)
+        csrutilChecker.refreshSIPStatus()
+        self._sipEnabled = State(initialValue: isSIPEnabled)
         print("csrutil: \(sipEnabled)")
     }
 
@@ -46,10 +40,11 @@ extension EnvironmentValues {
 }
 
 private enum csrutilChecker {
-    static func isSIPEnabled() -> Bool {
+    static func refreshSIPStatus() {
         let path = "/usr/bin/csrutil"
         guard FileManager.default.isExecutableFile(atPath: path) else {
-            return true
+            isSIPEnabled = true
+            return
         }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
@@ -63,20 +58,24 @@ private enum csrutilChecker {
             try process.run()
             process.waitUntilExit()
         } catch {
-            return true
+            isSIPEnabled = true
+            return
         }
 
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         guard let output = String(data: data, encoding: .utf8)?.lowercased() else {
-            return true
+            isSIPEnabled = true
+            return
         }
 
         if output.contains("enabled") && !output.contains("disabled") {
-            return true
+            isSIPEnabled = true
+            return
         }
         if output.contains("disabled") {
-            return false
+            isSIPEnabled = false
+            return
         }
-        return true
+        isSIPEnabled = true
     }
 }
