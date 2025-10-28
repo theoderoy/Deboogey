@@ -51,10 +51,11 @@ struct LadybugLauncherView: View {
     var body: some View {
         VStack {
             Group {
-                if Bundle.main.url(forResource: "DEBOOGEY_EDUCATION_LADYBUG", withExtension: "mov") != nil {
-                    EducationPlayerView(name: "DEBOOGEY_EDUCATION_LADYBUG", fileExtension: "mov")
+                if Bundle.main.url(forResource: "DEBOOGEY_EDUCATION-LADYBUG", withExtension: "mov") != nil {
+                    EducationPlayerView(name: "DEBOOGEY_EDUCATION-LADYBUG", fileExtension: "mov")
                         .aspectRatio(16.0/9.0, contentMode: .fit)
                         .clipped()
+                        .padding(4)
                 } else {
                     Rectangle()
                         .fill(.quaternary)
@@ -71,6 +72,10 @@ struct LadybugLauncherView: View {
                         .clipped()
                 }
             }
+            
+            Text("Crack open sandboxes & view or change hidden parameters.")
+                .foregroundStyle(.tertiary)
+                .padding()
 
             Form {
                 Section {

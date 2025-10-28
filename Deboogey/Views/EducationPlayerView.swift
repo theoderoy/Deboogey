@@ -15,7 +15,8 @@ struct EducationPlayerView: NSViewRepresentable {
     func makeNSView(context: Context) -> AVPlayerView {
         let playerView = AVPlayerView()
         playerView.wantsLayer = true
-        playerView.layer?.backgroundColor = NSColor.clear.cgColor
+        playerView.layer?.backgroundColor = NSColor.black.cgColor
+        playerView.layer?.cornerRadius = 8
         playerView.controlsStyle = .none
         playerView.showsFullScreenToggleButton = false
         playerView.videoGravity = .resizeAspectFill

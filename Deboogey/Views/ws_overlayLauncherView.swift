@@ -63,10 +63,11 @@ struct ws_overlayLauncherView: View {
     var body: some View {
         VStack {
             Group {
-                if Bundle.main.url(forResource: "DEBOOGEY_EDUCATION_PLACEHOLDER_1080p", withExtension: "mov") != nil {
-                    EducationPlayerView(name: "DEBOOGEY_EDUCATION_PLACEHOLDER_1080p", fileExtension: "mov")
+                if Bundle.main.url(forResource: "DEBOOGEY_EDUCATION-WS_OVERLAY", withExtension: "mov") != nil {
+                    EducationPlayerView(name: "DEBOOGEY_EDUCATION-WS_OVERLAY", fileExtension: "mov")
                         .aspectRatio(16.0/9.0, contentMode: .fit)
                         .clipped()
+                        .padding(4)
                 } else {
                     Rectangle()
                         .fill(.quaternary)
@@ -83,6 +84,10 @@ struct ws_overlayLauncherView: View {
                         .clipped()
                 }
             }
+            
+            Text("Look inside WindowServer and view all kinds of diagnostic information, such as macOS' refresh rate & application bounding boxes.")
+                .foregroundStyle(.tertiary)
+                .padding()
 
             Form {
                 Section {
