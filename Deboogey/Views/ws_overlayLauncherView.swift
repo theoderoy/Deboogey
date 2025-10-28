@@ -63,8 +63,8 @@ struct ws_overlayLauncherView: View {
     var body: some View {
         VStack {
             Group {
-                if Bundle.main.url(forResource: "DEBOOGEY_EDUCATION-WS_OVERLAY", withExtension: "mov") != nil {
-                    EducationPlayerView(name: "DEBOOGEY_EDUCATION-WS_OVERLAY", fileExtension: "mov")
+                if Bundle.main.url(forResource: "DEBOOGEY_EDUCATION-WS_OVERLAY_h265", withExtension: "mov") != nil {
+                    EducationPlayerView(name: "DEBOOGEY_EDUCATION-WS_OVERLAY_h265", fileExtension: "mov")
                         .aspectRatio(16.0/9.0, contentMode: .fit)
                         .clipped()
                         .padding(4)

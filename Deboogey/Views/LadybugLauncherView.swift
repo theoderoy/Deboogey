@@ -51,8 +51,8 @@ struct LadybugLauncherView: View {
     var body: some View {
         VStack {
             Group {
-                if Bundle.main.url(forResource: "DEBOOGEY_EDUCATION-LADYBUG", withExtension: "mov") != nil {
-                    EducationPlayerView(name: "DEBOOGEY_EDUCATION-LADYBUG", fileExtension: "mov")
+                if Bundle.main.url(forResource: "DEBOOGEY_EDUCATION-LADYBUG_h265", withExtension: "mov") != nil {
+                    EducationPlayerView(name: "DEBOOGEY_EDUCATION-LADYBUG_h265", fileExtension: "mov")
                         .aspectRatio(16.0/9.0, contentMode: .fit)
                         .clipped()
                         .padding(4)
