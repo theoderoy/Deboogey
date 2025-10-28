@@ -6,9 +6,10 @@
 //
 
 import SwiftUI
+import AppKit
 
 let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
-      ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
+?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
 let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
 let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
 
@@ -22,7 +23,7 @@ struct RootView: View {
     @StateObject private var vars = PersistentVariables()
     @Environment(\.sipEnabled) private var sipEnabled
     @Environment(\.openURL) private var openURL
-
+    
     var body: some View {
         VStack {
             HStack() {
@@ -72,6 +73,33 @@ struct RootView: View {
                         .buttonStyle(.borderedProminent)
                     }
                     .disabled(sipEnabled)
+                    
+                    Group {
+                        if #available(macOS 14.0, *) {
+                            SettingsLink {
+                                Label("Settings", systemImage: "gear")
+                                    .font(.headline)
+                                    .padding(8)
+                                    .frame(maxWidth: 220)
+                            }
+                            .buttonStyle(.borderedProminent)
+                        } else {
+                            Button(action: {
+                                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                            }) {
+                                Label {
+                                    Text("Settings")
+                                } icon: {
+                                    Image(systemName: "gear")
+                                }
+                                .font(.headline)
+                                .padding(8)
+                                .frame(maxWidth: 220)
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    }
+                    .padding(.top, 20)
                 }
                 .padding()
             }
