@@ -172,9 +172,11 @@ struct ConfigurationRootView: View {
                                 .help("Go Back")
                                 .disabled(!vm.canGoBack)
 
-                                Divider()
-                                    .frame(height: 18)
-
+                                if #available(macOS 27.0, *) {
+                                    Divider()
+                                        .frame(height: 18)
+                                }
+                                
                                 Button(action: vm.goForward) {
                                     Image(systemName: "chevron.right")
                                 }
