@@ -27,6 +27,12 @@ struct RootView: View {
     
     var body: some View {
         VStack {
+            if sipEnabled == true && vars.pesterMeWithSipping == true {
+                Text("System write-dependent features have been disabled.").foregroundStyle(.secondary)
+                    .padding(3)
+                    .padding(.bottom, 8)
+            }
+            
             HStack() {
                 VStack(spacing: 8) {
                     Image("Icon")
@@ -109,12 +115,6 @@ struct RootView: View {
                     .padding(.top, 20)
                 }
                 .padding()
-            }
-            
-            if sipEnabled == true && vars.pesterMeWithSipping == true {
-                Text("System write-dependent features have been disabled.").foregroundStyle(.secondary)
-                    .padding(3)
-                    .padding(.bottom, 8)
             }
             
             Link(destination: URL(string: "https://github.com/theoderoy")!) {
