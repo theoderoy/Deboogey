@@ -219,6 +219,8 @@
 			);
 			mainGroup = F07EDA792E9CC3B200AE8D4A;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F07EDA832E9CC3B200AE8D4A /* Products */;
 			projectDirPath = "";
@@ -433,7 +435,6 @@
 				CODE_SIGN_ENTITLEMENTS = Deboogey/Deboogey.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 5;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -464,7 +465,6 @@
 				CODE_SIGN_ENTITLEMENTS = Deboogey/Deboogey.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 5;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

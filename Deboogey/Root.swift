@@ -10,8 +10,46 @@ import AppKit
 
 public private(set) var isSIPEnabled: Bool = true
 
+private struct SceneSwitcher: Scene {
+    @SceneBuilder
+    var body: some Scene {
+        ConfigurationLegacy()
+
+        if #available(macOS 14.0, *) {
+            ConfigurationModern()
+        }
+    }
+}
+
+struct ConfigurationModern: Scene {
+    @Environment(\.openWindow) private var openWindow
+    var body: some Scene {
+        Window("Settings", id: "settings") {
+            ConfigurationRootView()
+        }
+
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Configuration", systemImage: "pointer.arrow.rays") {
+                    openWindow(id: "settings")
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+        }
+    }
+}
+
+struct ConfigurationLegacy: Scene {
+    var body: some Scene {
+        Settings {
+            ConfigurationRootView()
+        }
+    }
+}
+
 @main
 struct Root: App {
+    @Environment(\.openWindow) private var openWindow
     @State private var sipEnabled: Bool = true
 
     init() {
@@ -26,9 +64,7 @@ struct Root: App {
                 .environment(\.sipEnabled, sipEnabled)
         }
         
-        Settings {
-            SettingsRootView()
-        }
+        SceneSwitcher()
     }
 }
 

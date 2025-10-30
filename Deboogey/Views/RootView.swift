@@ -22,6 +22,7 @@ struct RootView: View {
     @State private var showSystemWriteRefused = false
     @StateObject private var vars = PersistentVariables()
     @Environment(\.sipEnabled) private var sipEnabled
+    @Environment(\.openWindow) private var openWindow
     @Environment(\.openURL) private var openURL
     
     var body: some View {
@@ -76,11 +77,17 @@ struct RootView: View {
                     
                     Group {
                         if #available(macOS 14.0, *) {
-                            SettingsLink {
-                                Label("Settings", systemImage: "gear")
-                                    .font(.headline)
-                                    .padding(8)
-                                    .frame(maxWidth: 220)
+                            Button(action: {
+                                openWindow(id: "settings")
+                            }) {
+                                Label {
+                                    Text("Configuration")
+                                } icon: {
+                                    Image(systemName: "pointer.arrow.rays")
+                                }
+                                .font(.headline)
+                                .padding(8)
+                                .frame(maxWidth: 220)
                             }
                             .buttonStyle(.borderedProminent)
                         } else {
@@ -147,6 +154,7 @@ struct RootView: View {
                 }
             }
         }
+        .frame(width: 520, height: 610)
     }
 }
 
