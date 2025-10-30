@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AppKit
 import Combine
 
 public final class PersistentVariables: ObservableObject {
@@ -27,5 +28,19 @@ public final class PersistentVariables: ObservableObject {
         self.defaults = defaults
         self.defaults.register(defaults: Self.registeredDefaults)
         self.pesterMeWithSipping = self.defaults.bool(forKey: Keys.pesterMeWithSipping)
+    }
+    
+    public func theThirdImpact() {
+        guard let bundleID = Bundle.main.bundleIdentifier else { return }
+        defaults.removePersistentDomain(forName: bundleID)
+        defaults.synchronize()
+
+        let alert = NSAlert()
+        alert.messageText = "Deboogey has been reset."
+        alert.informativeText = "The app will now quit."
+        alert.addButton(withTitle: "OK")
+
+        alert.runModal()
+        NSApp.terminate(nil)
     }
 }

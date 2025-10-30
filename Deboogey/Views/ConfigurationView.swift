@@ -8,14 +8,14 @@
 import SwiftUI
 import Combine
 
-private struct ConfigurationPanelView: View {
+private struct SettingsPanelView: View {
     @Environment(\.sipEnabled) private var sipEnabled
-    @Binding var pesterMeWithSipping: Bool
+    @ObservedObject var vm: ConfigurationViewModel
 
     var body: some View {
         Form {
             Section("Miscellaneous") {
-                Toggle(isOn: $pesterMeWithSipping) {
+                Toggle(isOn: $vm.pesterMeWithSipping) {
                     Text("System Integrity Protection Notices")
                     if sipEnabled {
                         Text("Show a notice when utilities are blocked by System Integrity Protection.")
@@ -34,14 +34,34 @@ private struct ConfigurationPanelView: View {
     }
 }
 
+private struct AdvancedPanelView: View {
+    @ObservedObject var vm: ConfigurationViewModel
+
+    var body: some View {
+        Form {
+            Section("Maintenance") {
+                Button("Delete Persistent Storage", systemImage: "trash") {
+                    vm.theThirdImpact()
+                }
+                Text("Clears all preferences, shows a confirmation alert and then quits the app.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
 enum Panel: String, CaseIterable, Identifiable, Hashable, Codable {
     case settings = "Settings"
+    case advanced = "Advanced"
 
     var id: String { rawValue }
     var title: String { rawValue }
     var systemImage: String {
         switch self {
         case .settings: return "gear"
+        case .advanced: return "wrench.and.screwdriver"
         }
     }
 }
@@ -89,6 +109,10 @@ final class ConfigurationViewModel: ObservableObject {
 
     var canGoBack: Bool { !backStack.isEmpty }
     var canGoForward: Bool { !forwardStack.isEmpty }
+
+    func theThirdImpact() {
+        vars.theThirdImpact()
+    }
 }
 
 private struct PanelList: View {
@@ -98,6 +122,9 @@ private struct PanelList: View {
         List(selection: $selection) {
             NavigationLink(value: Panel.settings) {
                 Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
+            }
+            NavigationLink(value: Panel.advanced) {
+                Label(Panel.advanced.title, systemImage: Panel.advanced.systemImage)
             }
         }
     }
@@ -110,7 +137,9 @@ private struct PanelDetail: View {
         Group {
             switch vm.selection {
             case .settings:
-                ConfigurationPanelView(pesterMeWithSipping: $vm.pesterMeWithSipping)
+                SettingsPanelView(vm: vm)
+            case .advanced:
+                AdvancedPanelView(vm: vm)
             case .none:
                 Text("Select a panel")
             }
@@ -160,11 +189,17 @@ struct ConfigurationRootView: View {
             }
         } else {
             TabView {
-                PanelDetail(vm: vm)
+                SettingsPanelView(vm: vm)
                     .frame(width: 520)
-                .tabItem {
-                    Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
-                }
+                    .tabItem {
+                        Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
+                    }
+
+                AdvancedPanelView(vm: vm)
+                    .frame(width: 520)
+                    .tabItem {
+                        Label(Panel.advanced.title, systemImage: Panel.advanced.systemImage)
+                    }
             }
         }
     }
