@@ -83,7 +83,7 @@ struct RootView: View {
                                 Label {
                                     Text("Configuration")
                                 } icon: {
-                                    Image(systemName: "pointer.arrow.rays")
+                                    Image(systemName: "gear")
                                 }
                                 .font(.headline)
                                 .padding(8)

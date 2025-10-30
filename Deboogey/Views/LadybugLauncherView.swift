@@ -54,6 +54,7 @@ struct LadybugLauncherView: View {
                 if Bundle.main.url(forResource: "DEBOOGEY_EDUCATION-LADYBUG_h265", withExtension: "mov") != nil {
                     EducationPlayerView(name: "DEBOOGEY_EDUCATION-LADYBUG_h265", fileExtension: "mov")
                         .aspectRatio(16.0/9.0, contentMode: .fit)
+                        .frame(minWidth: 480, minHeight: 270)
                         .clipped()
                         .padding(4)
                 } else {
@@ -69,6 +70,7 @@ struct LadybugLauncherView: View {
                             }
                         )
                         .aspectRatio(16.0/9.0, contentMode: .fit)
+                        .frame(minWidth: 480, minHeight: 270)
                         .clipped()
                 }
             }

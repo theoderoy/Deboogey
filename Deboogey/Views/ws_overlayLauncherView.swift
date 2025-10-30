@@ -66,6 +66,7 @@ struct ws_overlayLauncherView: View {
                 if Bundle.main.url(forResource: "DEBOOGEY_EDUCATION-WS_OVERLAY_h265", withExtension: "mov") != nil {
                     EducationPlayerView(name: "DEBOOGEY_EDUCATION-WS_OVERLAY_h265", fileExtension: "mov")
                         .aspectRatio(16.0/9.0, contentMode: .fit)
+                        .frame(minWidth: 480, minHeight: 270)
                         .clipped()
                         .padding(4)
                 } else {
@@ -81,6 +82,7 @@ struct ws_overlayLauncherView: View {
                             }
                         )
                         .aspectRatio(16.0/9.0, contentMode: .fit)
+                        .frame(minWidth: 480, minHeight: 270)
                         .clipped()
                 }
             }

@@ -30,7 +30,7 @@ struct ConfigurationModern: Scene {
 
         .commands {
             CommandGroup(replacing: .appSettings) {
-                Button("Configuration", systemImage: "pointer.arrow.rays") {
+                Button("Configuration", systemImage: "gear") {
                     openWindow(id: "settings")
                 }
                 .keyboardShortcut(",", modifiers: .command)
