@@ -36,19 +36,28 @@ private struct SettingsPanelView: View {
 
 private struct AdvancedPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
+    @State private var showResetAlert = false
 
     var body: some View {
         Form {
             Section("Maintenance") {
                 Button("Delete Persistent Storage", systemImage: "trash") {
-                    vm.theThirdImpact()
+                    showResetAlert = true
                 }
-                Text("Clears all preferences, shows a confirmation alert and then quits the app.")
+                Text("Clears all preferences and then quits the app.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
+        .alert("Delete Persistent Storage?", isPresented: $showResetAlert) {
+            Button("Delete", role: .destructive) {
+                vm.theThirdImpact()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will clear all preferences and then quit the app.")
+        }
     }
 }
 

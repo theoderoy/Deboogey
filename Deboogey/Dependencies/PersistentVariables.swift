@@ -35,12 +35,6 @@ public final class PersistentVariables: ObservableObject {
         defaults.removePersistentDomain(forName: bundleID)
         defaults.synchronize()
 
-        let alert = NSAlert()
-        alert.messageText = "Deboogey has been reset."
-        alert.informativeText = "The app will now quit."
-        alert.addButton(withTitle: "OK")
-
-        alert.runModal()
         NSApp.terminate(nil)
     }
 }
