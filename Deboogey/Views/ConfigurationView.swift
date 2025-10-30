@@ -180,18 +180,21 @@ struct ConfigurationRootView: View {
                                 }
                                 .help("Go Back")
                                 .disabled(!vm.canGoBack)
-
-                                if #available(macOS 27.0, *) {
+                                .padding(.leading, 3)
+                                
+                                if #available(macOS 26.0, *) {
                                     Divider()
                                         .frame(height: 18)
                                 }
-                                
+
                                 Button(action: vm.goForward) {
                                     Image(systemName: "chevron.right")
                                 }
                                 .help("Go Forward")
                                 .disabled(!vm.canGoForward)
+                                .padding(.trailing, 3)
                             }
+                            .controlSize(.large)
                         }
                     }
                     .onChange(of: vm.selection) { oldValue, newValue in
