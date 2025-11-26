@@ -9,12 +9,13 @@ import SwiftUI
 import Combine
 
 private struct SettingsPanelView: View {
-    @Environment(\.sipEnabled) private var sipEnabled
     @ObservedObject var vm: ConfigurationViewModel
+    @Environment(\.sipEnabled) private var sipEnabled
+    @State private var showResetAlert = false
 
     var body: some View {
         Form {
-            Section("Miscellaneous") {
+            Section("Settings") {
                 Toggle(isOn: $vm.pesterMeWithSipping) {
                     Text("System Integrity Protection Notices")
                     if sipEnabled {
@@ -29,17 +30,6 @@ private struct SettingsPanelView: View {
                 }
                 .disabled(!sipEnabled)
             }
-        }
-        .formStyle(.grouped)
-    }
-}
-
-private struct AdvancedPanelView: View {
-    @ObservedObject var vm: ConfigurationViewModel
-    @State private var showResetAlert = false
-
-    var body: some View {
-        Form {
             Section("Maintenance") {
                 Button("Delete Persistent Storage", systemImage: "trash") {
                     showResetAlert = true
@@ -61,16 +51,118 @@ private struct AdvancedPanelView: View {
     }
 }
 
+private struct AboutPanelView: View {
+    @ObservedObject var vm: ConfigurationViewModel
+    @State private var showResetAlert = false
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        Form {
+            Section("Acknowledgements") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Button(action: { openURL(URL(string: "https://mjtsai.com/blog/2024/03/22/_eventfirstresponderchaindescription/")!) }) {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Cocoa Debug Menu").font(.headline)
+                                Text("Sourced Article").font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "link").foregroundStyle(.blue)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Button(action: { openURL(URL(string: "https://x.com/khanhduytran0/status/1951637277760999628?s=61")!) }) {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("enable_overlay").font(.headline)
+                                Text("Sourced Article").font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "link").foregroundStyle(.blue)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Section("Special Thanks") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Button(action: { openURL(URL(string: "https://github.com/ogui-775")!) }) {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Salty").font(.headline)
+                                Text("Insight").font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "star.fill").foregroundStyle(.yellow)
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: { openURL(URL(string: "https://github.com/1davi")!) }) {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("1davi").font(.headline)
+                                Text("Tester").font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "screwdriver.fill").foregroundStyle(.green)
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: { openURL(URL(string: "https://github.com/aspauldingcode")!) }) {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Alex Spaulding").font(.headline)
+                                Text("Tester").font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "screwdriver.fill").foregroundStyle(.green)
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: { openURL(URL(string: "https://github.com/MTACS")!) }) {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("MTACS").font(.headline)
+                                Text("Tester").font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "screwdriver.fill").foregroundStyle(.green)
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: { openURL(URL(string: "https://github.com/oliviaiacovou")!) }) {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Olivia Iacovou").font(.headline)
+                                Text("Tester").font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "screwdriver.fill").foregroundStyle(.green)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
 enum Panel: String, CaseIterable, Identifiable, Hashable, Codable {
     case settings = "Settings"
-    case advanced = "Advanced"
+    case about = "About"
 
     var id: String { rawValue }
     var title: String { rawValue }
     var systemImage: String {
         switch self {
         case .settings: return "gear"
-        case .advanced: return "wrench.and.screwdriver"
+        case .about: return "wrench.and.screwdriver"
         }
     }
 }
@@ -132,8 +224,8 @@ private struct PanelList: View {
             NavigationLink(value: Panel.settings) {
                 Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
             }
-            NavigationLink(value: Panel.advanced) {
-                Label(Panel.advanced.title, systemImage: Panel.advanced.systemImage)
+            NavigationLink(value: Panel.about) {
+                Label(Panel.about.title, systemImage: Panel.about.systemImage)
             }
         }
     }
@@ -147,8 +239,8 @@ private struct PanelDetail: View {
             switch vm.selection {
             case .settings:
                 SettingsPanelView(vm: vm)
-            case .advanced:
-                AdvancedPanelView(vm: vm)
+            case .about:
+                AboutPanelView(vm: vm)
             case .none:
                 Text("Select a panel")
             }
@@ -209,10 +301,10 @@ struct ConfigurationRootView: View {
                         Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
                     }
 
-                AdvancedPanelView(vm: vm)
+                AboutPanelView(vm: vm)
                     .frame(width: 520)
                     .tabItem {
-                        Label(Panel.advanced.title, systemImage: Panel.advanced.systemImage)
+                        Label(Panel.about.title, systemImage: Panel.about.systemImage)
                     }
             }
         }
