@@ -5,8 +5,8 @@
 //  Created by Théo De Roy on 26/10/2025.
 //
 
-import SwiftUI
 import Combine
+import SwiftUI
 
 private struct SettingsPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
@@ -19,13 +19,17 @@ private struct SettingsPanelView: View {
                 Toggle(isOn: $vm.pesterMeWithSipping) {
                     Text("System Integrity Protection Notices")
                     if sipEnabled {
-                        Text("Show a notice when utilities are blocked by System Integrity Protection.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                        Text(
+                            "Show a notice when utilities are blocked by System Integrity Protection."
+                        )
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                     } else {
-                        Text("These notices will not be shown until System Integrity Protection is enabled.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                        Text(
+                            "These notices will not be shown until System Integrity Protection is enabled."
+                        )
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                     }
                 }
                 .disabled(!sipEnabled)
@@ -51,32 +55,45 @@ private struct SettingsPanelView: View {
     }
 }
 
-private struct AboutPanelView: View {
+private struct AcknowledgementsPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
     @State private var showResetAlert = false
     @Environment(\.openURL) private var openURL
 
     var body: some View {
         Form {
-            Section("Acknowledgements") {
+            Section("Sources") {
                 VStack(alignment: .leading, spacing: 8) {
-                    Button(action: { openURL(URL(string: "https://mjtsai.com/blog/2024/03/22/_eventfirstresponderchaindescription/")!) }) {
+                    Button(action: {
+                        openURL(
+                            URL(
+                                string:
+                                    "https://mjtsai.com/blog/2024/03/22/_eventfirstresponderchaindescription/"
+                            )!)
+                    }) {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Cocoa Debug Menu").font(.headline)
-                                Text("Sourced Article").font(.subheadline).foregroundStyle(.secondary)
+                                Text("Sourced Article").font(.subheadline).foregroundStyle(
+                                    .secondary)
                             }
                         } icon: {
                             Image(systemName: "link").foregroundStyle(.blue)
                         }
                     }
                     .buttonStyle(.plain)
-                    
-                    Button(action: { openURL(URL(string: "https://x.com/khanhduytran0/status/1951637277760999628?s=61")!) }) {
+
+                    Button(action: {
+                        openURL(
+                            URL(
+                                string:
+                                    "https://x.com/khanhduytran0/status/1951637277760999628?s=61")!)
+                    }) {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("enable_overlay").font(.headline)
-                                Text("Sourced Article").font(.subheadline).foregroundStyle(.secondary)
+                                Text("Sourced Article").font(.subheadline).foregroundStyle(
+                                    .secondary)
                             }
                         } icon: {
                             Image(systemName: "link").foregroundStyle(.blue)
@@ -155,14 +172,14 @@ private struct AboutPanelView: View {
 
 enum Panel: String, CaseIterable, Identifiable, Hashable, Codable {
     case settings = "Settings"
-    case about = "About"
+    case acknowledge = "Acknowledgements"
 
     var id: String { rawValue }
     var title: String { rawValue }
     var systemImage: String {
         switch self {
         case .settings: return "gear"
-        case .about: return "wrench.and.screwdriver"
+        case .acknowledge: return "star.square.on.square"
         }
     }
 }
@@ -224,8 +241,8 @@ private struct PanelList: View {
             NavigationLink(value: Panel.settings) {
                 Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
             }
-            NavigationLink(value: Panel.about) {
-                Label(Panel.about.title, systemImage: Panel.about.systemImage)
+            NavigationLink(value: Panel.acknowledge) {
+                Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
             }
         }
     }
@@ -239,8 +256,8 @@ private struct PanelDetail: View {
             switch vm.selection {
             case .settings:
                 SettingsPanelView(vm: vm)
-            case .about:
-                AboutPanelView(vm: vm)
+            case .acknowledge:
+                AcknowledgementsPanelView(vm: vm)
             case .none:
                 Text("Select a panel")
             }
@@ -257,10 +274,10 @@ struct ConfigurationRootView: View {
 
     var body: some View {
         if #available(macOS 14.0, *) {
-            NavigationSplitView() {
+            NavigationSplitView {
                 PanelList(selection: $vm.selection)
                     .toolbar(removing: .sidebarToggle)
-                    .navigationSplitViewColumnWidth(180)
+                    .navigationSplitViewColumnWidth(200)
             } detail: {
                 PanelDetail(vm: vm)
                     .frame(width: 520)
@@ -273,7 +290,7 @@ struct ConfigurationRootView: View {
                                 .help("Go Back")
                                 .disabled(!vm.canGoBack)
                                 .padding(.leading, 3)
-                                
+
                                 if #available(macOS 26.0, *) {
                                     Divider()
                                         .frame(height: 18)
@@ -301,10 +318,10 @@ struct ConfigurationRootView: View {
                         Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
                     }
 
-                AboutPanelView(vm: vm)
+                AcknowledgementsPanelView(vm: vm)
                     .frame(width: 520)
                     .tabItem {
-                        Label(Panel.about.title, systemImage: Panel.about.systemImage)
+                        Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
                     }
             }
         }
