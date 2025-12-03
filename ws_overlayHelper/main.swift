@@ -24,7 +24,10 @@ struct OverlayEnabler {
         pgrep.waitUntilExit()
 
         let data = outPipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !output.isEmpty else {
+        guard
+            let output = String(data: data, encoding: .utf8)?.trimmingCharacters(
+                in: .whitespacesAndNewlines), !output.isEmpty
+        else {
             return resolvePIDViaPS()
         }
         if let firstLine = output.split(separator: "\n").first, let pid = Int32(firstLine) {
@@ -36,7 +39,9 @@ struct OverlayEnabler {
     static func resolvePIDViaPS() -> Int32? {
         let shell = Process()
         shell.executableURL = URL(fileURLWithPath: "/bin/sh")
-        shell.arguments = ["-c", "ps axco pid,comm | grep -w WindowServer | awk '{print $1}' | head -n1"]
+        shell.arguments = [
+            "-c", "ps axco pid,comm | grep -w WindowServer | awk '{print $1}' | head -n1",
+        ]
 
         let outPipe = Pipe()
         shell.standardOutput = outPipe
@@ -46,7 +51,10 @@ struct OverlayEnabler {
         shell.waitUntilExit()
 
         let data = outPipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !output.isEmpty, let pid = Int32(output) else {
+        guard
+            let output = String(data: data, encoding: .utf8)?.trimmingCharacters(
+                in: .whitespacesAndNewlines), !output.isEmpty, let pid = Int32(output)
+        else {
             return nil
         }
         return pid
@@ -54,21 +62,33 @@ struct OverlayEnabler {
 
     static func enableOverlay(mask: Int) throws -> (stdout: String, stderr: String, status: Int32) {
         guard let pid = resolveWindowServerPID() else {
-            throw NSError(domain: "theoderoy.ws_overlayHelper", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Failed to resolve WindowServer PID"]) }
+            throw NSError(
+                domain: "theoderoy.ws_overlayHelper", code: 1001,
+                userInfo: [NSLocalizedDescriptionKey: "Failed to resolve WindowServer PID"])
+        }
 
         let lldbPath = "/usr/bin/lldb"
         let fm = FileManager.default
         var isDir: ObjCBool = false
         if !fm.fileExists(atPath: lldbPath, isDirectory: &isDir) || isDir.boolValue {
-            throw NSError(domain: "theoderoy.ws_overlayHelper", code: 1002, userInfo: [NSLocalizedDescriptionKey: "LLDB not found at \(lldbPath). Install Xcode Command Line Tools."]) }
+            throw NSError(
+                domain: "theoderoy.ws_overlayHelper", code: 1002,
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "LLDB not found at \(lldbPath). Install Xcode Command Line Tools."
+                ])
+        }
         if access(lldbPath, X_OK) != 0 {
-            throw NSError(domain: "theoderoy.ws_overlayHelper", code: 1003, userInfo: [NSLocalizedDescriptionKey: "LLDB not executable at \(lldbPath)"]) }
+            throw NSError(
+                domain: "theoderoy.ws_overlayHelper", code: 1003,
+                userInfo: [NSLocalizedDescriptionKey: "LLDB not executable at \(lldbPath)"])
+        }
 
         let lldbCommands = [
             "process attach --pid \(pid)",
-            "expr (void)enable_overlay(0b\(String(mask, radix: 2)))",
+            "expr -u true -i false -- (void)enable_overlay(0b\(String(mask, radix: 2)))",
             "process detach",
-            "quit"
+            "quit",
         ]
         var arguments: [String] = ["--batch", "--no-lldbinit", "--source-quietly"]
         for cmd in lldbCommands { arguments.append(contentsOf: ["-o", cmd]) }
@@ -76,7 +96,8 @@ struct OverlayEnabler {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: lldbPath)
         process.arguments = arguments
-        let outPipe = Pipe(); let errPipe = Pipe()
+        let outPipe = Pipe()
+        let errPipe = Pipe()
         process.standardOutput = outPipe
         process.standardError = errPipe
         process.standardInput = FileHandle.nullDevice
@@ -93,8 +114,10 @@ struct OverlayEnabler {
             _ = waitSemaphore.wait(timeout: .now() + 2)
         }
 
-        let stdoutStr = String(data: outPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        let stderrStr = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let stdoutStr =
+            String(data: outPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let stderrStr =
+            String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
         return (stdout: stdoutStr, stderr: stderrStr, status: process.terminationStatus)
     }
 }
@@ -106,17 +129,17 @@ let args = CommandLine.arguments
 func printUsage() {
     let tool = (args.first ?? "ws_overlayHelper")
     let usage = """
-    Usage: \(tool) <all|contributor|mouse|foreground|hang|0bMASK|MASK>
+        Usage: \(tool) <all|contributor|mouse|foreground|hang|0bMASK|MASK>
 
-      all         -> 0b1111 (All)
-      contributor -> 0b1000 (Contributor Screen)
-      mouse       -> 0b0100 (Foreground Tracking)
-      foreground  -> 0b0010 (Foreground Debugger)
-      hang        -> 0b0001 (Framerate & Hang Sensors)
+          all         -> 0b1111 (All)
+          contributor -> 0b1000 (Contributor Screen)
+          mouse       -> 0b0100 (Foreground Tracking)
+          foreground  -> 0b0010 (Foreground Debugger)
+          hang        -> 0b0001 (Framerate & Hang Sensors)
 
-      You may also pass an explicit mask as binary (e.g. 0b1010) or decimal (e.g. 10).
-      This command must be run as root.
-    """
+          You may also pass an explicit mask as binary (e.g. 0b1010) or decimal (e.g. 10).
+          This command must be run as root.
+        """
     print(usage)
 }
 
@@ -155,7 +178,7 @@ guard let mask = parseMask(from: arg) else {
     exit(EXIT_FAILURE)
 }
 
- do {
+do {
     let result = try OverlayEnabler.enableOverlay(mask: mask)
     if !result.stdout.isEmpty { fputs(result.stdout, stdout) }
     if !result.stderr.isEmpty { fputs(result.stderr, stderr) }
