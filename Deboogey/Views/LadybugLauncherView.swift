@@ -42,7 +42,7 @@ struct LadybugLauncherView: View {
     @State private var autoKill = false
     @State private var isRunning = false
     @State private var errorMessage: String? = nil
-    
+
     var bundleID: String? = Bundle.main.bundleIdentifier
     var onRun: (_ action: String, _ domain: String) -> Void
 
@@ -74,7 +74,7 @@ struct LadybugLauncherView: View {
                         .clipped()
                 }
             }
-            
+
             Text("Crack open sandboxes & view or change hidden parameters.")
                 .foregroundStyle(.tertiary)
                 .padding()
@@ -218,7 +218,13 @@ struct LadybugLauncherView: View {
 }
 
 #Preview {
-    NavigationStack {
-        LadybugLauncherView(onRun: { _, _ in })
+    if #available(macOS 13.0, *) {
+        NavigationStack {
+            LadybugLauncherView(onRun: { _, _ in })
+        }
+    } else {
+        NavigationView {
+            LadybugLauncherView(onRun: { _, _ in })
+        }
     }
 }

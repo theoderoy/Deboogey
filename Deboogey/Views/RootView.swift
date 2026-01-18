@@ -27,8 +27,8 @@ struct RootView: View {
     @State private var showSystemWriteRefused = false
     @StateObject private var vars = PersistentVariables()
     @Environment(\.sipEnabled) private var sipEnabled
-    @Environment(\.openWindow) private var openWindow
     @Environment(\.openURL) private var openURL
+
 
     var body: some View {
         VStack {
@@ -98,19 +98,7 @@ struct RootView: View {
 
                     Group {
                         if #available(macOS 14.0, *) {
-                            Button(action: {
-                                openWindow(id: "settings")
-                            }) {
-                                Label {
-                                    Text("Configuration")
-                                } icon: {
-                                    Image(systemName: "gear")
-                                }
-                                .font(.headline)
-                                .padding(8)
-                                .frame(maxWidth: 220)
-                            }
-                            .buttonStyle(.borderedProminent)
+                            ModernConfigurationButton()
                         } else {
                             Button(action: {
                                 NSApp.sendAction(
@@ -140,16 +128,32 @@ struct RootView: View {
             }
         }
         .sheet(isPresented: $showingws_overlayLauncher) {
-            NavigationStack {
-                ws_overlayLauncherView { argument in
-                    print("ws_overlayLauncherView Requested: \(argument)")
+            if #available(macOS 13.0, *) {
+                NavigationStack {
+                    ws_overlayLauncherView { argument in
+                        print("ws_overlayLauncherView Requested: \(argument)")
+                    }
+                }
+            } else {
+                NavigationView {
+                    ws_overlayLauncherView { argument in
+                        print("ws_overlayLauncherView Requested: \(argument)")
+                    }
                 }
             }
         }
         .sheet(isPresented: $showingLadybugLauncher) {
-            NavigationStack {
-                LadybugLauncherView { action, domain in
-                    print("LadybugLauncherView Requested: \(action) \(domain)")
+            if #available(macOS 13.0, *) {
+                NavigationStack {
+                    LadybugLauncherView { action, domain in
+                        print("LadybugLauncherView Requested: \(action) \(domain)")
+                    }
+                }
+            } else {
+                NavigationView {
+                    LadybugLauncherView { action, domain in
+                        print("LadybugLauncherView Requested: \(action) \(domain)")
+                    }
                 }
             }
         }
@@ -178,6 +182,27 @@ struct RootView: View {
             }
         }
         .frame(width: 520, height: 610)
+    }
+}
+
+@available(macOS 14.0, *)
+private struct ModernConfigurationButton: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button(action: {
+            openWindow(id: "settings")
+        }) {
+            Label {
+                Text("Configuration")
+            } icon: {
+                Image(systemName: "gear")
+            }
+            .font(.headline)
+            .padding(8)
+            .frame(maxWidth: 220)
+        }
+        .buttonStyle(.borderedProminent)
     }
 }
 

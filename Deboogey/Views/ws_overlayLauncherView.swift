@@ -86,7 +86,7 @@ struct ws_overlayLauncherView: View {
                         .clipped()
                 }
             }
-            
+
             Text("Look inside WindowServer and view all kinds of diagnostic information, such as macOS' refresh rate & application bounding boxes.")
                 .foregroundStyle(.tertiary)
                 .padding()
@@ -170,7 +170,13 @@ struct ws_overlayLauncherView: View {
 }
 
 #Preview {
-    NavigationStack {
-        ws_overlayLauncherView()
+    if #available(macOS 13.0, *) {
+        NavigationStack {
+            ws_overlayLauncherView()
+        }
+    } else {
+        NavigationView {
+            ws_overlayLauncherView()
+        }
     }
 }

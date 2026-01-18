@@ -8,6 +8,17 @@
 import Combine
 import SwiftUI
 
+extension View {
+    @ViewBuilder
+    func formStyleGroupedCompat() -> some View {
+        if #available(macOS 13.0, *) {
+            self.formStyle(.grouped)
+        } else {
+            self
+        }
+    }
+}
+
 private struct SettingsPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
     @Environment(\.sipEnabled) private var sipEnabled
@@ -43,7 +54,7 @@ private struct SettingsPanelView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .formStyle(.grouped)
+        .formStyleGroupedCompat()
         .alert("Delete Persistent Storage?", isPresented: $showResetAlert) {
             Button("Delete", role: .destructive) {
                 vm.theThirdImpact()
@@ -166,7 +177,7 @@ private struct AcknowledgementsPanelView: View {
                 }
             }
         }
-        .formStyle(.grouped)
+        .formStyleGroupedCompat()
     }
 }
 
@@ -237,12 +248,25 @@ private struct PanelList: View {
     @Binding var selection: Panel?
 
     var body: some View {
-        List(selection: $selection) {
-            NavigationLink(value: Panel.settings) {
-                Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
+        if #available(macOS 13.0, *) {
+            List(selection: $selection) {
+                NavigationLink(value: Panel.settings) {
+                    Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
+                }
+                NavigationLink(value: Panel.acknowledge) {
+                    Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+                }
             }
-            NavigationLink(value: Panel.acknowledge) {
-                Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+        } else {
+            List {
+                Button(action: { selection = .settings }) {
+                    Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
+                }
+                .buttonStyle(.plain)
+                Button(action: { selection = .acknowledge }) {
+                    Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -268,8 +292,6 @@ private struct PanelDetail: View {
 
 struct ConfigurationRootView: View {
     @Environment(\.sipEnabled) private var sipEnabled
-    @State private var columnVisibility = NavigationSplitViewVisibility.automatic
-
     @StateObject private var vm = ConfigurationViewModel()
 
     var body: some View {
