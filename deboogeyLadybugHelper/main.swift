@@ -110,6 +110,13 @@ guard let domain = parseDomain(domainArg) else {
     exit(EXIT_FAILURE)
 }
 
+if domain != "-g" {
+    if #unavailable(macOS 12.0) {
+        fputs("Targeting individual apps requires macOS 12.0 (Monterey) or later.\n", stderr)
+        exit(EXIT_FAILURE)
+    }
+}
+
 func runDefaultsWriteAndMaybeKill(action: ToggleAction, domain: String, autoKill: Bool) {
     do {
         let result = try DefaultsToggler.writeToggle(action: action, domain: domain)

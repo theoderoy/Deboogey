@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+@available(macOS 12.0, *)
 struct ws_overlayLauncherView: View {
     enum Preset: String, CaseIterable, Identifiable {
         case all
@@ -58,7 +59,7 @@ struct ws_overlayLauncherView: View {
 
     var onRun: (_ argument: String) -> Void = { _ in }
 
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.presentationMode) private var presentationMode
 
     var body: some View {
         VStack {
@@ -71,14 +72,14 @@ struct ws_overlayLauncherView: View {
                         .padding(4)
                 } else {
                     Rectangle()
-                        .fill(.quaternary)
+                        .fill(Color.secondary.opacity(0.1))
                         .overlay(
                             VStack(spacing: 8) {
                                 Image(systemName: "macwindow")
                                     .font(.system(size: 40, weight: .regular))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundColor(.secondary)
                                 Text("WindowServer Diagnostics")
-                                    .foregroundStyle(.secondary)
+                                    .foregroundColor(.secondary)
                             }
                         )
                         .aspectRatio(16.0/9.0, contentMode: .fit)
@@ -88,7 +89,7 @@ struct ws_overlayLauncherView: View {
             }
 
             Text("Look inside WindowServer and view all kinds of diagnostic information, such as macOS' refresh rate & application bounding boxes.")
-                .foregroundStyle(.tertiary)
+                .foregroundColor(.secondary)
                 .padding()
 
             Form {
@@ -102,19 +103,19 @@ struct ws_overlayLauncherView: View {
                     .labelsHidden()
                 }
 
-                Section(footer: Text(preset.description).foregroundStyle(.tertiary)) {
+                Section(footer: Text(preset.description).foregroundColor(.secondary)) {
                     if preset == .custom {
-                        TextField(text: $customMask) { }
+                        TextField("", text: $customMask)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
-                            .foregroundStyle(.secondary)
+                            .foregroundColor(.secondary)
                     }
                 }
 
                 if let errorMessage {
                     Section {
                         Text(errorMessage)
-                            .foregroundStyle(.red)
+                            .foregroundColor(.red)
                     }
                 }
             }
@@ -123,7 +124,7 @@ struct ws_overlayLauncherView: View {
             .navigationTitle("WindowServer Diagnostics")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") { presentationMode.wrappedValue.dismiss() }
                         .disabled(isRunning)
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -154,7 +155,7 @@ struct ws_overlayLauncherView: View {
                 await MainActor.run {
                     onRun(argument)
                     isRunning = false
-                    dismiss()
+                    presentationMode.wrappedValue.dismiss()
                 }
             } catch {
                 #if DEBUG
@@ -175,8 +176,10 @@ struct ws_overlayLauncherView: View {
             ws_overlayLauncherView()
         }
     } else {
-        NavigationView {
-            ws_overlayLauncherView()
+        if #available(macOS 12.0, *) {
+            NavigationView {
+                ws_overlayLauncherView()
+            }
         }
     }
 }

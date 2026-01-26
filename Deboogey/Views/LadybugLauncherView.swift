@@ -42,11 +42,12 @@ struct LadybugLauncherView: View {
     @State private var autoKill = false
     @State private var isRunning = false
     @State private var errorMessage: String? = nil
+    @State private var alertMessage: String? = nil
 
     var bundleID: String? = Bundle.main.bundleIdentifier
     var onRun: (_ action: String, _ domain: String) -> Void
 
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.presentationMode) private var presentationMode
 
     var body: some View {
         VStack {
@@ -59,14 +60,14 @@ struct LadybugLauncherView: View {
                         .padding(4)
                 } else {
                     Rectangle()
-                        .fill(.quaternary)
+                        .fill(Color.secondary.opacity(0.1))
                         .overlay(
                             VStack(spacing: 8) {
                                 Image(systemName: "ladybug")
                                     .font(.system(size: 40, weight: .regular))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundColor(.secondary)
                                 Text("Ladybug Interface")
-                                    .foregroundStyle(.secondary)
+                                    .foregroundColor(.secondary)
                             }
                         )
                         .aspectRatio(16.0/9.0, contentMode: .fit)
@@ -76,7 +77,7 @@ struct LadybugLauncherView: View {
             }
 
             Text("Crack open sandboxes & view or change hidden parameters.")
-                .foregroundStyle(.tertiary)
+                .foregroundColor(.secondary)
                 .padding()
 
             Form {
@@ -91,31 +92,49 @@ struct LadybugLauncherView: View {
                 }
 
                 Section(footer: footerHint) {
-                    Picker("Domain", selection: $domain) {
-                        Text(Domain.global.title).tag(Domain.global)
-                        if bundleID != nil {
-                            Text(Domain.deboogey.title).tag(Domain.deboogey)
+                    if #available(macOS 12.0, *) {
+                        Picker("Domain", selection: $domain) {
+                            Text(Domain.global.title).tag(Domain.global)
+                            if #available(macOS 12.0, *) {
+                                if bundleID != nil {
+                                    Text(Domain.deboogey.title).tag(Domain.deboogey)
+                                }
+                                Text(Domain.custom.title).tag(Domain.custom)
+                            }
                         }
-                        Text(Domain.custom.title).tag(Domain.custom)
-                    }
-                    .labelsHidden()
-                    .onChange(of: domain) { newValue in
-                        withAnimation { _ = newValue.isCustom }
-                        if newValue == .deboogey { autoKill = false }
-                    }
-                    .onAppear {
-                        if domain == .deboogey { autoKill = false }
+                        .labelsHidden()
+                        .onChange(of: domain) { newValue in
+                            withAnimation { _ = newValue.isCustom }
+                            if newValue == .deboogey { autoKill = false }
+                        }
+                        .onAppear {
+                            if domain == .deboogey { autoKill = false }
+                        }
+                    } else {
+                        HStack {
+                            Text("Target Selection")
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Button(action: {
+                                alertMessage = "Targeting individual apps requires macOS 12.0 (Monterey) or later."
+                            }) {
+                                Image(systemName: "questionmark.circle")
+                                    .font(.title2)
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
 
                     if domain.isCustom {
-                        TextField(text: $customBundle) { }
+                        TextField("", text: $customBundle)
                             .textFieldStyle(.roundedBorder)
-                            .foregroundStyle(.secondary)
+                            .foregroundColor(.secondary)
                     }
 
                     if domain == .deboogey {
                         Text("Deboogey automatically quits.")
-                            .foregroundStyle(.tertiary)
+                            .foregroundColor(.secondary)
                     } else {
                         Toggle(isOn: $autoKill) {
                             Text(domain == .global ? "Restart" : "Auto-Quit")
@@ -128,7 +147,7 @@ struct LadybugLauncherView: View {
                 if let errorMessage {
                     Section {
                         Text(errorMessage)
-                            .foregroundStyle(.red)
+                            .foregroundColor(.red)
                     }
                 }
             }
@@ -137,7 +156,7 @@ struct LadybugLauncherView: View {
             .navigationTitle("Ladybug Interface")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") { presentationMode.wrappedValue.dismiss() }
                         .disabled(isRunning)
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -146,13 +165,19 @@ struct LadybugLauncherView: View {
                 }
             }
         }
+        .alert(item: Binding<IdentifiableString?>(
+            get: { alertMessage.map { IdentifiableString(value: $0) } },
+            set: { _ in alertMessage = nil }
+        )) { message in
+            Alert(title: Text(message.value))
+        }
     }
 
     private var footerHint: some View {
         Group {
             if domain != .deboogey, autoKill == false {
                 Text("Quit the domain to see changes.")
-                    .foregroundStyle(.tertiary)
+                    .foregroundColor(.secondary)
             } else {
                 EmptyView()
             }
@@ -187,7 +212,7 @@ struct LadybugLauncherView: View {
                 await MainActor.run {
                     onRun(actionArg, domainArg)
                     isRunning = false
-                    dismiss()
+                    presentationMode.wrappedValue.dismiss()
 
                     if domainArg == "global" {
                         if autoKill {
