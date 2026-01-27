@@ -21,6 +21,7 @@ private struct SceneSwitcher: Scene {
     }
 }
 
+@available(macOS 13.0, *)
 struct ConfigurationModern: Scene {
     @Environment(\.openWindow) private var openWindow
     var body: some Scene {
@@ -49,7 +50,6 @@ struct ConfigurationLegacy: Scene {
 
 @main
 struct Root: App {
-    @Environment(\.openWindow) private var openWindow
     @State private var sipEnabled: Bool = true
 
     init() {
@@ -63,7 +63,7 @@ struct Root: App {
             RootView()
                 .environment(\.sipEnabled, sipEnabled)
         }
-        
+
         SceneSwitcher()
     }
 }

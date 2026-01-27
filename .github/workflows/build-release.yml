@@ -1,9 +1,7 @@
 name: Build Deboogey (Release)
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -26,4 +24,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Deboogey
-          path: DerivedData/Build/Products/Release/
+          path: DerivedData/Build/Products/Release/Deboogey.app
