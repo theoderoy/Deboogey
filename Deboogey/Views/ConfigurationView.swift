@@ -8,6 +8,17 @@
 import Combine
 import SwiftUI
 
+extension View {
+    @ViewBuilder
+    func formStyleGroupedCompat() -> some View {
+        if #available(macOS 13.0, *) {
+            self.formStyle(.grouped)
+        } else {
+            self.padding()
+        }
+    }
+}
+
 private struct SettingsPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
     @Environment(\.sipEnabled) private var sipEnabled
@@ -15,42 +26,50 @@ private struct SettingsPanelView: View {
 
     var body: some View {
         Form {
-            Section("Settings") {
-                Toggle(isOn: $vm.pesterMeWithSipping) {
-                    Text("System Integrity Protection Notices")
-                    if sipEnabled {
-                        Text(
-                            "Show a notice when utilities are blocked by System Integrity Protection."
-                        )
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    } else {
-                        Text(
-                            "These notices will not be shown until System Integrity Protection is enabled."
-                        )
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+            if #available(macOS 12.0, *) {
+                Section(header: Text("Settings")) {
+                    Toggle(isOn: $vm.pesterMeWithSipping) {
+                        Text("System Integrity Protection Notices")
+                        if sipEnabled {
+                            Text(
+                                "Show a notice when utilities are blocked by System Integrity Protection."
+                            )
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        } else {
+                            Text(
+                                "These notices will not be shown until System Integrity Protection is enabled."
+                            )
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        }
                     }
+                    .disabled(!sipEnabled)
                 }
-                .disabled(!sipEnabled)
             }
-            Section("Maintenance") {
-                Button("Delete Persistent Storage", systemImage: "trash") {
-                    showResetAlert = true
+            Section(header: Text("Maintenance")) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Button(action: { showResetAlert = true }) {
+                        Label("Delete Persistent Storage", systemImage: "trash")
+                    }
+                    Text("Clears all preferences and then quits the app.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
-                Text("Clears all preferences and then quits the app.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .formStyle(.grouped)
-        .alert("Delete Persistent Storage?", isPresented: $showResetAlert) {
-            Button("Delete", role: .destructive) {
-                vm.theThirdImpact()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This will clear all preferences and then quit the app.")
+        .padding()
+        .formStyleGroupedCompat()
+        .alert(isPresented: $showResetAlert) {
+            Alert(
+                title: Text("Delete Persistent Storage?"),
+                message: Text("This will clear all preferences and then quit the app."),
+                primaryButton: .destructive(Text("Delete")) {
+                    vm.theThirdImpact()
+                },
+                secondaryButton: .cancel()
+            )
         }
     }
 }
@@ -61,8 +80,8 @@ private struct AcknowledgementsPanelView: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        Form {
-            Section("Sources") {
+        List {
+            Section(header: Text("Sources")) {
                 VStack(alignment: .leading, spacing: 8) {
                     Button(action: {
                         openURL(
@@ -74,11 +93,11 @@ private struct AcknowledgementsPanelView: View {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Cocoa Debug Menu").font(.headline)
-                                Text("Sourced Article").font(.subheadline).foregroundStyle(
+                                Text("Sourced Article").font(.subheadline).foregroundColor(
                                     .secondary)
                             }
                         } icon: {
-                            Image(systemName: "link").foregroundStyle(.blue)
+                            Image(systemName: "link").foregroundColor(.blue)
                         }
                     }
                     .buttonStyle(.plain)
@@ -92,26 +111,26 @@ private struct AcknowledgementsPanelView: View {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("enable_overlay").font(.headline)
-                                Text("Sourced Article").font(.subheadline).foregroundStyle(
+                                Text("Sourced Article").font(.subheadline).foregroundColor(
                                     .secondary)
                             }
                         } icon: {
-                            Image(systemName: "link").foregroundStyle(.blue)
+                            Image(systemName: "link").foregroundColor(.blue)
                         }
                     }
                     .buttonStyle(.plain)
                 }
             }
-            Section("Special Thanks") {
+            Section(header: Text("Special Thanks")) {
                 VStack(alignment: .leading, spacing: 8) {
                     Button(action: { openURL(URL(string: "https://github.com/ogui-775")!) }) {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Salty").font(.headline)
-                                Text("Insight").font(.subheadline).foregroundStyle(.secondary)
+                                Text("Insight").font(.subheadline).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "star.fill").foregroundStyle(.yellow)
+                            Image(systemName: "star.fill").foregroundColor(.yellow)
                         }
                     }
                     .buttonStyle(.plain)
@@ -120,10 +139,10 @@ private struct AcknowledgementsPanelView: View {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("1davi").font(.headline)
-                                Text("Tester").font(.subheadline).foregroundStyle(.secondary)
+                                Text("Tester").font(.subheadline).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "screwdriver.fill").foregroundStyle(.green)
+                            Image(systemName: "screwdriver.fill").foregroundColor(.green)
                         }
                     }
                     .buttonStyle(.plain)
@@ -132,10 +151,10 @@ private struct AcknowledgementsPanelView: View {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Alex Spaulding").font(.headline)
-                                Text("Tester").font(.subheadline).foregroundStyle(.secondary)
+                                Text("Tester").font(.subheadline).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "screwdriver.fill").foregroundStyle(.green)
+                            Image(systemName: "screwdriver.fill").foregroundColor(.green)
                         }
                     }
                     .buttonStyle(.plain)
@@ -144,10 +163,10 @@ private struct AcknowledgementsPanelView: View {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("MTACS").font(.headline)
-                                Text("Tester").font(.subheadline).foregroundStyle(.secondary)
+                                Text("Tester").font(.subheadline).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "screwdriver.fill").foregroundStyle(.green)
+                            Image(systemName: "screwdriver.fill").foregroundColor(.green)
                         }
                     }
                     .buttonStyle(.plain)
@@ -156,17 +175,16 @@ private struct AcknowledgementsPanelView: View {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Olivia Iacovou").font(.headline)
-                                Text("Tester").font(.subheadline).foregroundStyle(.secondary)
+                                Text("Tester").font(.subheadline).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "screwdriver.fill").foregroundStyle(.green)
+                            Image(systemName: "screwdriver.fill").foregroundColor(.green)
                         }
                     }
                     .buttonStyle(.plain)
                 }
             }
         }
-        .formStyle(.grouped)
     }
 }
 
@@ -175,11 +193,27 @@ enum Panel: String, CaseIterable, Identifiable, Hashable, Codable {
     case acknowledge = "Acknowledgements"
 
     var id: String { rawValue }
-    var title: String { rawValue }
+    var title: String {
+        switch self {
+        case .settings:
+            if #available(macOS 13.0, *) {
+                return "Settings"
+            } else {
+                return "Preferences"
+            }
+        case .acknowledge:
+            return "Acknowledgements"
+        }
+    }
     var systemImage: String {
         switch self {
         case .settings: return "gear"
-        case .acknowledge: return "star.square.on.square"
+        case .acknowledge:
+            if #available(macOS 13.0, *) {
+                return "star.square.on.square"
+            } else {
+                return "star.fill"
+            }
         }
     }
 }
@@ -237,12 +271,25 @@ private struct PanelList: View {
     @Binding var selection: Panel?
 
     var body: some View {
-        List(selection: $selection) {
-            NavigationLink(value: Panel.settings) {
-                Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
+        if #available(macOS 13.0, *) {
+            List(selection: $selection) {
+                NavigationLink(value: Panel.settings) {
+                    Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
+                }
+                NavigationLink(value: Panel.acknowledge) {
+                    Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+                }
             }
-            NavigationLink(value: Panel.acknowledge) {
-                Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+        } else {
+            List {
+                Button(action: { selection = .settings }) {
+                    Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
+                }
+                .buttonStyle(.plain)
+                Button(action: { selection = .acknowledge }) {
+                    Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -268,8 +315,6 @@ private struct PanelDetail: View {
 
 struct ConfigurationRootView: View {
     @Environment(\.sipEnabled) private var sipEnabled
-    @State private var columnVisibility = NavigationSplitViewVisibility.automatic
-
     @StateObject private var vm = ConfigurationViewModel()
 
     var body: some View {
@@ -313,17 +358,16 @@ struct ConfigurationRootView: View {
         } else {
             TabView {
                 SettingsPanelView(vm: vm)
-                    .frame(width: 520)
                     .tabItem {
                         Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
                     }
 
                 AcknowledgementsPanelView(vm: vm)
-                    .frame(width: 520)
                     .tabItem {
                         Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
                     }
             }
+            .frame(width: 520, height: 400)
         }
     }
 }
