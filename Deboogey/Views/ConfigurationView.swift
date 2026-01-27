@@ -26,8 +26,8 @@ private struct SettingsPanelView: View {
 
     var body: some View {
         Form {
-            Section(header: Text("Settings")) {
-                if #available(macOS 12.0, *) {
+            if #available(macOS 12.0, *) {
+                Section(header: Text("Settings")) {
                     Toggle(isOn: $vm.pesterMeWithSipping) {
                         Text("System Integrity Protection Notices")
                         if sipEnabled {
@@ -48,14 +48,18 @@ private struct SettingsPanelView: View {
                 }
             }
             Section(header: Text("Maintenance")) {
-                Button("Delete Persistent Storage", systemImage: "trash") {
-                    showResetAlert = true
+                VStack(alignment: .leading, spacing: 12) {
+                    Button(action: { showResetAlert = true }) {
+                        Label("Delete Persistent Storage", systemImage: "trash")
+                    }
+                    Text("Clears all preferences and then quits the app.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
-                Text("Clears all preferences and then quits the app.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .padding()
         .formStyleGroupedCompat()
         .alert(isPresented: $showResetAlert) {
             Alert(
@@ -189,7 +193,18 @@ enum Panel: String, CaseIterable, Identifiable, Hashable, Codable {
     case acknowledge = "Acknowledgements"
 
     var id: String { rawValue }
-    var title: String { rawValue }
+    var title: String {
+        switch self {
+        case .settings:
+            if #available(macOS 13.0, *) {
+                return "Settings"
+            } else {
+                return "Preferences"
+            }
+        case .acknowledge:
+            return "Acknowledgements"
+        }
+    }
     var systemImage: String {
         switch self {
         case .settings: return "gear"
@@ -343,17 +358,16 @@ struct ConfigurationRootView: View {
         } else {
             TabView {
                 SettingsPanelView(vm: vm)
-                    .frame(width: 520)
                     .tabItem {
                         Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
                     }
 
                 AcknowledgementsPanelView(vm: vm)
-                    .frame(width: 520)
                     .tabItem {
                         Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
                     }
             }
+            .frame(width: 520, height: 400)
         }
     }
 }

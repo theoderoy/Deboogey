@@ -20,16 +20,38 @@ struct IdentifiableString: Identifiable {
     let value: String
 }
 
+struct LauncherButton: View {
+    let title: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label {
+                Text(title)
+            } icon: {
+                Image(systemName: icon)
+            }
+            .font(.headline)
+            .padding(8)
+            .frame(maxWidth: 220)
+            .background(color.opacity(0.1))
+            .cornerRadius(8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct RootView: View {
     @State private var alertMessage: String? = nil
     @State private var showingLadybugLauncher = false
     @State private var showingws_overlayLauncher = false
-    @State private var showingSettings = false
     @State private var showSystemWriteRefused = false
     @StateObject private var vars = PersistentVariables()
     @Environment(\.sipEnabled) private var sipEnabled
     @Environment(\.openURL) private var openURL
-
 
     var body: some View {
         VStack {
@@ -65,96 +87,58 @@ struct RootView: View {
                     .padding(.vertical, 4)
                     .background(Capsule().fill(Color.blue))
                 }
-                VStack {
-                    Group {
-                        Button(action: {
-                            showingLadybugLauncher = true
-                        }) {
-                            Label {
-                                Text("Ladybug Interface")
-                            } icon: {
-                                Image(systemName: "ladybug")
-                            }
-                            .font(.headline)
-                            .padding(8)
-                            .frame(maxWidth: 220)
-                        }
-                        .buttonStyle(.plain)
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(8)
+                VStack(spacing: 12) {
+                    LauncherButton(
+                        title: "Ladybug Interface",
+                        icon: "ladybug",
+                        color: .blue
+                    ) {
+                        showingLadybugLauncher = true
                     }
 
-                    Group {
-                        if #available(macOS 12.0, *) {
+                    if #available(macOS 12.0, *) {
+                        LauncherButton(
+                            title: "WindowServer Diagnostics",
+                            icon: "macwindow",
+                            color: .blue
+                        ) {
+                            showingws_overlayLauncher = true
+                        }
+                        .disabled(sipEnabled)
+                    } else {
+                        HStack {
+                            LauncherButton(
+                                title: "WindowServer Diagnostics",
+                                icon: "rectangle",
+                                color: .secondary
+                            ) { }
+                            .disabled(true)
+                            
                             Button(action: {
-                                showingws_overlayLauncher = true
+                                alertMessage = "Upgrade to macOS 12 to use WindowServer Diagnostics."
                             }) {
-                                Label {
-                                    Text("WindowServer Diagnostics")
-                                } icon: {
-                                    Image(systemName: "macwindow")
-                                }
-                                .font(.headline)
-                                .padding(8)
-                                .frame(maxWidth: 220)
+                                Image(systemName: "questionmark.circle")
+                                    .font(.title2)
+                                    .foregroundColor(.secondary)
                             }
                             .buttonStyle(.plain)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(8)
-                            .disabled(sipEnabled)
-                        } else {
-                            HStack {
-                                Button(action: {}) {
-                                    Label {
-                                        Text("WindowServer Diagnostics")
-                                    } icon: {
-                                        Image(systemName: "rectangle")
-                                    }
-                                    .font(.headline)
-                                    .padding(8)
-                                    .frame(maxWidth: 180)
-                                }
-                                .buttonStyle(.plain)
-                                .background(Color.secondary.opacity(0.1))
-                                .cornerRadius(8)
-                                .disabled(true)
-                                
-                                Button(action: {
-                                    alertMessage = "WindowServer Diagnostics requires macOS 12.0 (Monterey) or later."
-                                }) {
-                                    Image(systemName: "questionmark.circle")
-                                        .font(.title2)
-                                        .foregroundColor(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                            }
                         }
                     }
 
-                    Group {
-                        if #available(macOS 14.0, *) {
-                            ModernConfigurationButton()
-                        } else {
-                            if #available(macOS 12.0, *) {
-                                Button(action: {
-                                    showingSettings = true
-                                }) {
-                                    Label {
-                                        Text("Settings")
-                                    } icon: {
-                                        Image(systemName: "gear")
-                                    }
-                                    .font(.headline)
-                                    .padding(8)
-                                    .frame(maxWidth: 220)
-                                }
-                                .buttonStyle(.plain)
-                                .background(Color.gray.opacity(0.1))
-                                .cornerRadius(8)
-                                }
-                            }
+                    if #available(macOS 14.0, *) {
+                        ModernSettingsLauncher()
+                    } else {
+                        LauncherButton(
+                            title: {
+                                if #available(macOS 13.0, *) { return "Settings" }
+                                return "Preferences"
+                            }(),
+                            icon: "gear",
+                            color: .gray
+                        ) {
+                             NSApp.sendAction(Selector("showPreferencesWindow:"), to: nil, from: nil)
+                        }
                     }
-                    .padding(.top, 20)
                 }
                 .padding()
             }
@@ -179,19 +163,11 @@ struct RootView: View {
                             print("ws_overlayLauncherView Requested: \(argument)")
                         }
                     }
+                    .frame(width: 520, height: 540)
                 } else {
                     EmptyView()
                 }
             }
-        }
-        .sheet(isPresented: $showingSettings) {
-             ConfigurationRootView()
-                 .frame(minWidth: 500, minHeight: 400)
-                 .toolbar {
-                     ToolbarItem(placement: .confirmationAction) {
-                         Button("Done") { showingSettings = false }
-                     }
-                 }
         }
         .sheet(isPresented: $showingLadybugLauncher) {
             if #available(macOS 13.0, *) {
@@ -206,6 +182,7 @@ struct RootView: View {
                         print("LadybugLauncherView Requested: \(action) \(domain)")
                     }
                 }
+                .frame(width: 520, height: 650)
             }
         }
         .alert(isPresented: $showSystemWriteRefused) {
@@ -240,23 +217,17 @@ struct RootView: View {
 }
 
 @available(macOS 14.0, *)
-private struct ModernConfigurationButton: View {
-    @Environment(\.openWindow) private var openWindow
+private struct ModernSettingsLauncher: View {
+    @Environment(\.openWindow) var openWindow
 
     var body: some View {
-        Button(action: {
+        LauncherButton(
+            title: "Configuration",
+            icon: "gear",
+            color: .gray
+        ) {
             openWindow(id: "settings")
-        }) {
-            Label {
-                Text("Configuration")
-            } icon: {
-                Image(systemName: "gear")
-            }
-            .font(.headline)
-            .padding(8)
-            .frame(maxWidth: 220)
         }
-        .buttonStyle(.borderedProminent)
     }
 }
 
