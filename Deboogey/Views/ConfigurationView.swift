@@ -142,7 +142,7 @@ private struct AcknowledgementsPanelView: View {
                                 Text("Tester").font(.subheadline).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "screwdriver.fill").foregroundColor(.green)
+                            Image(systemName: "gearshape").foregroundColor(.green)
                         }
                     }
                     .buttonStyle(.plain)
@@ -154,7 +154,7 @@ private struct AcknowledgementsPanelView: View {
                                 Text("Tester").font(.subheadline).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "screwdriver.fill").foregroundColor(.green)
+                            Image(systemName: "gearshape").foregroundColor(.green)
                         }
                     }
                     .buttonStyle(.plain)
@@ -166,7 +166,7 @@ private struct AcknowledgementsPanelView: View {
                                 Text("Tester").font(.subheadline).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "screwdriver.fill").foregroundColor(.green)
+                            Image(systemName: "gearshape").foregroundColor(.green)
                         }
                     }
                     .buttonStyle(.plain)
@@ -178,7 +178,7 @@ private struct AcknowledgementsPanelView: View {
                                 Text("Tester").font(.subheadline).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "screwdriver.fill").foregroundColor(.green)
+                            Image(systemName: "gearshape").foregroundColor(.green)
                         }
                     }
                     .buttonStyle(.plain)
