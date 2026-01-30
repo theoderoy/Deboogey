@@ -81,7 +81,7 @@ struct RootView: View {
 
             HStack {
                 VStack(spacing: 8) {
-                    Image("Icon")
+                    Image(nsImage: NSImage(named: NSImage.applicationIconName) ?? NSImage())
                         .resizable()
                         .scaledToFit()
                         .frame(width: 128, height: 128)
@@ -99,22 +99,22 @@ struct RootView: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.blue))
+                    .background(Capsule().fill(Color.accentColor))
                 }
                 VStack(spacing: 12) {
                     LauncherButton(
-                        title: "Ladybug Interface",
+                        title: "Cocoa Debug Menu",
                         icon: "ladybug",
-                        color: .blue
+                        color: .accentColor
                     ) {
                         showingLadybugLauncher = true
                     }
 
                     if #available(macOS 12.0, *) {
                         LauncherButton(
-                            title: "WindowServer Diagnostics",
+                            title: "SkyLight Diagnostics",
                             icon: "macwindow",
-                            color: .blue
+                            color: .accentColor
                         ) {
                             showingws_overlayLauncher = true
                         }
@@ -122,14 +122,14 @@ struct RootView: View {
                     } else {
                         HStack {
                             LauncherButton(
-                                title: "WindowServer Diagnostics",
+                                title: "SkyLight Diagnostics",
                                 icon: "rectangle",
                                 color: .secondary
                             ) { }
                             .disabled(true)
                             
                             Button(action: {
-                                activeAlert = .message("Upgrade to macOS 12 to use WindowServer Diagnostics.")
+                                activeAlert = .message("Upgrade to macOS 12 to use SkyLight Diagnostics.")
                             }) {
                                 Image(systemName: "questionmark.circle")
                                     .font(.title2)

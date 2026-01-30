@@ -54,7 +54,7 @@ struct LadybugLauncherView: View {
                                 .overlay(
                                     VStack(spacing: 12) {
                                         Image(systemName: "ladybug").font(.system(size: 48, weight: .thin))
-                                        Text("Ladybug Interface").font(.headline)
+                                        Text("Cocoa Debug Menu").font(.headline)
                                     }.foregroundColor(.secondary)
                                 )
                         }
@@ -65,7 +65,7 @@ struct LadybugLauncherView: View {
                     .cornerRadius(12)
                     .padding(.horizontal)
 
-                    Text("Crack open sandboxes & view or change hidden parameters.")
+                    Text("Inspect the sandbox of individual programs and adjust parameters.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -101,7 +101,7 @@ struct LadybugLauncherView: View {
                             }
                         } else {
                             HStack {
-                                Text("Upgrade to macOS 12 for granular targeting").font(.footnote).foregroundColor(.secondary)
+                                Text("Upgrade to macOS 12 for granular targeting.").font(.footnote).foregroundColor(.secondary)
                                 Spacer()
                                 Image(systemName: "info.circle").foregroundColor(.secondary)
                             }
@@ -151,7 +151,7 @@ struct LadybugLauncherView: View {
         }
         .frame(width: 520, height: 650)
         .disabled(isRunning)
-        .navigationTitle("Ladybug Interface")
+        .navigationTitle("Cocoa Debug Menu")
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") { presentationMode.wrappedValue.dismiss() }.disabled(isRunning)
