@@ -45,13 +45,27 @@ struct LauncherButton: View {
 }
 
 struct RootView: View {
-    @State private var alertMessage: String? = nil
+    @State private var activeAlert: ActiveAlert?
     @State private var showingLadybugLauncher = false
     @State private var showingws_overlayLauncher = false
-    @State private var showSystemWriteRefused = false
     @StateObject private var vars = PersistentVariables()
+    @ObservedObject var upgradeChecker = UpgradeChecker.shared
     @Environment(\.sipEnabled) private var sipEnabled
     @Environment(\.openURL) private var openURL
+    
+    enum ActiveAlert: Identifiable, Equatable {
+        case message(String)
+        case sipNotice
+        case upgradeAvailable
+        
+        var id: String {
+            switch self {
+            case .message(let str): return "message-\(str)"
+            case .sipNotice: return "sipNotice"
+            case .upgradeAvailable: return "upgradeAvailable"
+            }
+        }
+    }
 
     var body: some View {
         VStack {
@@ -67,7 +81,7 @@ struct RootView: View {
 
             HStack {
                 VStack(spacing: 8) {
-                    Image("Icon")
+                    Image(nsImage: NSImage(named: NSImage.applicationIconName) ?? NSImage())
                         .resizable()
                         .scaledToFit()
                         .frame(width: 128, height: 128)
@@ -85,22 +99,22 @@ struct RootView: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.blue))
+                    .background(Capsule().fill(Color.accentColor))
                 }
                 VStack(spacing: 12) {
                     LauncherButton(
-                        title: "Ladybug Interface",
+                        title: "Cocoa Debug Menu",
                         icon: "ladybug",
-                        color: .blue
+                        color: .accentColor
                     ) {
                         showingLadybugLauncher = true
                     }
 
                     if #available(macOS 12.0, *) {
                         LauncherButton(
-                            title: "WindowServer Diagnostics",
+                            title: "SkyLight Diagnostics",
                             icon: "macwindow",
-                            color: .blue
+                            color: .accentColor
                         ) {
                             showingws_overlayLauncher = true
                         }
@@ -108,14 +122,14 @@ struct RootView: View {
                     } else {
                         HStack {
                             LauncherButton(
-                                title: "WindowServer Diagnostics",
+                                title: "SkyLight Diagnostics",
                                 icon: "rectangle",
                                 color: .secondary
                             ) { }
                             .disabled(true)
                             
                             Button(action: {
-                                alertMessage = "Upgrade to macOS 12 to use WindowServer Diagnostics."
+                                activeAlert = .message("Upgrade to macOS 12 to use SkyLight Diagnostics.")
                             }) {
                                 Image(systemName: "questionmark.circle")
                                     .font(.title2)
@@ -189,31 +203,63 @@ struct RootView: View {
                 .frame(width: 520, height: 650)
             }
         }
-        .alert(isPresented: $showSystemWriteRefused) {
-            Alert(
-                title: Text("System write-dependent features have been disabled."),
-                message: Text("Some features of this app require System Integrity Protection to be disabled.\n\nThis helps protect your Mac, so disable it if you understand the risks."),
-                primaryButton: .default(Text("Learn More")) {
-                    if let url = URL(string: "https://support.apple.com/guide/security/secb7ea06b49/web") {
-                        openURL(url)
+        .alert(item: $activeAlert) { item in
+            switch item {
+            case .message(let message):
+                return Alert(title: Text(message))
+            case .sipNotice:
+                return Alert(
+                    title: Text("System write-dependent features have been disabled."),
+                    message: Text("Some features of this app require System Integrity Protection to be disabled.\n\nThis helps protect your Mac, so disable it if you understand the risks."),
+                    primaryButton: .default(Text("Learn More")) {
+                        if let url = URL(string: "https://support.apple.com/guide/security/secb7ea06b49/web") {
+                            openURL(url)
+                        }
+                    },
+                    secondaryButton: .cancel(Text("OK"))
+                )
+            case .upgradeAvailable:
+                return Alert(
+                    title: Text("Upgrade Available"),
+                    message: Text("\(upgradeChecker.formattedLatestVersion) is available.\n\nYou might need to manually code-sign the application after upgrading."),
+                    primaryButton: .default(Text("Upgrade"), action: {
+                        upgradeChecker.upgradeAvailable = false
+                        upgradeChecker.proceedWithUpdate()
+                    }),
+                    secondaryButton: .cancel {
+                        upgradeChecker.upgradeAvailable = false
                     }
-                },
-                secondaryButton: .cancel(Text("OK"))
-            )
-        }
-        .alert(item: Binding<IdentifiableString?>(
-            get: { alertMessage.map { IdentifiableString(value: $0) } },
-            set: { _ in alertMessage = nil }
-        )) { message in
-            Alert(title: Text(message.value))
+                )
+            }
         }
         .onAppear {
             if #available(macOS 12.0, *) {
                 if sipEnabled == true && vars.pesterMeWithSipping == true {
                     DispatchQueue.main.async {
-                        showSystemWriteRefused = true
+                        activeAlert = .sipNotice
                     }
                 }
+            }
+            upgradeChecker.cleanUpOldApp()
+            upgradeChecker.checkForUpdates()
+        }
+        .onChange(of: upgradeChecker.upgradeAvailable) { available in
+            if available && activeAlert == nil && !vars.hideUpgradeAlerts {
+                activeAlert = .upgradeAvailable
+            }
+        }
+        .onChange(of: activeAlert) { newValue in
+            if newValue == nil && upgradeChecker.upgradeAvailable {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    if activeAlert == nil && !vars.hideUpgradeAlerts {
+                        activeAlert = .upgradeAvailable
+                    }
+                }
+            }
+        }
+        .onChange(of: vars.hideUpgradeAlerts) { hide in
+            if hide && activeAlert == .upgradeAvailable {
+                activeAlert = nil
             }
         }
         .frame(width: 520, height: 610)

@@ -8,14 +8,35 @@
 import Combine
 import SwiftUI
 
-extension View {
-    @ViewBuilder
-    func formStyleGroupedCompat() -> some View {
-        if #available(macOS 13.0, *) {
-            self.formStyle(.grouped)
-        } else {
-            self.padding()
+private struct LegacyGroupedSection<Content: View>: View {
+    let header: String
+    let content: Content
+    
+    init(header: String, @ViewBuilder content: () -> Content) {
+        self.header = header
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(header)
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .padding(.leading, 16)
+            
+            VStack(alignment: .leading, spacing: 12) {
+                content
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+            )
         }
+        .padding(.horizontal)
     }
 }
 
@@ -23,44 +44,23 @@ private struct SettingsPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
     @Environment(\.sipEnabled) private var sipEnabled
     @State private var showResetAlert = false
-
+    
     var body: some View {
-        Form {
-            if #available(macOS 12.0, *) {
-                Section(header: Text("Settings")) {
-                    Toggle(isOn: $vm.pesterMeWithSipping) {
-                        Text("System Integrity Protection Notices")
-                        if sipEnabled {
-                            Text(
-                                "Show a notice when utilities are blocked by System Integrity Protection."
-                            )
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        } else {
-                            Text(
-                                "These notices will not be shown until System Integrity Protection is enabled."
-                            )
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        }
-                    }
-                    .disabled(!sipEnabled)
+        Group {
+            if #available(macOS 13.0, *) {
+                Form {
+                    panels
                 }
-            }
-            Section(header: Text("Maintenance")) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Button(action: { showResetAlert = true }) {
-                        Label("Delete Persistent Storage", systemImage: "trash")
+                .formStyle(.grouped)
+            } else {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        panels
                     }
-                    Text("Clears all preferences and then quits the app.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    .padding(.vertical)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .padding()
-        .formStyleGroupedCompat()
         .alert(isPresented: $showResetAlert) {
             Alert(
                 title: Text("Delete Persistent Storage?"),
@@ -72,13 +72,78 @@ private struct SettingsPanelView: View {
             )
         }
     }
+    
+    @ViewBuilder
+    private var panels: some View {
+        if #available(macOS 12.0, *) {
+            section(header: "Notices") {
+                Toggle(isOn: $vm.pesterMeWithSipping) {
+                    Text("System-Write Protection")
+                }
+                .disabled(!sipEnabled)
+                if sipEnabled {
+                    Text(
+                        "Show a notice when utilities are blocked by System Integrity Protection."
+                    )
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                } else {
+                    Text(
+                        "These notices will not be shown until System Integrity Protection is enabled."
+                    )
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                }
+            }
+        }
+        
+        section(header: "Upgrades") {
+            Picker("Upgrade Channel", selection: $vm.upgradeChannel) {
+                Text("Release").tag("Release")
+                Text("Internal").tag("Internal")
+            }
+            if vm.upgradeChannel == "Internal" {
+                Text("Internal builds are pre-release versions and may be unstable.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            
+            Toggle("Hide Upgrade Notices", isOn: $vm.hideUpgradeAlerts)
+            Toggle("Delete Backup on Startup", isOn: $vm.deleteBackupOnStartup)
+        }
+        
+        section(header: "Maintenance") {
+            VStack(alignment: .leading, spacing: 12) {
+                Button(action: { showResetAlert = true }) {
+                    Label("Delete Persistent Storage", systemImage: "trash")
+                }
+                Text("Clears all preferences and then quits the app.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+    
+    @ViewBuilder
+    private func section<Content: View>(header: String, @ViewBuilder content: () -> Content) -> some View {
+        if #available(macOS 13.0, *) {
+            Section(header: Text(header)) {
+                content()
+            }
+        } else {
+            LegacyGroupedSection(header: header) {
+                content()
+            }
+        }
+    }
 }
 
 private struct AcknowledgementsPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
     @State private var showResetAlert = false
     @Environment(\.openURL) private var openURL
-
+    
     var body: some View {
         List {
             Section(header: Text("Sources")) {
@@ -101,7 +166,7 @@ private struct AcknowledgementsPanelView: View {
                         }
                     }
                     .buttonStyle(.plain)
-
+                    
                     Button(action: {
                         openURL(
                             URL(
@@ -134,7 +199,7 @@ private struct AcknowledgementsPanelView: View {
                         }
                     }
                     .buttonStyle(.plain)
-
+                    
                     Button(action: { openURL(URL(string: "https://github.com/1davi")!) }) {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
@@ -142,11 +207,11 @@ private struct AcknowledgementsPanelView: View {
                                 Text("Tester").font(.subheadline).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "screwdriver.fill").foregroundColor(.green)
+                            Image(systemName: "gearshape").foregroundColor(.green)
                         }
                     }
                     .buttonStyle(.plain)
-
+                    
                     Button(action: { openURL(URL(string: "https://github.com/aspauldingcode")!) }) {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
@@ -154,11 +219,11 @@ private struct AcknowledgementsPanelView: View {
                                 Text("Tester").font(.subheadline).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "screwdriver.fill").foregroundColor(.green)
+                            Image(systemName: "gearshape").foregroundColor(.green)
                         }
                     }
                     .buttonStyle(.plain)
-
+                    
                     Button(action: { openURL(URL(string: "https://github.com/MTACS")!) }) {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
@@ -166,11 +231,11 @@ private struct AcknowledgementsPanelView: View {
                                 Text("Tester").font(.subheadline).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "screwdriver.fill").foregroundColor(.green)
+                            Image(systemName: "gearshape").foregroundColor(.green)
                         }
                     }
                     .buttonStyle(.plain)
-
+                    
                     Button(action: { openURL(URL(string: "https://github.com/oliviaiacovou")!) }) {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
@@ -178,7 +243,7 @@ private struct AcknowledgementsPanelView: View {
                                 Text("Tester").font(.subheadline).foregroundColor(.secondary)
                             }
                         } icon: {
-                            Image(systemName: "screwdriver.fill").foregroundColor(.green)
+                            Image(systemName: "gearshape").foregroundColor(.green)
                         }
                     }
                     .buttonStyle(.plain)
@@ -191,7 +256,7 @@ private struct AcknowledgementsPanelView: View {
 enum Panel: String, CaseIterable, Identifiable, Hashable, Codable {
     case settings = "Settings"
     case acknowledge = "Acknowledgements"
-
+    
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -208,12 +273,7 @@ enum Panel: String, CaseIterable, Identifiable, Hashable, Codable {
     var systemImage: String {
         switch self {
         case .settings: return "gear"
-        case .acknowledge:
-            if #available(macOS 13.0, *) {
-                return "star.square.on.square"
-            } else {
-                return "star.fill"
-            }
+        case .acknowledge: return "star.fill"
         }
     }
 }
@@ -223,33 +283,48 @@ final class ConfigurationViewModel: ObservableObject {
     @Published private(set) var backStack: [Panel] = []
     @Published private(set) var forwardStack: [Panel] = []
     private var isJumpingViaHistory = false
-
+    
     @Published var pesterMeWithSipping: Bool {
         didSet { vars.pesterMeWithSipping = pesterMeWithSipping }
     }
-
+    
+    @Published var upgradeChannel: String {
+        didSet { vars.upgradeChannel = upgradeChannel }
+    }
+    
+    @Published var hideUpgradeAlerts: Bool {
+        didSet { vars.hideUpgradeAlerts = hideUpgradeAlerts }
+    }
+    
+    @Published var deleteBackupOnStartup: Bool {
+        didSet { vars.deleteBackupOnStartup = deleteBackupOnStartup }
+    }
+    
     private let vars: PersistentVariables
-
+    
     init(initialSelection: Panel? = .settings, vars: PersistentVariables = PersistentVariables()) {
         self.vars = vars
         self.selection = initialSelection
         self.pesterMeWithSipping = vars.pesterMeWithSipping
+        self.upgradeChannel = vars.upgradeChannel
+        self.hideUpgradeAlerts = vars.hideUpgradeAlerts
+        self.deleteBackupOnStartup = vars.deleteBackupOnStartup
     }
-
+    
     func goBack() {
         guard let previous = backStack.popLast() else { return }
         if let current = selection { forwardStack.append(current) }
         isJumpingViaHistory = true
         selection = previous
     }
-
+    
     func goForward() {
         guard let next = forwardStack.popLast() else { return }
         if let current = selection { backStack.append(current) }
         isJumpingViaHistory = true
         selection = next
     }
-
+    
     func onSelectionChanged(oldValue: Panel?, newValue: Panel?) {
         guard !isJumpingViaHistory else {
             isJumpingViaHistory = false
@@ -258,10 +333,10 @@ final class ConfigurationViewModel: ObservableObject {
         if let old = oldValue { backStack.append(old) }
         forwardStack.removeAll()
     }
-
+    
     var canGoBack: Bool { !backStack.isEmpty }
     var canGoForward: Bool { !forwardStack.isEmpty }
-
+    
     func theThirdImpact() {
         vars.theThirdImpact()
     }
@@ -269,7 +344,7 @@ final class ConfigurationViewModel: ObservableObject {
 
 private struct PanelList: View {
     @Binding var selection: Panel?
-
+    
     var body: some View {
         if #available(macOS 13.0, *) {
             List(selection: $selection) {
@@ -297,7 +372,7 @@ private struct PanelList: View {
 
 private struct PanelDetail: View {
     @ObservedObject var vm: ConfigurationViewModel
-
+    
     var body: some View {
         Group {
             switch vm.selection {
@@ -316,7 +391,7 @@ private struct PanelDetail: View {
 struct ConfigurationRootView: View {
     @Environment(\.sipEnabled) private var sipEnabled
     @StateObject private var vm = ConfigurationViewModel()
-
+    
     var body: some View {
         if #available(macOS 14.0, *) {
             NavigationSplitView {
@@ -335,12 +410,12 @@ struct ConfigurationRootView: View {
                                 .help("Go Back")
                                 .disabled(!vm.canGoBack)
                                 .padding(.leading, 3)
-
+                                
                                 if #available(macOS 26.0, *) {
                                     Divider()
                                         .frame(height: 18)
                                 }
-
+                                
                                 Button(action: vm.goForward) {
                                     Image(systemName: "chevron.right")
                                 }
@@ -361,7 +436,7 @@ struct ConfigurationRootView: View {
                     .tabItem {
                         Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
                     }
-
+                
                 AcknowledgementsPanelView(vm: vm)
                     .tabItem {
                         Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)

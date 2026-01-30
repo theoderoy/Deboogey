@@ -68,7 +68,7 @@ struct ws_overlayLauncherView: View {
                                 .overlay(
                                     VStack(spacing: 12) {
                                         Image(systemName: "macwindow").font(.system(size: 48, weight: .thin))
-                                        Text("WindowServer Diagnostics").font(.headline)
+                                        Text("SkyLight Diagnostics").font(.headline)
                                     }.foregroundColor(.secondary)
                                 )
                         }
@@ -79,7 +79,7 @@ struct ws_overlayLauncherView: View {
                     .cornerRadius(12)
                     .padding(.horizontal)
 
-                    Text("Look inside WindowServer and view all kinds of diagnostic information, such as macOS' refresh rate & application bounding boxes.")
+                    Text("Take a look at the system's internal diagnostics, such as the refresh rate, collision boxes, screen activity and more.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -127,7 +127,7 @@ struct ws_overlayLauncherView: View {
         }
         .frame(width: 520, height: 540)
         .disabled(isRunning)
-        .navigationTitle("WindowServer Diagnostics")
+        .navigationTitle("SkyLight Diagnostics")
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") { presentationMode.wrappedValue.dismiss() }.disabled(isRunning)
