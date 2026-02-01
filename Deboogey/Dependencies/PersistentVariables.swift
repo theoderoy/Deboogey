@@ -15,6 +15,7 @@ public final class PersistentVariables: ObservableObject {
         static let upgradeChannel = "upgradeChannel"
         static let hideUpgradeAlerts = "hideUpgradeAlerts"
         static let deleteBackupOnStartup = "deleteBackupOnStartup"
+        static let hasShownWhatsNew = "hasShownWhatsNew"
     }
 
     private let defaults: UserDefaults
@@ -23,7 +24,8 @@ public final class PersistentVariables: ObservableObject {
         Keys.pesterMeWithSipping: true,
         Keys.upgradeChannel: "Release",
         Keys.hideUpgradeAlerts: false,
-        Keys.deleteBackupOnStartup: false
+        Keys.deleteBackupOnStartup: false,
+        Keys.hasShownWhatsNew: false
     ]
 
     @Published public var pesterMeWithSipping: Bool {
@@ -41,6 +43,10 @@ public final class PersistentVariables: ObservableObject {
     @Published public var deleteBackupOnStartup: Bool {
         didSet { defaults.set(deleteBackupOnStartup, forKey: Keys.deleteBackupOnStartup) }
     }
+    
+    @Published public var hasShownWhatsNew: Bool {
+        didSet { defaults.set(hasShownWhatsNew, forKey: Keys.hasShownWhatsNew) }
+    }
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -49,6 +55,7 @@ public final class PersistentVariables: ObservableObject {
         self.upgradeChannel = self.defaults.string(forKey: Keys.upgradeChannel) ?? "Release"
         self.hideUpgradeAlerts = self.defaults.bool(forKey: Keys.hideUpgradeAlerts)
         self.deleteBackupOnStartup = self.defaults.bool(forKey: Keys.deleteBackupOnStartup)
+        self.hasShownWhatsNew = self.defaults.bool(forKey: Keys.hasShownWhatsNew)
     }
     
     public func theThirdImpact() {
