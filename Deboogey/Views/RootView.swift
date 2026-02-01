@@ -220,8 +220,8 @@ struct RootView: View {
                 )
             case .upgradeAvailable:
                 return Alert(
-                    title: Text("Upgrade Available"),
-                    message: Text("\(upgradeChecker.formattedLatestVersion) is available.\n\nYou might need to manually code-sign the application after upgrading."),
+                    title: Text("\(upgradeChecker.formattedLatestVersion) is available"),
+                    message: Text("You might need to manually code-sign the application after upgrading."),
                     primaryButton: .default(Text("Upgrade"), action: {
                         upgradeChecker.upgradeAvailable = false
                         upgradeChecker.proceedWithUpdate()
