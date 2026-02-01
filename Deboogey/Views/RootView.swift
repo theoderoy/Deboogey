@@ -48,6 +48,7 @@ struct RootView: View {
     @State private var activeAlert: ActiveAlert?
     @State private var showingLadybugLauncher = false
     @State private var showingws_overlayLauncher = false
+    @State private var showingWhatsNew = false
     @StateObject private var vars = PersistentVariables()
     @ObservedObject var upgradeChecker = UpgradeChecker.shared
     @Environment(\.sipEnabled) private var sipEnabled
@@ -202,6 +203,14 @@ struct RootView: View {
                 }
                 .frame(width: 520, height: 650)
             }
+
+        }
+        .sheet(isPresented: $showingWhatsNew) {
+            WhatsNewView {
+                showingWhatsNew = false
+                vars.hasShownWhatsNew = true
+                performStartupChecks()
+            }
         }
         .alert(item: $activeAlert) { item in
             switch item {
@@ -223,6 +232,7 @@ struct RootView: View {
                     title: Text("\(upgradeChecker.formattedLatestVersion) is available"),
                     message: Text("You might need to manually code-sign the application after upgrading."),
                     primaryButton: .default(Text("Upgrade"), action: {
+                        vars.hasShownWhatsNew = false
                         upgradeChecker.upgradeAvailable = false
                         upgradeChecker.proceedWithUpdate()
                     }),
@@ -233,15 +243,11 @@ struct RootView: View {
             }
         }
         .onAppear {
-            if #available(macOS 12.0, *) {
-                if sipEnabled == true && vars.pesterMeWithSipping == true {
-                    DispatchQueue.main.async {
-                        activeAlert = .sipNotice
-                    }
-                }
+            if !vars.hasShownWhatsNew {
+                showingWhatsNew = true
+            } else {
+                performStartupChecks()
             }
-            upgradeChecker.cleanUpOldApp()
-            upgradeChecker.checkForUpdates()
         }
         .onChange(of: upgradeChecker.upgradeAvailable) { available in
             if available && activeAlert == nil && !vars.hideUpgradeAlerts {
@@ -263,6 +269,18 @@ struct RootView: View {
             }
         }
         .frame(width: 520, height: 610)
+    }
+
+    private func performStartupChecks() {
+        if #available(macOS 12.0, *) {
+            if sipEnabled == true && vars.pesterMeWithSipping == true {
+                DispatchQueue.main.async {
+                    activeAlert = .sipNotice
+                }
+            }
+        }
+        upgradeChecker.cleanUpOldApp()
+        upgradeChecker.checkForUpdates()
     }
 }
 

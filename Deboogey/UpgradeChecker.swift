@@ -1,3 +1,10 @@
+//
+//  UpgradeChecker.swift
+//  Deboogey
+//
+//  Created by Théo De Roy on 30/01/2026.
+//
+
 import Foundation; import AppKit; import Combine
 
 class UpgradeChecker: ObservableObject {
