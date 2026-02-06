@@ -108,7 +108,7 @@ private struct SettingsPanelView: View {
                     .foregroundColor(.secondary)
             }
             
-            Toggle("Hide Upgrade Notices", isOn: $vm.hideUpgradeAlerts)
+            Toggle("Hide Automatic Notices", isOn: $vm.hideUpgradeAlerts)
             Toggle("Delete Backup on Startup", isOn: $vm.deleteBackupOnStartup)
         }
         

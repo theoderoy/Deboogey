@@ -9,7 +9,9 @@ import Foundation; import AppKit; import Combine
 
 class UpgradeChecker: ObservableObject {
     static let shared = UpgradeChecker()
+    let manualCheck = PassthroughSubject<Void,Never>()
     @Published var upgradeAvailable: Bool = false
+    @Published var isUpdating: Bool = false
     @Published var latestVersion: String = ""
     @Published var pendingUpdateURL: URL?
     private init() {}
@@ -58,8 +60,10 @@ class UpgradeChecker: ObservableObject {
         return AppVersion.parse(from: short)
     }
 
-    func checkForUpdates() {
-        if UserDefaults.standard.bool(forKey: "hideUpgradeAlerts") { return }
+    func requestManualCheck() { manualCheck.send() }
+    
+    func checkForUpdates(force: Bool = false, clearIfNone: Bool = false, completion: ((Bool)->Void)? = nil) {
+        if !force && UserDefaults.standard.bool(forKey: "hideUpgradeAlerts") { DispatchQueue.main.async { completion?(false) }; return }
         
         let local = currentAppVersion
         let desiredChannelRaw = UserDefaults.standard.string(forKey: "upgradeChannel")
@@ -71,7 +75,13 @@ class UpgradeChecker: ObservableObject {
         
         guard let url = URL(string: "https://api.github.com/repos/theoderoy/Deboogey/releases") else { return }
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
-            guard let self = self, let data = data, error == nil else { return }
+            guard let self = self, let data = data, error == nil else {
+                DispatchQueue.main.async {
+                    if clearIfNone { self?.latestVersion = ""; self?.pendingUpdateURL = nil; self?.upgradeAvailable = false }
+                    completion?(false)
+                }
+                return
+            }
             do {
                 if let jsonArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
                     
@@ -81,26 +91,41 @@ class UpgradeChecker: ObservableObject {
                         return v.channel == targetChannel ? (v, r) : nil
                     }
 
-                    if let (latest, json) = releases.sorted(by: { $0.0 < $1.0 }).last {
-                        if latest > local { self.promptUpdate(json: json, version: latest) }
+                    if let (latest, json) = releases.sorted(by: { $0.0 < $1.0 }).last, latest > local {
+                        DispatchQueue.main.async {
+                            self.latestVersion = latest.originalString
+                            if let assets = json["assets"] as? [[String: Any]],
+                               let asset = assets.first(where: { ($0["name"] as? String) == "Deboogey.aar" }),
+                               let dlStr = asset["browser_download_url"] as? String, let dlUrl = URL(string: dlStr) {
+                                self.pendingUpdateURL = dlUrl; self.upgradeAvailable = true; completion?(true)
+                            } else {
+                                if clearIfNone { self.latestVersion = ""; self.pendingUpdateURL = nil; self.upgradeAvailable = false }
+                                completion?(false)
+                            }
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            if clearIfNone { self.latestVersion = ""; self.pendingUpdateURL = nil; self.upgradeAvailable = false }
+                            completion?(false)
+                        }
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        if clearIfNone { self.latestVersion = ""; self.pendingUpdateURL = nil; self.upgradeAvailable = false }
+                        completion?(false)
                     }
                 }
-            } catch { print("Check failed: \(error)") }
+            } catch {
+                DispatchQueue.main.async {
+                    if clearIfNone { self.latestVersion = ""; self.pendingUpdateURL = nil; self.upgradeAvailable = false }
+                    completion?(false)
+                }
+                print("Check failed: \(error)")
+            }
         }.resume()
     }
 
-    private func promptUpdate(json: [String: Any], version: AppVersion) {
-        DispatchQueue.main.async {
-            self.latestVersion = version.originalString
-            if let assets = json["assets"] as? [[String: Any]],
-               let asset = assets.first(where: { ($0["name"] as? String) == "Deboogey.aar" }),
-               let dlStr = asset["browser_download_url"] as? String, let dlUrl = URL(string: dlStr) {
-                self.pendingUpdateURL = dlUrl; self.upgradeAvailable = true
-            }
-        }
-    }
-
-    func proceedWithUpdate() { guard let url = pendingUpdateURL else { return }; downloadAndInstall(from: url) }
+    func proceedWithUpdate() { guard let url = pendingUpdateURL else { return }; isUpdating = true; downloadAndInstall(from: url) }
     var formattedLatestVersion: String {
         let v = AppVersion.parse(from: latestVersion)
         switch v.channel {
@@ -132,14 +157,15 @@ class UpgradeChecker: ObservableObject {
     private func downloadAndInstall(from url: URL) {
         print("Downloading: \(url)")
         URLSession.shared.downloadTask(with: url) { localUrl, _, error in
-            guard let localUrl = localUrl, error == nil else { return }
+            guard let localUrl = localUrl, error == nil else { DispatchQueue.main.async { self.isUpdating = false }; return }
             do {
                 let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
                 try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
                 let archivePath = tempDir.appendingPathComponent("Deboogey.aar")
                 try FileManager.default.moveItem(at: localUrl, to: archivePath)
                 if self.extractArchive(at: archivePath, to: tempDir) { self.installUpdate(from: tempDir) }
-            } catch { print("Update failed: \(error)") }
+                else { DispatchQueue.main.async { self.isUpdating = false } }
+            } catch { DispatchQueue.main.async { self.isUpdating = false }; print("Update failed: \(error)") }
         }.resume()
     }
 
@@ -160,6 +186,6 @@ class UpgradeChecker: ObservableObject {
             try FileManager.default.moveItem(atPath: currentPath, toPath: oldPath)
             try FileManager.default.moveItem(at: newPath, to: URL(fileURLWithPath: currentPath))
             DispatchQueue.main.async { NSApp.terminate(nil) }
-        } catch { print("Install failed: \(error)") }
+        } catch { DispatchQueue.main.async { self.isUpdating = false }; print("Install failed: \(error)") }
     }
 }
