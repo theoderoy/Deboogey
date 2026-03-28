@@ -279,7 +279,7 @@ struct RootView: View {
             case .sipNotice:
                 return Alert(
                     title: Text("System write-dependent features have been disabled."),
-                    message: Text("Some features of this app require System Integrity Protection to be disabled.\n\nThis helps protect your Mac, so disable it if you understand the risks."),
+                    message: Text("Some features of this app require you to loosen System Integrity Protection to allow for process debugging.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks."),
                     primaryButton: .default(Text("Learn More")) {
                         if let url = URL(string: "https://support.apple.com/guide/security/secb7ea06b49/web") {
                             openURL(url)
@@ -333,7 +333,7 @@ struct RootView: View {
                     highlightUpdateCard = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { highlightUpdateCard = false }
                 }
-            } else { activeAlert = .message("No upgrade present at this time.") }
+            } else { activeAlert = .message("No upgrade is present at this time.") }
         }
     }
 }

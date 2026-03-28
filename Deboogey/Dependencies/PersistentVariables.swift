@@ -24,7 +24,7 @@ public final class PersistentVariables: ObservableObject {
         Keys.pesterMeWithSipping: true,
         Keys.upgradeChannel: "Release",
         Keys.hideUpgradeAlerts: false,
-        Keys.deleteBackupOnStartup: false,
+        Keys.deleteBackupOnStartup: true,
         Keys.hasShownWhatsNew: false
     ]
 

@@ -78,18 +78,18 @@ private struct SettingsPanelView: View {
         if #available(macOS 12.0, *) {
             section(header: "Notices") {
                 Toggle(isOn: $vm.pesterMeWithSipping) {
-                    Text("System-Write Protection")
+                    Text("System Integrity Protection")
                 }
                 .disabled(!sipEnabled)
                 if sipEnabled {
                     Text(
-                        "Show a notice when utilities are blocked by System Integrity Protection."
+                        "Show a notice when utilities require security adjustments."
                     )
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 } else {
                     Text(
-                        "These notices will not be shown until System Integrity Protection is enabled."
+                        "These notices will not be shown until System Integrity Protection is adjusted."
                     )
                     .font(.subheadline)
                     .foregroundColor(.secondary)
