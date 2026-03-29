@@ -49,6 +49,10 @@ struct RootView: View {
     @State private var showingLadybugLauncher = false
     @State private var showingws_overlayLauncher = false
     @State private var showingWhatsNew = false
+    @State private var updateCardOpen = false
+    @State private var hideUpdateCard = false
+    @State private var showUpdateCardOverride = false
+    @State private var highlightUpdateCard = false
     @StateObject private var vars = PersistentVariables()
     @ObservedObject var upgradeChecker = UpgradeChecker.shared
     @Environment(\.sipEnabled) private var sipEnabled
@@ -57,13 +61,11 @@ struct RootView: View {
     enum ActiveAlert: Identifiable, Equatable {
         case message(String)
         case sipNotice
-        case upgradeAvailable
         
         var id: String {
             switch self {
             case .message(let str): return "message-\(str)"
             case .sipNotice: return "sipNotice"
-            case .upgradeAvailable: return "upgradeAvailable"
             }
         }
     }
@@ -72,9 +74,7 @@ struct RootView: View {
         VStack {
             if #available(macOS 12.0, *) {
                 if sipEnabled == true && vars.pesterMeWithSipping == true {
-                    Text("System write-dependent features have been disabled.").foregroundColor(
-                        .secondary
-                    )
+                    Text("System write-dependent features have been disabled.")
                     .padding(3)
                     .padding(.bottom, 8)
                 }
@@ -167,6 +167,66 @@ struct RootView: View {
                     .bold()
                     .padding(4)
             }
+            
+            if upgradeChecker.upgradeAvailable && (!vars.hideUpgradeAlerts || showUpdateCardOverride) && (!hideUpdateCard || showUpdateCardOverride) {
+                ZStack {
+                    Rectangle()
+                        .cornerRadius(20)
+                        .foregroundColor(.accentColor)
+                        .opacity(0.1)
+                    if updateCardOpen {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(upgradeChecker.formattedLatestVersion) is available").font(.headline)
+                                Text("You might need to manually code-sign after upgrading.").font(.caption).foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            if upgradeChecker.isUpdating {
+                                ProgressView()
+                            } else {
+                                HStack(spacing: 8) {
+                                    Button("Upgrade") {
+                                        vars.hasShownWhatsNew = false
+                                        upgradeChecker.upgradeAvailable = false
+                                        upgradeChecker.proceedWithUpdate()
+                                    }
+                                    .buttonStyle(.bordered)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                    } else {
+                        Button(action: { updateCardOpen = true }) {
+                            HStack(spacing: 6) {
+                                Text("Upgrade available")
+                                Image(systemName: "chevron.down")
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if updateCardOpen && !upgradeChecker.isUpdating {
+                        VStack {
+                            HStack {
+                                Spacer()
+                                Button(action: { hideUpdateCard = true; showUpdateCardOverride = false; updateCardOpen = false; highlightUpdateCard = false }) {
+                                    Image(systemName: "xmark.circle.fill").foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .padding(6)
+                            }
+                            Spacer()
+                        }
+                    }
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.accentColor.opacity(highlightUpdateCard ? 0.9 : 0), lineWidth: 2)
+                )
+                .scaleEffect(highlightUpdateCard ? 1.02 : 1)
+                .animation(.easeInOut(duration: 0.35), value: highlightUpdateCard)
+                .frame(width: 420, height: updateCardOpen ? 70 : 38)
+                .padding(10)
+            }
         }
         .sheet(isPresented: $showingws_overlayLauncher) {
             if #available(macOS 13.0, *) {
@@ -219,26 +279,13 @@ struct RootView: View {
             case .sipNotice:
                 return Alert(
                     title: Text("System write-dependent features have been disabled."),
-                    message: Text("Some features of this app require System Integrity Protection to be disabled.\n\nThis helps protect your Mac, so disable it if you understand the risks."),
+                    message: Text("Some features of this app require you to loosen System Integrity Protection to allow for process debugging.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks."),
                     primaryButton: .default(Text("Learn More")) {
                         if let url = URL(string: "https://support.apple.com/guide/security/secb7ea06b49/web") {
                             openURL(url)
                         }
                     },
                     secondaryButton: .cancel(Text("OK"))
-                )
-            case .upgradeAvailable:
-                return Alert(
-                    title: Text("\(upgradeChecker.formattedLatestVersion) is available"),
-                    message: Text("You might need to manually code-sign the application after upgrading."),
-                    primaryButton: .default(Text("Upgrade"), action: {
-                        vars.hasShownWhatsNew = false
-                        upgradeChecker.upgradeAvailable = false
-                        upgradeChecker.proceedWithUpdate()
-                    }),
-                    secondaryButton: .cancel {
-                        upgradeChecker.upgradeAvailable = false
-                    }
                 )
             }
         }
@@ -249,24 +296,14 @@ struct RootView: View {
                 performStartupChecks()
             }
         }
-        .onChange(of: upgradeChecker.upgradeAvailable) { available in
-            if available && activeAlert == nil && !vars.hideUpgradeAlerts {
-                activeAlert = .upgradeAvailable
-            }
+        .onReceive(upgradeChecker.manualCheck) { _ in
+            runManualCheck()
         }
-        .onChange(of: activeAlert) { newValue in
-            if newValue == nil && upgradeChecker.upgradeAvailable {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    if activeAlert == nil && !vars.hideUpgradeAlerts {
-                        activeAlert = .upgradeAvailable
-                    }
-                }
-            }
+        .onChange(of: upgradeChecker.upgradeAvailable) { available in
+            if available && !vars.hideUpgradeAlerts { hideUpdateCard = false; showUpdateCardOverride = false; updateCardOpen = true }
         }
         .onChange(of: vars.hideUpgradeAlerts) { hide in
-            if hide && activeAlert == .upgradeAvailable {
-                activeAlert = nil
-            }
+            if hide { updateCardOpen = false; hideUpdateCard = true; showUpdateCardOverride = false }
         }
         .frame(width: 520, height: 610)
     }
@@ -281,6 +318,23 @@ struct RootView: View {
         }
         upgradeChecker.cleanUpOldApp()
         upgradeChecker.checkForUpdates()
+    }
+
+    private func runManualCheck() {
+        upgradeChecker.checkForUpdates(force: true, clearIfNone: true) { found in
+            if found {
+                if updateCardOpen {
+                    vars.hasShownWhatsNew = false
+                    upgradeChecker.upgradeAvailable = false
+                    upgradeChecker.proceedWithUpdate()
+                } else {
+                    showUpdateCardOverride = vars.hideUpgradeAlerts || hideUpdateCard
+                    updateCardOpen = true
+                    highlightUpdateCard = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { highlightUpdateCard = false }
+                }
+            } else { activeAlert = .message("No upgrade is present at this time.") }
+        }
     }
 }
 

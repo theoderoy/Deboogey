@@ -10,6 +10,14 @@ import AppKit
 
 public private(set) var isSIPEnabled: Bool = true
 
+private struct UpgradeCommands: Commands {
+    var body: some Commands {
+        CommandGroup(after: .appInfo) {
+            Button("Check for Upgrades...") { UpgradeChecker.shared.requestManualCheck() }
+        }
+    }
+}
+
 private struct SceneSwitcher: Scene {
     @SceneBuilder
     var body: some Scene {
@@ -62,6 +70,9 @@ struct Root: App {
         WindowGroup {
             RootView()
                 .environment(\.sipEnabled, sipEnabled)
+        }
+        .commands {
+            UpgradeCommands()
         }
 
         SceneSwitcher()
