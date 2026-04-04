@@ -24,25 +24,23 @@ struct WhatsNewView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
                 
-                Text("Changes")
-                    .font(.title2)
-                    .fontWeight(.medium)
+                Text(
+                    "What's changed in "
+                        + (shortVersion.isEmpty ? "" : "\(shortVersion)")
+                        + (buildNumber.isEmpty
+                            ? "" : shortVersion.isEmpty ? "\(buildNumber)" : " \(buildNumber)")
+                )
+                .font(.title2)
+                .fontWeight(.medium)
             }
             .padding(.top, 40)
             
             VStack(alignment: .leading, spacing: 25) {
                 FeatureRow(
                     icon: "info.circle",
-                    color: .accentColor,
+                    color: .blue,
                     title: "Improvements",
-                    description: "Changes will now be laid out to read in the program itself, like this."
-                )
-                
-                FeatureRow(
-                    icon: "ladybug",
-                    color: .red,
-                    title: "Issues",
-                    description: "Fixed an issue where Upgrade Channels would behave less reliably when a new version is not correctly specified."
+                    description: "Bettered the interactions for Upgrade Channels and it's reliability in varying network conditions. Additionally, upgrading to a new version now deletes the previous version's backup data by default."
                 )
             }
             .padding(.horizontal, 40)
