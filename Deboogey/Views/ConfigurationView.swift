@@ -94,6 +94,15 @@ private struct SettingsPanelView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 }
+                
+                Toggle(isOn: $vm.showNetworkNotices) {
+                    Text("Network Connection")
+                }
+                Text(
+                    "Show a notice when network connection is required for upgrades."
+                )
+                .font(.subheadline)
+                .foregroundColor(.secondary)
             }
         }
         
@@ -288,6 +297,10 @@ final class ConfigurationViewModel: ObservableObject {
         didSet { vars.pesterMeWithSipping = pesterMeWithSipping }
     }
     
+    @Published var showNetworkNotices: Bool {
+        didSet { vars.showNetworkNotices = showNetworkNotices }
+    }
+    
     @Published var upgradeChannel: String {
         didSet { vars.upgradeChannel = upgradeChannel }
     }
@@ -306,6 +319,7 @@ final class ConfigurationViewModel: ObservableObject {
         self.vars = vars
         self.selection = initialSelection
         self.pesterMeWithSipping = vars.pesterMeWithSipping
+        self.showNetworkNotices = vars.showNetworkNotices
         self.upgradeChannel = vars.upgradeChannel
         self.hideUpgradeAlerts = vars.hideUpgradeAlerts
         self.deleteBackupOnStartup = vars.deleteBackupOnStartup

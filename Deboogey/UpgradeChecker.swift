@@ -63,6 +63,18 @@ class UpgradeChecker: ObservableObject {
     func requestManualCheck() { manualCheck.send() }
     
     func checkForUpdates(force: Bool = false, clearIfNone: Bool = false, completion: ((Bool)->Void)? = nil) {
+        guard NetworkMonitor.shared.isConnected else {
+            DispatchQueue.main.async {
+                if clearIfNone {
+                    self.latestVersion = ""
+                    self.pendingUpdateURL = nil
+                    self.upgradeAvailable = false
+                }
+                completion?(false)
+            }
+            return
+        }
+        
         if !force && UserDefaults.standard.bool(forKey: "hideUpgradeAlerts") { DispatchQueue.main.async { completion?(false) }; return }
         
         let local = currentAppVersion

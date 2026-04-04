@@ -55,6 +55,7 @@ struct RootView: View {
     @State private var highlightUpdateCard = false
     @StateObject private var vars = PersistentVariables()
     @ObservedObject var upgradeChecker = UpgradeChecker.shared
+    @ObservedObject var networkMonitor = NetworkMonitor.shared
     @Environment(\.sipEnabled) private var sipEnabled
     @Environment(\.openURL) private var openURL
     
@@ -168,22 +169,31 @@ struct RootView: View {
                     .padding(4)
             }
             
-            if upgradeChecker.upgradeAvailable && (!vars.hideUpgradeAlerts || showUpdateCardOverride) && (!hideUpdateCard || showUpdateCardOverride) {
+            if (upgradeChecker.upgradeAvailable && (!vars.hideUpgradeAlerts || showUpdateCardOverride) && (!hideUpdateCard || showUpdateCardOverride)) || (!networkMonitor.isConnected && !vars.hideUpgradeAlerts && !hideUpdateCard && vars.showNetworkNotices) {
                 ZStack {
                     Rectangle()
                         .cornerRadius(20)
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(!networkMonitor.isConnected && !upgradeChecker.upgradeAvailable ? .orange : .accentColor)
                         .opacity(0.1)
-                    if updateCardOpen {
+                    if updateCardOpen || (!networkMonitor.isConnected && !upgradeChecker.upgradeAvailable && vars.showNetworkNotices) {
                         HStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("\(upgradeChecker.formattedLatestVersion) is available").font(.headline)
-                                Text("You might need to manually code-sign after upgrading.").font(.caption).foregroundColor(.secondary)
+                                if !networkMonitor.isConnected && !upgradeChecker.upgradeAvailable {
+                                    Text("Network connection required").font(.headline)
+                                    Text("Connect to check for upgrades").font(.caption).foregroundColor(.orange)
+                                } else {
+                                    Text("\(upgradeChecker.formattedLatestVersion) is available").font(.headline)
+                                    if !networkMonitor.isConnected {
+                                        Text("Network connection required to download upgrade").font(.caption).foregroundColor(.orange)
+                                    } else {
+                                        Text("You might need to manually code-sign after upgrading.").font(.caption).foregroundColor(.secondary)
+                                    }
+                                }
                             }
                             Spacer()
                             if upgradeChecker.isUpdating {
                                 ProgressView()
-                            } else {
+                            } else if upgradeChecker.upgradeAvailable {
                                 HStack(spacing: 8) {
                                     Button("Upgrade") {
                                         vars.hasShownWhatsNew = false
@@ -191,6 +201,13 @@ struct RootView: View {
                                         upgradeChecker.proceedWithUpdate()
                                     }
                                     .buttonStyle(.bordered)
+                                    .disabled(!networkMonitor.isConnected)
+                                    
+                                    if !networkMonitor.isConnected {
+                                        Image(systemName: "wifi.slash")
+                                            .foregroundColor(.orange)
+                                            .help("No network connection")
+                                    }
                                 }
                             }
                         }
@@ -199,16 +216,26 @@ struct RootView: View {
                         Button(action: { updateCardOpen = true }) {
                             HStack(spacing: 6) {
                                 Text("Upgrade available")
+                                if !networkMonitor.isConnected {
+                                    Image(systemName: "wifi.slash")
+                                        .foregroundColor(.orange)
+                                        .font(.caption)
+                                }
                                 Image(systemName: "chevron.down")
                             }
                         }
                         .buttonStyle(.plain)
                     }
-                    if updateCardOpen && !upgradeChecker.isUpdating {
+                    if (updateCardOpen || (!networkMonitor.isConnected && !upgradeChecker.upgradeAvailable && vars.showNetworkNotices)) && !upgradeChecker.isUpdating {
                         VStack {
                             HStack {
                                 Spacer()
-                                Button(action: { hideUpdateCard = true; showUpdateCardOverride = false; updateCardOpen = false; highlightUpdateCard = false }) {
+                                Button(action: { 
+                                    hideUpdateCard = true
+                                    showUpdateCardOverride = false
+                                    updateCardOpen = false
+                                    highlightUpdateCard = false
+                                }) {
                                     Image(systemName: "xmark.circle.fill").foregroundColor(.secondary)
                                 }
                                 .buttonStyle(.plain)
@@ -220,11 +247,11 @@ struct RootView: View {
                 }
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.accentColor.opacity(highlightUpdateCard ? 0.9 : 0), lineWidth: 2)
+                        .stroke((!networkMonitor.isConnected && !upgradeChecker.upgradeAvailable ? Color.orange : Color.accentColor).opacity(highlightUpdateCard ? 0.9 : 0), lineWidth: 2)
                 )
                 .scaleEffect(highlightUpdateCard ? 1.02 : 1)
                 .animation(.easeInOut(duration: 0.35), value: highlightUpdateCard)
-                .frame(width: 420, height: updateCardOpen ? 70 : 38)
+                .frame(width: 420, height: (updateCardOpen || (!networkMonitor.isConnected && !upgradeChecker.upgradeAvailable && vars.showNetworkNotices)) ? 70 : 38)
                 .padding(10)
             }
         }
@@ -285,7 +312,7 @@ struct RootView: View {
                             openURL(url)
                         }
                     },
-                    secondaryButton: .cancel(Text("OK"))
+                    secondaryButton: .default(Text("OK"))
                 )
             }
         }
@@ -321,6 +348,14 @@ struct RootView: View {
     }
 
     private func runManualCheck() {
+        if !networkMonitor.isConnected && !upgradeChecker.upgradeAvailable {
+            if vars.showNetworkNotices {
+                showUpdateCardOverride = true
+                hideUpdateCard = false
+            }
+            return
+        }
+        
         upgradeChecker.checkForUpdates(force: true, clearIfNone: true) { found in
             if found {
                 if updateCardOpen {

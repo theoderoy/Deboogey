@@ -11,9 +11,36 @@ import AppKit
 public private(set) var isSIPEnabled: Bool = true
 
 private struct UpgradeCommands: Commands {
+    @ObservedObject var networkMonitor = NetworkMonitor.shared
+    @ObservedObject var upgradeChecker = UpgradeChecker.shared
+    
     var body: some Commands {
         CommandGroup(after: .appInfo) {
-            Button("Check for Upgrades...") { UpgradeChecker.shared.requestManualCheck() }
+            if #available(macOS 13.0, *) {
+                Button(
+                    upgradeChecker.upgradeAvailable ? "Upgrade to \(upgradeChecker.formattedLatestVersion)" : "Check for Upgrades...",
+                    systemImage: networkMonitor.isConnected ? "network" : "network.slash"
+                ) { 
+                    UpgradeChecker.shared.requestManualCheck() 
+                }
+                .disabled(!networkMonitor.isConnected)
+            } else if #available(macOS 11.0, *) {
+                Button(upgradeChecker.upgradeAvailable ? "Upgrade to \(upgradeChecker.formattedLatestVersion)" : "Check for Upgrades...") { 
+                    UpgradeChecker.shared.requestManualCheck() 
+                }
+                .disabled(!networkMonitor.isConnected)
+            } else {
+                Button("Check for Upgrades...") { 
+                    UpgradeChecker.shared.requestManualCheck() 
+                }
+                .disabled(!networkMonitor.isConnected)
+            }
+            
+            if !networkMonitor.isConnected {
+                Text("Network connection required")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 }
