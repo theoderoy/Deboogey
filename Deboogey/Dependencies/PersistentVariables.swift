@@ -12,6 +12,7 @@ import Combine
 public final class PersistentVariables: ObservableObject {
     private enum Keys {
         static let pesterMeWithSipping = "pesterMeWithSipping"
+        static let showNetworkNotices = "showNetworkNotices"
         static let upgradeChannel = "upgradeChannel"
         static let hideUpgradeAlerts = "hideUpgradeAlerts"
         static let deleteBackupOnStartup = "deleteBackupOnStartup"
@@ -22,6 +23,7 @@ public final class PersistentVariables: ObservableObject {
 
     private static let registeredDefaults: [String: Any] = [
         Keys.pesterMeWithSipping: true,
+        Keys.showNetworkNotices: true,
         Keys.upgradeChannel: "Release",
         Keys.hideUpgradeAlerts: false,
         Keys.deleteBackupOnStartup: true,
@@ -30,6 +32,10 @@ public final class PersistentVariables: ObservableObject {
 
     @Published public var pesterMeWithSipping: Bool {
         didSet { defaults.set(pesterMeWithSipping, forKey: Keys.pesterMeWithSipping) }
+    }
+    
+    @Published public var showNetworkNotices: Bool {
+        didSet { defaults.set(showNetworkNotices, forKey: Keys.showNetworkNotices) }
     }
     
     @Published public var upgradeChannel: String {
@@ -52,6 +58,7 @@ public final class PersistentVariables: ObservableObject {
         self.defaults = defaults
         self.defaults.register(defaults: Self.registeredDefaults)
         self.pesterMeWithSipping = self.defaults.bool(forKey: Keys.pesterMeWithSipping)
+        self.showNetworkNotices = self.defaults.bool(forKey: Keys.showNetworkNotices)
         self.upgradeChannel = self.defaults.string(forKey: Keys.upgradeChannel) ?? "Release"
         self.hideUpgradeAlerts = self.defaults.bool(forKey: Keys.hideUpgradeAlerts)
         self.deleteBackupOnStartup = self.defaults.bool(forKey: Keys.deleteBackupOnStartup)
