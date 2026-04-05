@@ -5,8 +5,8 @@
 //  Created by Théo De Roy on 26/10/2025.
 //
 
-import Combine
 import SwiftUI
+import Combine
 
 private struct LegacyGroupedSection<Content: View>: View {
     let header: String
@@ -42,22 +42,44 @@ private struct LegacyGroupedSection<Content: View>: View {
 
 private struct SettingsPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
-    @Environment(\.sipEnabled) private var sipEnabled
+    @Environment(\.sipSatisfied) private var sipSatisfied
     @State private var showResetAlert = false
+    @AppStorage("deboogey.entityTracker.rowScale") private var rowScale: Double = 1.0
+    @AppStorage("deboogey.entityTracker.scaleTarget") private var scaleTarget: String = "both"
     
     var body: some View {
-        Group {
-            if #available(macOS 13.0, *) {
-                Form {
-                    panels
-                }
-                .formStyle(.grouped)
-            } else {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        panels
+        GeometryReader { geometry in
+            Group {
+                if #available(macOS 13.0, *) {
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            Image("EntityTrackerConfUnit")
+                                .resizable()
+                                .scaledToFit()
+                                .cornerRadius(10)
+                                .padding(16)
+                            
+                            Form {
+                                panels
+                            }
+                            .formStyle(.grouped)
+                        }
                     }
-                    .padding(.vertical)
+                } else {
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            Image("EntityTrackerConfUnit")
+                                .resizable()
+                                .scaledToFit()
+                                .cornerRadius(10)
+                                .padding(16)
+                            
+                            VStack(spacing: 20) {
+                                panels
+                            }
+                            .padding(.vertical)
+                        }
+                    }
                 }
             }
         }
@@ -75,13 +97,55 @@ private struct SettingsPanelView: View {
     
     @ViewBuilder
     private var panels: some View {
+        section(header: "Entity Tracker") {
+            Toggle("Auto-Delete", isOn: $vm.entityTrackerAutoDeleteEnabled)
+            if vm.entityTrackerAutoDeleteEnabled {
+                Picker("Trigger", selection: $vm.entityTrackerAutoDeleteTrigger) {
+                    Text("On Login").tag("login")
+                    Text("On Deboogey Launch").tag("launch")
+                }
+                Picker("Scope", selection: $vm.entityTrackerAutoDeleteScope) {
+                    Text("Ephemerals Only").tag("ephemerals")
+                    Text("All Entries").tag("all")
+                }
+                Text(descriptionForAutoDelete)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        }
+        
+        section {
+            Picker("Display Scale", selection: $scaleTarget) {
+                Text("Icon").tag("icon")
+                Text("Text").tag("text")
+                Text("Both").tag("both")
+            }
+            
+            HStack {
+                Text("Scale Size")
+                Spacer()
+                Group {
+                    if #available(macOS 12.0, *) {
+                        Text("\(Int((rowScale * 100).rounded()))%")
+                            .monospacedDigit()
+                    } else {
+                        Text("\(Int((rowScale * 100).rounded()))%")
+                    }
+                }
+                .foregroundColor(.secondary)
+                
+                Stepper("", value: $rowScale, in: 0.70...1.50, step: 0.05)
+                    .labelsHidden()
+            }
+        }
+        
         if #available(macOS 12.0, *) {
             section(header: "Notices") {
                 Toggle(isOn: $vm.pesterMeWithSipping) {
                     Text("System Integrity Protection")
                 }
-                .disabled(!sipEnabled)
-                if sipEnabled {
+                .disabled(!sipSatisfied)
+                if sipSatisfied {
                     Text(
                         "Show a notice when utilities require security adjustments."
                     )
@@ -120,7 +184,7 @@ private struct SettingsPanelView: View {
             Toggle("Hide Automatic Notices", isOn: $vm.hideUpgradeAlerts)
             Toggle("Delete Backup on Startup", isOn: $vm.deleteBackupOnStartup)
         }
-        
+
         section(header: "Maintenance") {
             VStack(alignment: .leading, spacing: 12) {
                 Button(action: { showResetAlert = true }) {
@@ -134,15 +198,46 @@ private struct SettingsPanelView: View {
         }
     }
     
+    private var descriptionForAutoDelete: String {
+        let what = vm.entityTrackerAutoDeleteScope == "ephemerals"
+            ? "Removes ephemeral entries (e.g. SkyLight Diagnostics) from the log"
+            : "Clears the entire Entity Tracker log"
+        let when = vm.entityTrackerAutoDeleteTrigger == "login"
+            ? "once per login session."
+            : "on every app launch."
+        return "\(what) \(when)"
+    }
+
     @ViewBuilder
-    private func section<Content: View>(header: String, @ViewBuilder content: () -> Content) -> some View {
+    private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
         if #available(macOS 13.0, *) {
-            Section(header: Text(header)) {
-                content()
+            if let header = header {
+                Section(header: Text(header)) {
+                    content()
+                }
+            } else {
+                Section {
+                    content()
+                }
             }
         } else {
-            LegacyGroupedSection(header: header) {
-                content()
+            if let header = header {
+                LegacyGroupedSection(header: header) {
+                    content()
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    content()
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(NSColor.controlBackgroundColor))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+                )
+                .padding(.horizontal)
             }
         }
     }
@@ -154,109 +249,157 @@ private struct AcknowledgementsPanelView: View {
     @Environment(\.openURL) private var openURL
     
     var body: some View {
-        List {
-            Section(header: Text("Sources")) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Button(action: {
-                        openURL(
-                            URL(
-                                string:
-                                    "https://mjtsai.com/blog/2024/03/22/_eventfirstresponderchaindescription/"
-                            )!)
-                    }) {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Cocoa Debug Menu").font(.headline)
-                                Text("Sourced Article").font(.subheadline).foregroundColor(
-                                    .secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "link").foregroundColor(.blue)
-                        }
+        Group {
+            if #available(macOS 13.0, *) {
+                Form {
+                    panels
+                }
+                .formStyle(.grouped)
+            } else {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        panels
                     }
-                    .buttonStyle(.plain)
-                    
-                    Button(action: {
-                        openURL(
-                            URL(
-                                string:
-                                    "https://x.com/khanhduytran0/status/1951637277760999628?s=61")!)
-                    }) {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("enable_overlay").font(.headline)
-                                Text("Sourced Article").font(.subheadline).foregroundColor(
-                                    .secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "link").foregroundColor(.blue)
-                        }
-                    }
-                    .buttonStyle(.plain)
+                    .padding(.vertical)
                 }
             }
-            Section(header: Text("Special Thanks")) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Button(action: { openURL(URL(string: "https://github.com/ogui-775")!) }) {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Salty").font(.headline)
-                                Text("Insight").font(.subheadline).foregroundColor(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "star.fill").foregroundColor(.yellow)
-                        }
+        }
+    }
+    
+    @ViewBuilder
+    private var panels: some View {
+        section(header: "Sources") {
+            Button(action: {
+                openURL(
+                    URL(
+                        string:
+                            "https://mjtsai.com/blog/2024/03/22/_eventfirstresponderchaindescription/"
+                    )!)
+            }) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Cocoa Debug Menu").font(.headline)
+                        Text("Sourced Article").font(.subheadline).foregroundColor(
+                            .secondary)
                     }
-                    .buttonStyle(.plain)
-                    
-                    Button(action: { openURL(URL(string: "https://github.com/1davi")!) }) {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("1davi").font(.headline)
-                                Text("Tester").font(.subheadline).foregroundColor(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "gearshape").foregroundColor(.green)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Button(action: { openURL(URL(string: "https://github.com/aspauldingcode")!) }) {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Alex Spaulding").font(.headline)
-                                Text("Tester").font(.subheadline).foregroundColor(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "gearshape").foregroundColor(.green)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Button(action: { openURL(URL(string: "https://github.com/MTACS")!) }) {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("MTACS").font(.headline)
-                                Text("Tester").font(.subheadline).foregroundColor(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "gearshape").foregroundColor(.green)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Button(action: { openURL(URL(string: "https://github.com/oliviaiacovou")!) }) {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Olivia Iacovou").font(.headline)
-                                Text("Tester").font(.subheadline).foregroundColor(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "gearshape").foregroundColor(.green)
-                        }
-                    }
-                    .buttonStyle(.plain)
+                } icon: {
+                    Image(systemName: "link").foregroundColor(.blue)
                 }
+            }
+            .buttonStyle(.plain)
+            
+            Button(action: {
+                openURL(
+                    URL(
+                        string:
+                            "https://x.com/khanhduytran0/status/1951637277760999628?s=61")!)
+            }) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("enable_overlay").font(.headline)
+                        Text("Sourced Article").font(.subheadline).foregroundColor(
+                            .secondary)
+                    }
+                } icon: {
+                    Image(systemName: "link").foregroundColor(.blue)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+        
+        section(header: "Special Thanks") {
+            Button(action: { openURL(URL(string: "https://github.com/ogui-775")!) }) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Salty").font(.headline)
+                        Text("Insight").font(.subheadline).foregroundColor(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "star.fill").foregroundColor(.yellow)
+                }
+            }
+            .buttonStyle(.plain)
+            
+            Button(action: { openURL(URL(string: "https://github.com/1davi")!) }) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("1davi").font(.headline)
+                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "gearshape").foregroundColor(.green)
+                }
+            }
+            .buttonStyle(.plain)
+            
+            Button(action: { openURL(URL(string: "https://github.com/aspauldingcode")!) }) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Alex Spaulding").font(.headline)
+                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "gearshape").foregroundColor(.green)
+                }
+            }
+            .buttonStyle(.plain)
+            
+            Button(action: { openURL(URL(string: "https://github.com/MTACS")!) }) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("MTACS").font(.headline)
+                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "gearshape").foregroundColor(.green)
+                }
+            }
+            .buttonStyle(.plain)
+            
+            Button(action: { openURL(URL(string: "https://github.com/oliviaiacovou")!) }) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Olivia Iacovou").font(.headline)
+                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "gearshape").foregroundColor(.green)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    
+    @ViewBuilder
+    private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
+        if #available(macOS 13.0, *) {
+            if let header = header {
+                Section(header: Text(header)) {
+                    content()
+                }
+            } else {
+                Section {
+                    content()
+                }
+            }
+        } else {
+            if let header = header {
+                LegacyGroupedSection(header: header) {
+                    content()
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    content()
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(NSColor.controlBackgroundColor))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+                )
+                .padding(.horizontal)
             }
         }
     }
@@ -312,7 +455,19 @@ final class ConfigurationViewModel: ObservableObject {
     @Published var deleteBackupOnStartup: Bool {
         didSet { vars.deleteBackupOnStartup = deleteBackupOnStartup }
     }
-    
+
+    @Published var entityTrackerAutoDeleteEnabled: Bool {
+        didSet { vars.entityTrackerAutoDeleteEnabled = entityTrackerAutoDeleteEnabled }
+    }
+
+    @Published var entityTrackerAutoDeleteScope: String {
+        didSet { vars.entityTrackerAutoDeleteScope = entityTrackerAutoDeleteScope }
+    }
+
+    @Published var entityTrackerAutoDeleteTrigger: String {
+        didSet { vars.entityTrackerAutoDeleteTrigger = entityTrackerAutoDeleteTrigger }
+    }
+
     private let vars: PersistentVariables
     
     init(initialSelection: Panel? = .settings, vars: PersistentVariables = PersistentVariables()) {
@@ -323,6 +478,9 @@ final class ConfigurationViewModel: ObservableObject {
         self.upgradeChannel = vars.upgradeChannel
         self.hideUpgradeAlerts = vars.hideUpgradeAlerts
         self.deleteBackupOnStartup = vars.deleteBackupOnStartup
+        self.entityTrackerAutoDeleteEnabled = vars.entityTrackerAutoDeleteEnabled
+        self.entityTrackerAutoDeleteScope = vars.entityTrackerAutoDeleteScope
+        self.entityTrackerAutoDeleteTrigger = vars.entityTrackerAutoDeleteTrigger
     }
     
     func goBack() {
@@ -403,7 +561,7 @@ private struct PanelDetail: View {
 }
 
 struct ConfigurationRootView: View {
-    @Environment(\.sipEnabled) private var sipEnabled
+    @Environment(\.sipSatisfied) private var sipSatisfied
     @StateObject private var vm = ConfigurationViewModel()
     
     var body: some View {

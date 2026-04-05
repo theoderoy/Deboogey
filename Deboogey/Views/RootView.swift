@@ -48,6 +48,7 @@ struct RootView: View {
     @State private var activeAlert: ActiveAlert?
     @State private var showingLadybugLauncher = false
     @State private var showingws_overlayLauncher = false
+    @State private var showingEntityTracker = false
     @State private var showingWhatsNew = false
     @State private var updateCardOpen = false
     @State private var hideUpdateCard = false
@@ -56,7 +57,7 @@ struct RootView: View {
     @StateObject private var vars = PersistentVariables()
     @ObservedObject var upgradeChecker = UpgradeChecker.shared
     @ObservedObject var networkMonitor = NetworkMonitor.shared
-    @Environment(\.sipEnabled) private var sipEnabled
+    @Environment(\.sipSatisfied) private var sipSatisfied
     @Environment(\.openURL) private var openURL
     
     enum ActiveAlert: Identifiable, Equatable {
@@ -74,7 +75,7 @@ struct RootView: View {
     var body: some View {
         VStack {
             if #available(macOS 12.0, *) {
-                if sipEnabled == true && vars.pesterMeWithSipping == true {
+                if sipSatisfied == true && vars.pesterMeWithSipping == true {
                     Text("System write-dependent features have been disabled.")
                     .padding(3)
                     .padding(.bottom, 8)
@@ -90,7 +91,7 @@ struct RootView: View {
 
                     Text(appName ?? "DEBOOGEY_DEVELOPMENT_STATE")
                         .font(.largeTitle)
-                        .fontWeight(.black)
+                        .fontWeight(.bold)
                     Text(
                         (shortVersion.isEmpty ? "" : "\(shortVersion)")
                             + (buildNumber.isEmpty
@@ -104,23 +105,68 @@ struct RootView: View {
                     .background(Capsule().fill(Color.accentColor))
                 }
                 VStack(spacing: 12) {
-                    LauncherButton(
-                        title: "Cocoa Debug Menu",
-                        icon: "ladybug",
-                        color: .accentColor
-                    ) {
-                        showingLadybugLauncher = true
-                    }
-
-                    if #available(macOS 12.0, *) {
+                    if #available(macOS 13.0, *) {
+                        LadybugWindowLauncher()
+                    } else {
                         LauncherButton(
-                            title: "SkyLight Diagnostics",
-                            icon: "macwindow",
+                            title: "Cocoa Debug Menu",
+                            icon: "ladybug",
                             color: .accentColor
                         ) {
-                            showingws_overlayLauncher = true
+                            showingLadybugLauncher = true
                         }
-                        .disabled(sipEnabled)
+                    }
+
+                    if #available(macOS 13.0, *) {
+                        if sipSatisfied {
+                            HStack {
+                                LauncherButton(
+                                    title: "SkyLight Diagnostics",
+                                    icon: "macwindow",
+                                    color: .accentColor
+                                ) { }
+                                .disabled(true)
+
+                                Button(action: {
+                                    activeAlert = .sipNotice
+                                }) {
+                                    Image(systemName: "questionmark.circle")
+                                        .font(.title2)
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        } else {
+                            WsOverlayWindowLauncher()
+                        }
+                    } else if #available(macOS 12.0, *) {
+                        if sipSatisfied {
+                            HStack {
+                                LauncherButton(
+                                    title: "SkyLight Diagnostics",
+                                    icon: "macwindow",
+                                    color: .accentColor
+                                ) { }
+                                .disabled(true)
+
+                                Button(action: {
+                                    activeAlert = .sipNotice
+                                }) {
+                                    Image(systemName: "questionmark.circle")
+                                        .font(.title2)
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        } else {
+                            LauncherButton(
+                                title: "SkyLight Diagnostics",
+                                icon: "macwindow",
+                                color: .accentColor
+                            ) {
+                                showingws_overlayLauncher = true
+                            }
+                        }
                     } else {
                         HStack {
                             LauncherButton(
@@ -129,7 +175,7 @@ struct RootView: View {
                                 color: .secondary
                             ) { }
                             .disabled(true)
-                            
+
                             Button(action: {
                                 activeAlert = .message("Upgrade to macOS 12 to use SkyLight Diagnostics.")
                             }) {
@@ -138,6 +184,21 @@ struct RootView: View {
                                     .foregroundColor(.secondary)
                             }
                             .buttonStyle(.plain)
+                        }
+                    }
+
+                    Divider()
+                        .frame(width: 220)
+
+                    if #available(macOS 13.0, *) {
+                        EntityTrackerWindowLauncher()
+                    } else {
+                        LauncherButton(
+                            title: "Entity Tracker",
+                            icon: "binoculars",
+                            color: .accentColor
+                        ) {
+                            showingEntityTracker = true
                         }
                     }
 
@@ -256,41 +317,28 @@ struct RootView: View {
             }
         }
         .sheet(isPresented: $showingws_overlayLauncher) {
-            if #available(macOS 13.0, *) {
-                NavigationStack {
+            if #available(macOS 12.0, *) {
+                NavigationView {
                     ws_overlayLauncherView { argument in
-                        print("ws_overlayLauncherView Requested: \(argument)")
+                        EntityTracker.shared.record(source: .wsOverlay, arguments: [argument])
                     }
                 }
-            } else {
-                if #available(macOS 12.0, *) {
-                    NavigationView {
-                        ws_overlayLauncherView { argument in
-                            print("ws_overlayLauncherView Requested: \(argument)")
-                        }
-                    }
-                    .frame(width: 520, height: 540)
-                } else {
-                    EmptyView()
-                }
+                .frame(width: 520, height: 540)
             }
         }
         .sheet(isPresented: $showingLadybugLauncher) {
-            if #available(macOS 13.0, *) {
-                NavigationStack {
-                    LadybugLauncherView { action, domain in
-                        print("LadybugLauncherView Requested: \(action) \(domain)")
-                    }
+            NavigationView {
+                LadybugLauncherView { arguments in
+                    EntityTracker.shared.record(source: .ladybug, arguments: arguments)
                 }
-            } else {
-                NavigationView {
-                    LadybugLauncherView { action, domain in
-                        print("LadybugLauncherView Requested: \(action) \(domain)")
-                    }
-                }
-                .frame(width: 520, height: 650)
             }
-
+            .frame(width: 520, height: 650)
+        }
+        .sheet(isPresented: $showingEntityTracker) {
+            NavigationView {
+                EntityTrackerView()
+            }
+            .frame(width: 560, height: 480)
         }
         .sheet(isPresented: $showingWhatsNew) {
             WhatsNewView {
@@ -306,7 +354,7 @@ struct RootView: View {
             case .sipNotice:
                 return Alert(
                     title: Text("System write-dependent features have been disabled."),
-                    message: Text("Some features of this app require you to loosen System Integrity Protection to allow for process debugging.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks."),
+                    message: Text("Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks."),
                     primaryButton: .default(Text("Learn More")) {
                         if let url = URL(string: "https://support.apple.com/guide/security/secb7ea06b49/web") {
                             openURL(url)
@@ -337,7 +385,7 @@ struct RootView: View {
 
     private func performStartupChecks() {
         if #available(macOS 12.0, *) {
-            if sipEnabled == true && vars.pesterMeWithSipping == true {
+            if sipSatisfied == true && vars.pesterMeWithSipping == true {
                 DispatchQueue.main.async {
                     activeAlert = .sipNotice
                 }
@@ -369,6 +417,36 @@ struct RootView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { highlightUpdateCard = false }
                 }
             } else { activeAlert = .message("No upgrade is present at this time.") }
+        }
+    }
+}
+
+@available(macOS 13.0, *)
+private struct LadybugWindowLauncher: View {
+    @Environment(\.openWindow) var openWindow
+    var body: some View {
+        LauncherButton(title: "Cocoa Debug Menu", icon: "ladybug", color: .accentColor) {
+            openWindow(id: "ladybug-launcher")
+        }
+    }
+}
+
+@available(macOS 13.0, *)
+private struct WsOverlayWindowLauncher: View {
+    @Environment(\.openWindow) var openWindow
+    var body: some View {
+        LauncherButton(title: "SkyLight Diagnostics", icon: "macwindow", color: .accentColor) {
+            openWindow(id: "ws-overlay-launcher")
+        }
+    }
+}
+
+@available(macOS 13.0, *)
+private struct EntityTrackerWindowLauncher: View {
+    @Environment(\.openWindow) var openWindow
+    var body: some View {
+        LauncherButton(title: "Entity Tracker", icon: "binoculars", color: .accentColor) {
+            openWindow(id: "entity-tracker")
         }
     }
 }

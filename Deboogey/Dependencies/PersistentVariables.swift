@@ -17,6 +17,9 @@ public final class PersistentVariables: ObservableObject {
         static let hideUpgradeAlerts = "hideUpgradeAlerts"
         static let deleteBackupOnStartup = "deleteBackupOnStartup"
         static let hasShownWhatsNew = "hasShownWhatsNew"
+        static let entityTrackerAutoDeleteEnabled = "deboogey.entityTracker.autoDeleteEnabled"
+        static let entityTrackerAutoDeleteScope = "deboogey.entityTracker.autoDeleteScope"
+        static let entityTrackerAutoDeleteTrigger = "deboogey.entityTracker.autoDeleteTrigger"
     }
 
     private let defaults: UserDefaults
@@ -27,7 +30,10 @@ public final class PersistentVariables: ObservableObject {
         Keys.upgradeChannel: "Release",
         Keys.hideUpgradeAlerts: false,
         Keys.deleteBackupOnStartup: true,
-        Keys.hasShownWhatsNew: false
+        Keys.hasShownWhatsNew: false,
+        Keys.entityTrackerAutoDeleteEnabled: false,
+        Keys.entityTrackerAutoDeleteScope: "ephemerals",
+        Keys.entityTrackerAutoDeleteTrigger: "login"
     ]
 
     @Published public var pesterMeWithSipping: Bool {
@@ -54,6 +60,18 @@ public final class PersistentVariables: ObservableObject {
         didSet { defaults.set(hasShownWhatsNew, forKey: Keys.hasShownWhatsNew) }
     }
 
+    @Published public var entityTrackerAutoDeleteEnabled: Bool {
+        didSet { defaults.set(entityTrackerAutoDeleteEnabled, forKey: Keys.entityTrackerAutoDeleteEnabled) }
+    }
+
+    @Published public var entityTrackerAutoDeleteScope: String {
+        didSet { defaults.set(entityTrackerAutoDeleteScope, forKey: Keys.entityTrackerAutoDeleteScope) }
+    }
+
+    @Published public var entityTrackerAutoDeleteTrigger: String {
+        didSet { defaults.set(entityTrackerAutoDeleteTrigger, forKey: Keys.entityTrackerAutoDeleteTrigger) }
+    }
+
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         self.defaults.register(defaults: Self.registeredDefaults)
@@ -63,6 +81,9 @@ public final class PersistentVariables: ObservableObject {
         self.hideUpgradeAlerts = self.defaults.bool(forKey: Keys.hideUpgradeAlerts)
         self.deleteBackupOnStartup = self.defaults.bool(forKey: Keys.deleteBackupOnStartup)
         self.hasShownWhatsNew = self.defaults.bool(forKey: Keys.hasShownWhatsNew)
+        self.entityTrackerAutoDeleteEnabled = self.defaults.bool(forKey: Keys.entityTrackerAutoDeleteEnabled)
+        self.entityTrackerAutoDeleteScope = self.defaults.string(forKey: Keys.entityTrackerAutoDeleteScope) ?? "ephemerals"
+        self.entityTrackerAutoDeleteTrigger = self.defaults.string(forKey: Keys.entityTrackerAutoDeleteTrigger) ?? "login"
     }
     
     public func theThirdImpact() {

@@ -37,7 +37,7 @@ struct LadybugLauncherView: View {
     @State private var alertMessage: String? = nil
 
     var bundleID: String? = Bundle.main.bundleIdentifier
-    var onRun: (_ action: String, _ domain: String) -> Void
+    var onRun: (_ arguments: [String]) -> Void
 
     @Environment(\.presentationMode) private var presentationMode
 
@@ -100,6 +100,7 @@ struct LadybugLauncherView: View {
                                 if newValue == .deboogey { autoKill = false }
                             }
                         } else {
+
                             HStack {
                                 Text("Upgrade to macOS 12 for granular targeting.").font(.footnote).foregroundColor(.secondary)
                                 Spacer()
@@ -117,15 +118,13 @@ struct LadybugLauncherView: View {
 
                         Divider().opacity(0.5)
 
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(domain == .global ? "Restart System" : "Auto-Quit App").font(.body)
-                                Text(domain == .deboogey ? "Required for Deboogey" : "Recommended").font(.caption).foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            if domain == .deboogey {
-                                Text("Enabled").font(.caption.bold()).foregroundColor(.blue)
-                            } else {
+                        if domain != .deboogey {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(domain == .global ? "Auto-Restart" : "Auto-Quit").font(.body)
+                                    Text(domain == .global ? "Restarts your Mac immediately" : "Quits the app immediately").font(.caption).foregroundColor(.secondary)
+                                }
+                                Spacer()
                                 Toggle("", isOn: $autoKill).toggleStyle(.switch).labelsHidden()
                             }
                         }
@@ -138,8 +137,13 @@ struct LadybugLauncherView: View {
                         Text(errorMessage).foregroundColor(.red).font(.caption).padding(8)
                     }
 
-                    if domain != .deboogey, !autoKill {
-                        Text("Quit the domain manually to see changes.")
+                    if domain == .deboogey {
+                        Text("Quit Deboogey manually to see changes.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.top, 4)
+                    } else if !autoKill {
+                        Text(domain == .global ? "Restart your Mac manually to see changes." : "Quit the app manually to see changes.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .padding(.top, 4)
@@ -186,7 +190,7 @@ struct LadybugLauncherView: View {
             do {
                 _ = try ladybugLauncher.runLadybugHelper(arguments: arguments)
                 await MainActor.run {
-                    onRun(actionArg, domainArg)
+                    onRun(arguments)
                     isRunning = false
                     presentationMode.wrappedValue.dismiss()
                     if domainArg == "global" && autoKill {
@@ -197,7 +201,6 @@ struct LadybugLauncherView: View {
                             try? process.run()
                         }
                     }
-                    if let bundleID, domainArg == bundleID { NSApplication.shared.terminate(nil) }
                 }
             } catch {
                 await MainActor.run {
@@ -211,8 +214,8 @@ struct LadybugLauncherView: View {
 
 #Preview {
     if #available(macOS 13.0, *) {
-        NavigationStack { LadybugLauncherView(onRun: { _, _ in }) }
+        NavigationStack { LadybugLauncherView(onRun: { _ in }) }
     } else {
-        NavigationView { LadybugLauncherView(onRun: { _, _ in }) }
+        NavigationView { LadybugLauncherView(onRun: { _ in }) }
     }
 }
