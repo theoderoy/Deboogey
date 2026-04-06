@@ -43,22 +43,22 @@ let args = CommandLine.arguments
 func printUsage() {
     let tool = (args.first as NSString?)?.lastPathComponent ?? "deboogeyLadybugHelper"
     let usage = """
-    Usage: \(tool) <enable|disable> <global|BUNDLE_ID> [--autokill]
+    Usage: \(tool) <enable|disable> <global|bundle> [--autokill]
 
       Examples:
         \(tool) enable global
-        \(tool) disable com.example.myapp
-        \(tool) enable com.example.myapp --autokill
+        \(tool) disable example.myapp
+        \(tool) enable example.myapp --autokill
 
       This writes the boolean key `_NS_4445425547` using `defaults`:
         defaults write <domain> _NS_4445425547 -bool <true|false>
 
       Where <domain> is:
         - "-g" (global domain) when you pass `global`
-        - a specific bundle identifier when you pass `BUNDLE_ID`
+        - a bundle identifier (example.myapp) in place of passing `bundle` (macOS 12.0+)
 
       Optional flags:
-        --autokill    After applying, politely ask the target (by bundle id) to quit.
+        --autokill    After applying, politely ask the target to quit.
                       No quit is attempted when this flag is omitted.
 """
     print(usage)
@@ -98,7 +98,7 @@ guard let domain = parseDomain(domainArg) else {
 
 if domain != "-g" {
     if #unavailable(macOS 12.0) {
-        fputs("Targeting individual apps requires macOS 12.0 (Monterey) or later.\n", stderr)
+        fputs("Targeting bundle identifiers requires macOS 12.0 (Monterey) or later.\n", stderr)
         exit(EXIT_FAILURE)
     }
 }

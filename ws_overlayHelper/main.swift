@@ -155,7 +155,7 @@ let args = CommandLine.arguments
 func printUsage() {
     let tool = (args.first ?? "ws_overlayHelper")
     let usage = """
-        Usage: \(tool) <all|contributor|mouse|foreground|hang|0bMASK|MASK>
+        Usage: \(tool) <all|contributor|mouse|foreground|hang|custom>
 
           all         -> 0b1111 (All)
           contributor -> 0b1000 (Contributor Screen)
@@ -163,7 +163,7 @@ func printUsage() {
           foreground  -> 0b0010 (Foreground Debugger)
           hang        -> 0b0001 (Framerate & Hang Sensors)
           
-          You may also pass an explicit mask as binary (e.g. 0b1010) or decimal (e.g. 10).
+          You may also pass an explicit mask as binary (e.g. 0b1010) or decimal (e.g. 10) in place of custom.
           This command must be run as root.
         """
     print(usage)
@@ -194,7 +194,7 @@ guard args.count > 1 else {
 let arg = args[1]
 
 guard geteuid() == 0 else {
-    fputs("This command must be run as root. Try: sudo \(args[0]) \(arg)\n", stderr)
+    fputs("This tool must be run as root. Try: sudo \(args[0]) \(arg)\n", stderr)
     exit(EXIT_FAILURE)
 }
 
