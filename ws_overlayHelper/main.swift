@@ -8,8 +8,6 @@
 import Foundation
 import Darwin
 
-// MARK: - Process Lookup
-
 struct ProcessHelper {
     static func findWindowServerPID() -> Int32? {
         var name = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
@@ -24,8 +22,7 @@ struct ProcessHelper {
         let result = sysctl(&name, UInt32(name.count), &processes, &length, nil, 0)
         if result != 0 { return nil }
         
-        for i in 0..<count {
-            let p = processes[i]
+        for p in processes {
             let comm = withUnsafePointer(to: p.kp_proc.p_comm) {
                 String(cString: UnsafeRawPointer($0).assumingMemoryBound(to: CChar.self))
             }
@@ -37,8 +34,6 @@ struct ProcessHelper {
         return nil
     }
 }
-
-// MARK: - Overlay Injection
 
 struct OverlayEnabler {
     
@@ -60,12 +55,8 @@ struct OverlayEnabler {
         }
     }
 
-    static func resolveLLDBPath() -> String {
-        return "/usr/bin/lldb"
-    }
-    
     static func runLLDB(arguments: [String], input: String? = nil) throws -> (stdout: String, stderr: String, status: Int32) {
-        let lldbPath = resolveLLDBPath()
+        let lldbPath = "/usr/bin/lldb"
         guard FileManager.default.isExecutableFile(atPath: lldbPath) else {
             throw OverlayError.lldbNotFound(path: lldbPath)
         }
@@ -131,9 +122,6 @@ struct OverlayEnabler {
             throw OverlayError.windowServerNotFound
         }
         
-        // Inject call directly (EAFP strategy)
-        // If the symbol 'enable_overlay' is missing, lldb will return an error about an undeclared identifier.
-        // expr -u true -i false -- (void)enable_overlay(mask)
         let execArgs = ["--batch", "--no-lldbinit", "--source-quietly",
                         "--attach-pid", String(pid),
                         "--one-line", "expr -u true -i false -- (void)enable_overlay(0b\(String(mask, radix: 2)))",
@@ -142,20 +130,16 @@ struct OverlayEnabler {
         
         let execResult = try runLLDB(arguments: execArgs)
         
-        // specific check for unsupported symbol
         if execResult.stderr.contains("use of undeclared identifier 'enable_overlay'") ||
             execResult.stdout.contains("use of undeclared identifier 'enable_overlay'") {
             throw OverlayError.symbolNotSupported
         }
         
         if execResult.status != 0 {
-             // If legitimate failure, throw it
              throw OverlayError.executionFailed(status: execResult.status, stderr: execResult.stderr)
         }
         
         if !execResult.stderr.isEmpty {
-            // LLDB prints to stderr sometimes even on success (e.g. process attached/detached)
-            // Filter out common benign messages
              let errors = execResult.stderr.split(separator: "\n").filter {
                  !$0.contains("Process") && !$0.contains("detached") && !$0.contains("attached")
              }
@@ -165,8 +149,6 @@ struct OverlayEnabler {
         }
     }
 }
-
-// MARK: - CLI Entry Point
 
 let args = CommandLine.arguments
 
@@ -204,7 +186,6 @@ func parseMask(from arg: String) -> Int? {
     }
 }
 
-// Main Execution
 guard args.count > 1 else {
     printUsage()
     exit(EXIT_FAILURE)

@@ -56,6 +56,7 @@ struct ws_overlayLauncherView: View {
     @Environment(\.presentationMode) private var presentationMode
 
     var body: some View {
+        VStack(spacing: 0) {
         ScrollView {
             VStack(spacing: 24) {
                 VStack(spacing: 0) {
@@ -125,19 +126,21 @@ struct ws_overlayLauncherView: View {
             }
             .padding(.vertical)
         }
-        .frame(width: 520, height: 540)
         .disabled(isRunning)
-        .navigationTitle("SkyLight Diagnostics")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { presentationMode.wrappedValue.dismiss() }.disabled(isRunning)
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Run") { runHelper() }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(isRunning || (preset == .custom && customMask.isEmpty))
-            }
+        Divider()
+        HStack {
+            Button("Cancel") { presentationMode.wrappedValue.dismiss() }
+                .disabled(isRunning)
+            Spacer()
+            Button("Run") { runHelper() }
+                .keyboardShortcut(.defaultAction)
+                .disabled(isRunning || (preset == .custom && customMask.isEmpty))
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        }
+        .frame(width: 520, height: 540)
+        .navigationTitle("SkyLight Diagnostics")
     }
 
     private func runHelper() {

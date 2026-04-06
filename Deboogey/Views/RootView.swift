@@ -54,6 +54,7 @@ struct RootView: View {
     @State private var hideUpdateCard = false
     @State private var showUpdateCardOverride = false
     @State private var highlightUpdateCard = false
+    @State private var cltInstalled: Bool = true
     @StateObject private var vars = PersistentVariables()
     @ObservedObject var upgradeChecker = UpgradeChecker.shared
     @ObservedObject var networkMonitor = NetworkMonitor.shared
@@ -63,11 +64,13 @@ struct RootView: View {
     enum ActiveAlert: Identifiable, Equatable {
         case message(String)
         case sipNotice
-        
+        case cltNotice
+
         var id: String {
             switch self {
             case .message(let str): return "message-\(str)"
             case .sipNotice: return "sipNotice"
+            case .cltNotice: return "cltNotice"
             }
         }
     }
@@ -136,8 +139,26 @@ struct RootView: View {
                                 }
                                 .buttonStyle(.plain)
                             }
+                        } else if !cltInstalled {
+                            HStack {
+                                LauncherButton(
+                                    title: "SkyLight Diagnostics",
+                                    icon: "macwindow",
+                                    color: .accentColor
+                                ) { }
+                                .disabled(true)
+
+                                Button(action: {
+                                    activeAlert = .cltNotice
+                                }) {
+                                    Image(systemName: "questionmark.circle")
+                                        .font(.title2)
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         } else {
-                            WsOverlayWindowLauncher()
+                            ws_overlayWindowLauncher()
                         }
                     } else if #available(macOS 12.0, *) {
                         if sipSatisfied {
@@ -151,6 +172,24 @@ struct RootView: View {
 
                                 Button(action: {
                                     activeAlert = .sipNotice
+                                }) {
+                                    Image(systemName: "questionmark.circle")
+                                        .font(.title2)
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        } else if !cltInstalled {
+                            HStack {
+                                LauncherButton(
+                                    title: "SkyLight Diagnostics",
+                                    icon: "macwindow",
+                                    color: .accentColor
+                                ) { }
+                                .disabled(true)
+
+                                Button(action: {
+                                    activeAlert = .cltNotice
                                 }) {
                                     Image(systemName: "questionmark.circle")
                                         .font(.title2)
@@ -362,9 +401,19 @@ struct RootView: View {
                     },
                     secondaryButton: .default(Text("OK"))
                 )
+            case .cltNotice:
+                return Alert(
+                    title: Text("Command Line Tools for Xcode are not installed."),
+                    message: Text("Some features of this app require Command Line Tools for Xcode."),
+                    primaryButton: .default(Text("Install")) {
+                        installCLT()
+                    },
+                    secondaryButton: .cancel()
+                )
             }
         }
         .onAppear {
+            checkCLT()
             if !vars.hasShownWhatsNew {
                 showingWhatsNew = true
             } else {
@@ -383,11 +432,43 @@ struct RootView: View {
         .frame(width: 520, height: 610)
     }
 
+    private func installCLT() {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/xcode-select")
+        process.arguments = ["--install"]
+        try? process.run()
+        NSApp.terminate(nil)
+    }
+
+    private func checkCLT() {
+        let xcodeSelect = "/usr/bin/xcode-select"
+        guard FileManager.default.isExecutableFile(atPath: xcodeSelect) else {
+            cltInstalled = false
+            return
+        }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: xcodeSelect)
+        process.arguments = ["-p"]
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+        do {
+            try process.run()
+            process.waitUntilExit()
+            cltInstalled = process.terminationStatus == 0
+        } catch {
+            cltInstalled = false
+        }
+    }
+
     private func performStartupChecks() {
         if #available(macOS 12.0, *) {
             if sipSatisfied == true && vars.pesterMeWithSipping == true {
                 DispatchQueue.main.async {
                     activeAlert = .sipNotice
+                }
+            } else if sipSatisfied == false && !cltInstalled && vars.showCLTNotices == true {
+                DispatchQueue.main.async {
+                    activeAlert = .cltNotice
                 }
             }
         }
@@ -432,7 +513,7 @@ private struct LadybugWindowLauncher: View {
 }
 
 @available(macOS 13.0, *)
-private struct WsOverlayWindowLauncher: View {
+private struct ws_overlayWindowLauncher: View {
     @Environment(\.openWindow) var openWindow
     var body: some View {
         LauncherButton(title: "SkyLight Diagnostics", icon: "macwindow", color: .accentColor) {

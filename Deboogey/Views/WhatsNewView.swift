@@ -37,10 +37,24 @@ struct WhatsNewView: View {
             
             VStack(alignment: .leading, spacing: 25) {
                 FeatureRow(
+                    icon: "binoculars",
+                    color: .accentColor,
+                    title: "Entity Tracker",
+                    description: "Past performed tool actions are now logged and monitorable in real time. Additionally, you can change selected actions and supersede them."
+                )
+                
+                FeatureRow(
                     icon: "info.circle",
                     color: .blue,
                     title: "Improvements",
-                    description: "Bettered the interactions for Upgrade Channels and it's reliability in varying network conditions. Additionally, upgrading to a new version now deletes the previous version's backup data by default."
+                    description: "You'll now be warned if you lack Command Line Tools for Xcode if it's required by a tool, along with this, the app has been made more optimized across the board."
+                )
+                
+                FeatureRow(
+                    icon: "ladybug",
+                    color: .red,
+                    title: "Bug Fixes",
+                    description: "Addressed several issues related to legacy macOS versions, such as unresponsive UI elements and disrespected user-instated configurations."
                 )
             }
             .padding(.horizontal, 40)
