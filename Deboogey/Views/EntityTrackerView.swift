@@ -166,7 +166,7 @@ struct EntityTrackerView: View {
 
     private var supersededIDs: Set<UUID> {
         var seenDomains = Set<String>()
-        var seenWsOverlay = false
+        var seenws_overlay = false
         var result = Set<UUID>()
         for entity in tracker.entities {
             switch entity.source {
@@ -178,10 +178,10 @@ struct EntityTrackerView: View {
                     seenDomains.insert(domain)
                 }
             case .wsOverlay:
-                if seenWsOverlay {
+                if seenws_overlay {
                     result.insert(entity.id)
                 } else {
-                    seenWsOverlay = true
+                    seenws_overlay = true
                 }
             }
         }
@@ -356,9 +356,6 @@ private struct ToolbarModifier: ViewModifier {
     func body(content: Content) -> some View {
         if #available(macOS 13.0, *) {
             content.toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    closeButton
-                }
                 ToolbarItem(placement: .automatic) {
                     sortMenu(iconOnly: true)
                 }

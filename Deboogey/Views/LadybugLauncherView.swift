@@ -42,6 +42,7 @@ struct LadybugLauncherView: View {
     @Environment(\.presentationMode) private var presentationMode
 
     var body: some View {
+        VStack(spacing: 0) {
         ScrollView {
             VStack(spacing: 24) {
                 VStack(spacing: 0) {
@@ -153,19 +154,21 @@ struct LadybugLauncherView: View {
             }
             .padding(.vertical)
         }
-        .frame(width: 520, height: 650)
         .disabled(isRunning)
-        .navigationTitle("Cocoa Debug Menu")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { presentationMode.wrappedValue.dismiss() }.disabled(isRunning)
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Run") { runHelper() }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(isRunning || (domain == .custom && customBundle.isEmpty))
-            }
+        Divider()
+        HStack {
+            Button("Cancel") { presentationMode.wrappedValue.dismiss() }
+                .disabled(isRunning)
+            Spacer()
+            Button("Run") { runHelper() }
+                .keyboardShortcut(.defaultAction)
+                .disabled(isRunning || (domain == .custom && customBundle.isEmpty))
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        }
+        .frame(width: 520, height: 650)
+        .navigationTitle("Cocoa Debug Menu")
         .alert(item: Binding<IdentifiableString?>(
             get: { alertMessage.map { IdentifiableString(value: $0) } },
             set: { _ in alertMessage = nil }

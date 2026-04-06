@@ -7,8 +7,6 @@
 
 import Foundation
 
-// MARK: - Defaults Write
-
 enum ToggleAction: String {
     case enable
     case disable
@@ -40,13 +38,7 @@ struct DefaultsToggler {
     }
 }
 
-// MARK: - Arguments
-
 let args = CommandLine.arguments
-
-func hasAutoKillFlag(_ args: [String]) -> Bool {
-    return args.contains("--autokill")
-}
 
 func printUsage() {
     let tool = (args.first as NSString?)?.lastPathComponent ?? "deboogeyLadybugHelper"
@@ -72,18 +64,12 @@ func printUsage() {
     print(usage)
 }
 
-let autoKillRequested = hasAutoKillFlag(args)
-
-let minimumArgsOK = args.count >= 3
+let autoKillRequested = args.contains("--autokill")
 let positionalArgs = args.filter { $0 != "--autokill" }
 
-guard minimumArgsOK && positionalArgs.count == 3 else {
+guard positionalArgs.count == 3 else {
     printUsage()
     exit(EXIT_FAILURE)
-}
-
-func parseAction(_ string: String) -> ToggleAction? {
-    return ToggleAction(rawValue: string.lowercased())
 }
 
 func parseDomain(_ string: String) -> String? {
@@ -98,7 +84,7 @@ func parseDomain(_ string: String) -> String? {
 let actionArg = positionalArgs[1]
 let domainArg = positionalArgs[2]
 
-guard let action = parseAction(actionArg) else {
+guard let action = ToggleAction(rawValue: actionArg.lowercased()) else {
     fputs("Unrecognized action: \(actionArg)\n", stderr)
     printUsage()
     exit(EXIT_FAILURE)
@@ -154,9 +140,8 @@ func runAppleScript(_ script: String) -> AppleScriptResult {
     process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
     process.arguments = ["-e", script]
 
-    let outPipe = Pipe()
     let errPipe = Pipe()
-    process.standardOutput = outPipe
+    process.standardOutput = FileHandle.nullDevice
     process.standardError = errPipe
     process.standardInput = FileHandle.nullDevice
 

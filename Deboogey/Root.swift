@@ -7,7 +7,6 @@
 
 import SwiftUI
 import AppKit
-import Security
 
 public private(set) var isSIPSatisfied: Bool = true
 
@@ -25,22 +24,23 @@ private struct UpgradeCommands: Commands {
                     UpgradeChecker.shared.requestManualCheck() 
                 }
                 .disabled(!networkMonitor.isConnected)
-            } else if #available(macOS 11.0, *) {
+                
+                if !networkMonitor.isConnected {
+                    Text("Network connection required")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            } else {
                 Button(upgradeChecker.upgradeAvailable ? "Upgrade to \(upgradeChecker.formattedLatestVersion)" : "Check for Upgrades...") { 
                     UpgradeChecker.shared.requestManualCheck() 
                 }
                 .disabled(!networkMonitor.isConnected)
-            } else {
-                Button("Check for Upgrades...") { 
-                    UpgradeChecker.shared.requestManualCheck() 
+                
+                if !networkMonitor.isConnected {
+                    Text("Network connection required")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
-                .disabled(!networkMonitor.isConnected)
-            }
-            
-            if !networkMonitor.isConnected {
-                Text("Network connection required")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
         }
     }
@@ -57,7 +57,7 @@ private struct SceneSwitcher: Scene {
 
         if #available(macOS 13.0, *) {
             LadybugLauncherScene()
-            WsOverlayLauncherScene()
+            ws_overlayLauncherScene()
             EntityTrackerScene()
         }
     }
@@ -73,14 +73,13 @@ private struct LadybugLauncherScene: Scene {
                 }
             }
         }
-        .commandsRemoved()
         .defaultSize(width: 520, height: 650)
         .windowResizability(.contentSize)
     }
 }
 
 @available(macOS 13.0, *)
-private struct WsOverlayLauncherScene: Scene {
+private struct ws_overlayLauncherScene: Scene {
     var body: some Scene {
         Window("SkyLight Diagnostics", id: "ws-overlay-launcher") {
             NavigationStack {
@@ -89,7 +88,6 @@ private struct WsOverlayLauncherScene: Scene {
                 }
             }
         }
-        .commandsRemoved()
         .defaultSize(width: 520, height: 540)
         .windowResizability(.contentSize)
     }
@@ -153,21 +151,16 @@ struct Root: App {
             if trigger == "launch" {
                 shouldDelete = true
             } else {
-                // "login" — only delete once per macOS login session.
                 let sessionKey = "deboogey.entityTracker.lastKnownSessionID"
                 let currentSession = loginSessionID()
                 let storedSession = UserDefaults.standard.string(forKey: sessionKey)
-                if let current = currentSession {
-                    if storedSession == nil {
-                        // First time the setting is active — record session, don't delete yet.
-                        UserDefaults.standard.set(current, forKey: sessionKey)
-                        shouldDelete = false
-                    } else if current != storedSession {
-                        UserDefaults.standard.set(current, forKey: sessionKey)
-                        shouldDelete = true
-                    } else {
-                        shouldDelete = false
-                    }
+                
+                if storedSession == nil {
+                    UserDefaults.standard.set(currentSession, forKey: sessionKey)
+                    shouldDelete = false
+                } else if currentSession != storedSession {
+                    UserDefaults.standard.set(currentSession, forKey: sessionKey)
+                    shouldDelete = true
                 } else {
                     shouldDelete = false
                 }
@@ -207,11 +200,21 @@ extension EnvironmentValues {
     }
 }
 
-private func loginSessionID() -> String? {
-    var sessionID: SecuritySessionId = 0
-    var attrs = SessionAttributeBits(rawValue: 0)
-    guard SessionGetInfo(callerSecuritySession, &sessionID, &attrs) == errSecSuccess else { return nil }
-    return String(sessionID)
+private func loginSessionID() -> String {
+    var mib = [CTL_KERN, KERN_BOOTTIME]
+    var bootTime = timeval()
+    var size = MemoryLayout<timeval>.size
+    
+    let bootTimestamp: Int
+    if sysctl(&mib, 2, &bootTime, &size, nil, 0) == 0 {
+        bootTimestamp = bootTime.tv_sec
+    } else {
+        // Extremely unlikely to instate, but let's not abandon ship guys.
+        bootTimestamp = Int(Date().timeIntervalSince1970)
+    }
+
+    let uid = getuid()
+    return "\(bootTimestamp)-\(uid)"
 }
 
 private enum csrutilChecker {

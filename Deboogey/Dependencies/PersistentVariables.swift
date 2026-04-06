@@ -20,6 +20,7 @@ public final class PersistentVariables: ObservableObject {
         static let entityTrackerAutoDeleteEnabled = "deboogey.entityTracker.autoDeleteEnabled"
         static let entityTrackerAutoDeleteScope = "deboogey.entityTracker.autoDeleteScope"
         static let entityTrackerAutoDeleteTrigger = "deboogey.entityTracker.autoDeleteTrigger"
+        static let showCLTNotices = "showCLTNotices"
     }
 
     private let defaults: UserDefaults
@@ -31,9 +32,10 @@ public final class PersistentVariables: ObservableObject {
         Keys.hideUpgradeAlerts: false,
         Keys.deleteBackupOnStartup: true,
         Keys.hasShownWhatsNew: false,
-        Keys.entityTrackerAutoDeleteEnabled: false,
+        Keys.entityTrackerAutoDeleteEnabled: true,
         Keys.entityTrackerAutoDeleteScope: "ephemerals",
-        Keys.entityTrackerAutoDeleteTrigger: "login"
+        Keys.entityTrackerAutoDeleteTrigger: "login",
+        Keys.showCLTNotices: true
     ]
 
     @Published public var pesterMeWithSipping: Bool {
@@ -72,6 +74,10 @@ public final class PersistentVariables: ObservableObject {
         didSet { defaults.set(entityTrackerAutoDeleteTrigger, forKey: Keys.entityTrackerAutoDeleteTrigger) }
     }
 
+    @Published public var showCLTNotices: Bool {
+        didSet { defaults.set(showCLTNotices, forKey: Keys.showCLTNotices) }
+    }
+
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         self.defaults.register(defaults: Self.registeredDefaults)
@@ -84,6 +90,7 @@ public final class PersistentVariables: ObservableObject {
         self.entityTrackerAutoDeleteEnabled = self.defaults.bool(forKey: Keys.entityTrackerAutoDeleteEnabled)
         self.entityTrackerAutoDeleteScope = self.defaults.string(forKey: Keys.entityTrackerAutoDeleteScope) ?? "ephemerals"
         self.entityTrackerAutoDeleteTrigger = self.defaults.string(forKey: Keys.entityTrackerAutoDeleteTrigger) ?? "login"
+        self.showCLTNotices = self.defaults.bool(forKey: Keys.showCLTNotices)
     }
     
     public func theThirdImpact() {

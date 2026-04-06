@@ -139,8 +139,8 @@ private struct SettingsPanelView: View {
             }
         }
         
-        if #available(macOS 12.0, *) {
-            section(header: "Notices") {
+        section(header: "Notices") {
+            if #available(macOS 12.0, *) {
                 Toggle(isOn: $vm.pesterMeWithSipping) {
                     Text("System Integrity Protection")
                 }
@@ -158,16 +158,25 @@ private struct SettingsPanelView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 }
-                
-                Toggle(isOn: $vm.showNetworkNotices) {
-                    Text("Network Connection")
-                }
-                Text(
-                    "Show a notice when network connection is required for upgrades."
-                )
-                .font(.subheadline)
-                .foregroundColor(.secondary)
             }
+            
+            Toggle(isOn: $vm.showNetworkNotices) {
+                Text("Network Connection")
+            }
+            Text(
+                "Show a notice when network connection is required for upgrades."
+            )
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+
+            Toggle(isOn: $vm.showCLTNotices) {
+                Text("Command Line Tools for Xcode")
+            }
+            Text(
+                "Show a notice when a feature requires Command Line Tools for Xcode to be installed."
+            )
+            .font(.subheadline)
+            .foregroundColor(.secondary)
         }
         
         section(header: "Upgrades") {
@@ -443,6 +452,10 @@ final class ConfigurationViewModel: ObservableObject {
     @Published var showNetworkNotices: Bool {
         didSet { vars.showNetworkNotices = showNetworkNotices }
     }
+
+    @Published var showCLTNotices: Bool {
+        didSet { vars.showCLTNotices = showCLTNotices }
+    }
     
     @Published var upgradeChannel: String {
         didSet { vars.upgradeChannel = upgradeChannel }
@@ -475,6 +488,7 @@ final class ConfigurationViewModel: ObservableObject {
         self.selection = initialSelection
         self.pesterMeWithSipping = vars.pesterMeWithSipping
         self.showNetworkNotices = vars.showNetworkNotices
+        self.showCLTNotices = vars.showCLTNotices
         self.upgradeChannel = vars.upgradeChannel
         self.hideUpgradeAlerts = vars.hideUpgradeAlerts
         self.deleteBackupOnStartup = vars.deleteBackupOnStartup
@@ -566,7 +580,32 @@ struct ConfigurationRootView: View {
     
     var body: some View {
         if #available(macOS 14.0, *) {
-            NavigationSplitView {
+            ModernNavigationView(vm: vm)
+        } else {
+            TabView {
+                SettingsPanelView(vm: vm)
+                    .tabItem {
+                        Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
+                    }
+                
+                AcknowledgementsPanelView(vm: vm)
+                    .tabItem {
+                        Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+                    }
+            }
+            .frame(width: 520, height: 400)
+        }
+    }
+}
+
+@available(macOS 13.0, *)
+private struct ModernNavigationView: View {
+    @ObservedObject var vm: ConfigurationViewModel
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    
+    var body: some View {
+        if #available(macOS 14.0, *) {
+            NavigationSplitView(columnVisibility: $columnVisibility) {
                 PanelList(selection: $vm.selection)
                     .toolbar(removing: .sidebarToggle)
                     .navigationSplitViewColumnWidth(200)
@@ -576,12 +615,27 @@ struct ConfigurationRootView: View {
                     .toolbar {
                         ToolbarItem(placement: .navigation) {
                             HStack {
+                                if columnVisibility == .detailOnly {
+                                    Button(action: {
+                                        columnVisibility = .all
+                                    }) {
+                                        Image(systemName: "sidebar.left")
+                                    }
+                                    .help("Show Sidebar")
+                                    .padding(.leading, 3)
+                                    
+                                    if #available(macOS 26.0, *) {
+                                        Divider()
+                                            .frame(height: 18)
+                                    }
+                                }
+                                
                                 Button(action: vm.goBack) {
                                     Image(systemName: "chevron.left")
                                 }
                                 .help("Go Back")
                                 .disabled(!vm.canGoBack)
-                                .padding(.leading, 3)
+                                .padding(.leading, columnVisibility == .detailOnly ? 0 : 3)
                                 
                                 if #available(macOS 26.0, *) {
                                     Divider()
@@ -603,18 +657,36 @@ struct ConfigurationRootView: View {
                     }
             }
         } else {
-            TabView {
-                SettingsPanelView(vm: vm)
-                    .tabItem {
-                        Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
+            NavigationSplitView {
+                PanelList(selection: $vm.selection)
+                    .navigationSplitViewColumnWidth(200)
+            } detail: {
+                PanelDetail(vm: vm)
+                    .frame(width: 520)
+                    .toolbar {
+                        ToolbarItem(placement: .navigation) {
+                            HStack {
+                                Button(action: vm.goBack) {
+                                    Image(systemName: "chevron.left")
+                                }
+                                .help("Go Back")
+                                .disabled(!vm.canGoBack)
+                                .padding(.leading, 3)
+                                
+                                Button(action: vm.goForward) {
+                                    Image(systemName: "chevron.right")
+                                }
+                                .help("Go Forward")
+                                .disabled(!vm.canGoForward)
+                                .padding(.trailing, 3)
+                            }
+                            .controlSize(.large)
+                        }
                     }
-                
-                AcknowledgementsPanelView(vm: vm)
-                    .tabItem {
-                        Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+                    .onChange(of: vm.selection) { newValue in
+                        vm.onSelectionChanged(oldValue: nil, newValue: newValue)
                     }
             }
-            .frame(width: 520, height: 400)
         }
     }
 }
