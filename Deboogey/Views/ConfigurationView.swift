@@ -45,6 +45,10 @@ private struct SettingsPanelView: View {
     @Environment(\.sipSatisfied) private var sipSatisfied
     @State private var showResetAlert = false
     @AppStorage("deboogey.entityTracker.rowScale") private var rowScale: Double = 1.0
+    @State private var displayScale: Double = {
+        let stored = UserDefaults.standard.double(forKey: "deboogey.entityTracker.rowScale")
+        return stored.isZero ? 1.0 : stored
+    }()
     @AppStorage("deboogey.entityTracker.scaleTarget") private var scaleTarget: String = "both"
     
     var body: some View {
@@ -126,15 +130,21 @@ private struct SettingsPanelView: View {
                 Spacer()
                 Group {
                     if #available(macOS 12.0, *) {
-                        Text("\(Int((rowScale * 100).rounded()))%")
+                        Text("\(Int((displayScale * 100).rounded()))%")
                             .monospacedDigit()
                     } else {
-                        Text("\(Int((rowScale * 100).rounded()))%")
+                        Text("\(Int((displayScale * 100).rounded()))%")
                     }
                 }
                 .foregroundColor(.secondary)
-                
-                Stepper("", value: $rowScale, in: 0.70...1.50, step: 0.05)
+
+                Stepper("", value: Binding(
+                    get: { rowScale },
+                    set: { newValue in
+                        rowScale = newValue
+                        displayScale = newValue
+                    }
+                ), in: 0.70...1.50, step: 0.05)
                     .labelsHidden()
             }
         }
