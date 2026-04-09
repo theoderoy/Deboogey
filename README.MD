@@ -1,10 +1,10 @@
 <div align="center">
 
-![Deboogey](Assets/banner.png)
+![Deboogey](Assets/banner.jpeg)
 
 # Deboogey
 
-**Hardened debug inspector for macOS**
+**A hardened debugging inspector for macOS.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -12,35 +12,16 @@
 
 ## Overview
 
-Deboogey provides low-level debugging tools for macOS applications and system component inspection. It exposes hidden debugging interfaces that are typically disabled in production environments.
+Deboogey allows you to poke at hidden debugging interfaces built into macOS that are typically inaccessible with an easy-to-use graphical interface.
 
-## Features
-
-### 🐞 Ladybug Interface
-Enable or disable the Cocoa Debug Menu flag for applications:
-- **Global Domain**: Apply to all applications system-wide
-- **Per-application**: Target specific apps by bundle ID
-
-### 🪟 WindowServer Diagnostics
-Access WindowServer's debug overlay system:
-- **Framerate & Hang Sensors**: Monitor systemwide performance issues
-- **Foreground Debugger**: Track active window states
-- **Mouse Tracking**: Verbose cursor interactions
-- **Contributor Screen**: View contributors
-- **Custom Masks**: Define your own diagnostic combinations
+"Cocoa Debug Menu" allows you to enable a menu bar item for the target of your choice to access some of it's sandbox parameters. "SkyLight Diagnostics" allows you to enable system-wide diagnostic screens, such as the screen's active framerate or the cursor's X and Y position.
 
 ## Requirements
 
-- macOS 13.0+
-- **SIP disabled** for system-write features
+- macOS Big Sur (or later)
 
-## Technical Details
+### Using SkyLight Diagnostics
+To use this tool, you need to have accounted for the following:
 
-- Built with SwiftUI
-- Includes two helper executables bundled as resources:
-  - `deboogeyLadybugHelper`: Modifies `defaults` settings
-  - `ws_overlayHelper`: Injects debug overlays into WindowServer via LLDB
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file
+- "System Integrity Protection" needs to be loosened to allow for debugging on your machine (you do not need to disable it outright).
+- "Command Line Tools for Xcode" is required on your machine.
