@@ -18,10 +18,11 @@ Deboogey allows you to poke at hidden debugging interfaces built into macOS that
 
 ## Requirements
 
-- macOS Big Sur (or later)
+- **macOS Big Sur** (or later)
 
 ### Using SkyLight Diagnostics
 To use this tool, you need to have accounted for the following:
 
+- **macOS Monterey** (or later)
 - "System Integrity Protection" needs to be loosened to allow for debugging on your machine (you do not need to disable it outright).
 - "Command Line Tools for Xcode" is required on your machine.
