@@ -9,6 +9,20 @@ import Foundation; import AppKit; import Combine
 
 class UpgradeChecker: ObservableObject {
     static let shared = UpgradeChecker()
+    static var supportsUpgradeChannels: Bool {
+        if DebugVariables.simulateUnsupportedUpgradeChannelVersion {
+            return false
+        }
+        if #available(macOS 12.0, *) {
+            return true
+        } else {
+            return false
+        }
+    }
+    static var supportsUpgrades: Bool {
+        supportsUpgradeChannels
+    }
+    static let unsupportedUpgradeMessage = "Upgrade channels are unsupported on this version of macOS.\n\nRelease 3.1 and Internal 14 are the final Deboogey releases that will support macOS Big Sur."
     let manualCheck = PassthroughSubject<Void,Never>()
     @Published var upgradeAvailable: Bool = false
     @Published var isUpdating: Bool = false
@@ -63,6 +77,18 @@ class UpgradeChecker: ObservableObject {
     func requestManualCheck() { manualCheck.send() }
     
     func checkForUpdates(force: Bool = false, clearIfNone: Bool = false, completion: ((Bool)->Void)? = nil) {
+        guard Self.supportsUpgrades else {
+            DispatchQueue.main.async {
+                if clearIfNone {
+                    self.latestVersion = ""
+                    self.pendingUpdateURL = nil
+                    self.upgradeAvailable = false
+                }
+                completion?(false)
+            }
+            return
+        }
+
         guard NetworkMonitor.shared.isConnected else {
             DispatchQueue.main.async {
                 if clearIfNone {
@@ -78,7 +104,7 @@ class UpgradeChecker: ObservableObject {
         if !force && UserDefaults.standard.bool(forKey: "hideUpgradeAlerts") { DispatchQueue.main.async { completion?(false) }; return }
         
         let local = currentAppVersion
-        let desiredChannelRaw = UserDefaults.standard.string(forKey: "upgradeChannel")
+        let desiredChannelRaw = Self.supportsUpgradeChannels ? UserDefaults.standard.string(forKey: "upgradeChannel") : nil
         var targetChannel = local.channel
         if let raw = desiredChannelRaw {
             if raw.caseInsensitiveCompare("Internal") == .orderedSame { targetChannel = .internalBuild }

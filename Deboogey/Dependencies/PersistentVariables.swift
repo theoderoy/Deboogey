@@ -38,6 +38,10 @@ public final class PersistentVariables: ObservableObject {
         Keys.showCLTNotices: true
     ]
 
+    static func registerDefaults(in defaults: UserDefaults = .standard) {
+        defaults.register(defaults: registeredDefaults)
+    }
+
     @Published public var pesterMeWithSipping: Bool {
         didSet { defaults.set(pesterMeWithSipping, forKey: Keys.pesterMeWithSipping) }
     }
@@ -80,7 +84,7 @@ public final class PersistentVariables: ObservableObject {
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        self.defaults.register(defaults: Self.registeredDefaults)
+        Self.registerDefaults(in: self.defaults)
         self.pesterMeWithSipping = self.defaults.bool(forKey: Keys.pesterMeWithSipping)
         self.showNetworkNotices = self.defaults.bool(forKey: Keys.showNetworkNotices)
         self.upgradeChannel = self.defaults.string(forKey: Keys.upgradeChannel) ?? "Release"

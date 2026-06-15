@@ -65,12 +65,14 @@ struct RootView: View {
         case message(String)
         case sipNotice
         case cltNotice
+        case upgradesUnsupported
 
         var id: String {
             switch self {
             case .message(let str): return "message-\(str)"
             case .sipNotice: return "sipNotice"
             case .cltNotice: return "cltNotice"
+            case .upgradesUnsupported: return "upgradesUnsupported"
             }
         }
     }
@@ -269,7 +271,7 @@ struct RootView: View {
                     .padding(4)
             }
             
-            if (upgradeChecker.upgradeAvailable && (!vars.hideUpgradeAlerts || showUpdateCardOverride) && (!hideUpdateCard || showUpdateCardOverride)) || (!networkMonitor.isConnected && !vars.hideUpgradeAlerts && !hideUpdateCard && vars.showNetworkNotices) {
+            if UpgradeChecker.supportsUpgrades && ((upgradeChecker.upgradeAvailable && (!vars.hideUpgradeAlerts || showUpdateCardOverride) && (!hideUpdateCard || showUpdateCardOverride)) || (!networkMonitor.isConnected && !vars.hideUpgradeAlerts && !hideUpdateCard && vars.showNetworkNotices)) {
                 ZStack {
                     Rectangle()
                         .cornerRadius(20)
@@ -410,11 +412,17 @@ struct RootView: View {
                     },
                     secondaryButton: .cancel()
                 )
+            case .upgradesUnsupported:
+                return Alert(
+                    title: Text("Support"),
+                    message: Text(UpgradeChecker.unsupportedUpgradeMessage),
+                    dismissButton: .default(Text("OK"))
+                )
             }
         }
         .onAppear {
             checkCLT()
-            if !vars.hasShownWhatsNew {
+            if DebugVariables.alwaysShowWhatsNewView || !vars.hasShownWhatsNew {
                 showingWhatsNew = true
             } else {
                 performStartupChecks()
@@ -473,10 +481,25 @@ struct RootView: View {
             }
         }
         upgradeChecker.cleanUpOldApp()
+        guard UpgradeChecker.supportsUpgrades else {
+            upgradeChecker.upgradeAvailable = false
+            if !vars.hideUpgradeAlerts {
+                DispatchQueue.main.async {
+                    activeAlert = .upgradesUnsupported
+                }
+            }
+            return
+        }
         upgradeChecker.checkForUpdates()
     }
 
     private func runManualCheck() {
+        guard UpgradeChecker.supportsUpgrades else {
+            upgradeChecker.upgradeAvailable = false
+            activeAlert = .upgradesUnsupported
+            return
+        }
+
         if !networkMonitor.isConnected && !upgradeChecker.upgradeAvailable {
             if vars.showNetworkNotices {
                 showUpdateCardOverride = true
