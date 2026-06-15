@@ -23,9 +23,13 @@ private struct UpgradeCommands: Commands {
                 ) { 
                     UpgradeChecker.shared.requestManualCheck() 
                 }
-                .disabled(!networkMonitor.isConnected)
+                .disabled(!networkMonitor.isConnected || !UpgradeChecker.supportsUpgrades)
                 
-                if !networkMonitor.isConnected {
+                if !UpgradeChecker.supportsUpgrades {
+                    Text("Upgrade channels are unsupported on this version of macOS")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else if !networkMonitor.isConnected {
                     Text("Network connection required")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -34,9 +38,13 @@ private struct UpgradeCommands: Commands {
                 Button(upgradeChecker.upgradeAvailable ? "Upgrade to \(upgradeChecker.formattedLatestVersion)" : "Check for Upgrades...") { 
                     UpgradeChecker.shared.requestManualCheck() 
                 }
-                .disabled(!networkMonitor.isConnected)
+                .disabled(!networkMonitor.isConnected || !UpgradeChecker.supportsUpgrades)
                 
-                if !networkMonitor.isConnected {
+                if !UpgradeChecker.supportsUpgrades {
+                    Text("Upgrade channels are unsupported on this version of macOS")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else if !networkMonitor.isConnected {
                     Text("Network connection required")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -143,6 +151,7 @@ struct Root: App {
         self._sipSatisfied = State(initialValue: isSIPSatisfied)
         print("csrutil: \(isSIPSatisfied)")
 
+        PersistentVariables.registerDefaults()
         if UserDefaults.standard.bool(forKey: "deboogey.entityTracker.autoDeleteEnabled") {
             let scope = UserDefaults.standard.string(forKey: "deboogey.entityTracker.autoDeleteScope") ?? "ephemerals"
             let trigger = UserDefaults.standard.string(forKey: "deboogey.entityTracker.autoDeleteTrigger") ?? "login"
@@ -155,10 +164,7 @@ struct Root: App {
                 let currentSession = loginSessionID()
                 let storedSession = UserDefaults.standard.string(forKey: sessionKey)
                 
-                if storedSession == nil {
-                    UserDefaults.standard.set(currentSession, forKey: sessionKey)
-                    shouldDelete = false
-                } else if currentSession != storedSession {
+                if currentSession != storedSession {
                     UserDefaults.standard.set(currentSession, forKey: sessionKey)
                     shouldDelete = true
                 } else {
@@ -214,7 +220,8 @@ private func loginSessionID() -> String {
     }
 
     let uid = getuid()
-    return "\(bootTimestamp)-\(uid)"
+    let processSession = getsid(0)
+    return "\(bootTimestamp)-\(uid)-\(processSession)"
 }
 
 private enum csrutilChecker {
