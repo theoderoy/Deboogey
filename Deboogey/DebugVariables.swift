@@ -6,6 +6,6 @@
 //
 
 enum DebugVariables {
-    static var simulateUnsupportedUpgradeChannelVersion = true
+    static var simulateUnsupportedUpgradeChannelVersion = false
     static var alwaysShowWhatsNewView = false
 }
