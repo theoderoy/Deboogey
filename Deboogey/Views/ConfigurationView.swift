@@ -173,6 +173,7 @@ private struct SettingsPanelView: View {
             Toggle(isOn: $vm.showNetworkNotices) {
                 Text("Network Connection")
             }
+            .disabled(!vm.supportsUpgrades)
             Text(
                 "Show a notice when network connection is required for upgrades."
             )
@@ -194,6 +195,12 @@ private struct SettingsPanelView: View {
                 Text("Release").tag("Release")
                 Text("Internal").tag("Internal")
             }
+            .disabled(!vm.supportsUpgradeChannels)
+            if !vm.supportsUpgradeChannels {
+                Text(UpgradeChecker.unsupportedUpgradeMessage)
+                    .font(.subheadline)
+                    .foregroundColor(.orange)
+            }
             if vm.upgradeChannel == "Internal" {
                 Text("Internal builds are pre-release versions and may be unstable.")
                     .font(.subheadline)
@@ -201,7 +208,9 @@ private struct SettingsPanelView: View {
             }
             
             Toggle("Hide Automatic Notices", isOn: $vm.hideUpgradeAlerts)
+                .disabled(!vm.supportsUpgrades)
             Toggle("Delete Backup on Startup", isOn: $vm.deleteBackupOnStartup)
+                .disabled(!vm.supportsUpgrades)
         }
 
         section(header: "Maintenance") {
@@ -479,6 +488,9 @@ final class ConfigurationViewModel: ObservableObject {
         didSet { vars.deleteBackupOnStartup = deleteBackupOnStartup }
     }
 
+    var supportsUpgradeChannels: Bool { UpgradeChecker.supportsUpgradeChannels }
+    var supportsUpgrades: Bool { UpgradeChecker.supportsUpgrades }
+
     @Published var entityTrackerAutoDeleteEnabled: Bool {
         didSet { vars.entityTrackerAutoDeleteEnabled = entityTrackerAutoDeleteEnabled }
     }
@@ -499,12 +511,16 @@ final class ConfigurationViewModel: ObservableObject {
         self.pesterMeWithSipping = vars.pesterMeWithSipping
         self.showNetworkNotices = vars.showNetworkNotices
         self.showCLTNotices = vars.showCLTNotices
-        self.upgradeChannel = vars.upgradeChannel
+        self.upgradeChannel = UpgradeChecker.supportsUpgradeChannels ? vars.upgradeChannel : "Release"
         self.hideUpgradeAlerts = vars.hideUpgradeAlerts
         self.deleteBackupOnStartup = vars.deleteBackupOnStartup
         self.entityTrackerAutoDeleteEnabled = vars.entityTrackerAutoDeleteEnabled
         self.entityTrackerAutoDeleteScope = vars.entityTrackerAutoDeleteScope
         self.entityTrackerAutoDeleteTrigger = vars.entityTrackerAutoDeleteTrigger
+
+        if !UpgradeChecker.supportsUpgradeChannels {
+            vars.upgradeChannel = "Release"
+        }
     }
     
     func goBack() {

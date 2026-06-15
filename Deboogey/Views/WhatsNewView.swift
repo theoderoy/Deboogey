@@ -37,24 +37,17 @@ struct WhatsNewView: View {
             
             VStack(alignment: .leading, spacing: 25) {
                 FeatureRow(
-                    icon: "binoculars",
-                    color: .accentColor,
-                    title: "Entity Tracker",
-                    description: "Past performed tool actions are now logged and monitorable in real time. Additionally, you can change selected actions and supersede them."
-                )
-                
-                FeatureRow(
-                    icon: "info.circle",
-                    color: .blue,
-                    title: "Improvements",
-                    description: "You'll now be warned if you lack Command Line Tools for Xcode if it's required by a tool, along with this, the app has been made more optimized across the board."
+                    icon: "exclamationmark.triangle",
+                    color: .yellow,
+                    title: "Support",
+                    description: "Release 3.1 and Internal 14 are the final Deboogey releases that will support macOS Big Sur."
                 )
                 
                 FeatureRow(
                     icon: "ladybug",
                     color: .red,
                     title: "Bug Fixes",
-                    description: "Addressed several issues related to legacy macOS versions, such as unresponsive UI elements and disrespected user-instated configurations."
+                    description: "Addressed an issue where Entity Tracker would not properly take care of deleting ephemeral entries if this was preconfigured by the user to happen automatically."
                 )
             }
             .padding(.horizontal, 40)
