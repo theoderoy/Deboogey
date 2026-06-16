@@ -27,11 +27,11 @@ struct EntityTrackerView: View {
         
         var displayName: String {
             switch self {
-            case .dateNewest: return "Date (Newest First)"
-            case .dateOldest: return "Date (Oldest First)"
-            case .alphabeticalAction: return "Alphabetical (Action)"
-            case .alphabeticalTarget: return "Alphabetical (Target)"
-            case .alphabeticalTool: return "Alphabetical (Tool)"
+            case .dateNewest: return L10n.t("Date (Newest First)")
+            case .dateOldest: return L10n.t("Date (Oldest First)")
+            case .alphabeticalAction: return L10n.t("Alphabetical (Action)")
+            case .alphabeticalTarget: return L10n.t("Alphabetical (Target)")
+            case .alphabeticalTool: return L10n.t("Alphabetical (Tool)")
             }
         }
         
@@ -92,7 +92,7 @@ struct EntityTrackerView: View {
             }
         }
         .frame(width: 560, height: 480)
-        .navigationTitle("Entity Tracker")
+        .navigationTitle(L10n.t("Entity Tracker"))
         .modifier(ToolbarModifier(
             tracker: tracker,
             selection: $selection,
@@ -107,10 +107,10 @@ struct EntityTrackerView: View {
             Image(systemName: "binoculars")
                 .font(.system(size: 48, weight: .thin))
                 .foregroundColor(.secondary)
-            Text("No modifications recorded yet.")
+            Text(L10n.t("No modifications recorded yet."))
                 .font(.headline)
                 .foregroundColor(.secondary)
-            Text("Modifications made via Cocoa Debug Menu and SkyLight Diagnostics will appear here.")
+            Text(L10n.t("Modifications made via Cocoa Debug Menu and SkyLight Diagnostics will appear here."))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -223,7 +223,11 @@ private struct EntityRow: View {
     }()
 
     private var revertLabel: String {
-        entity.ladybugAction == "enable" ? "Revert" : "Swap"
+        entity.ladybugAction == "enable" ? L10n.t("Revert") : L10n.t("Swap")
+    }
+
+    private var revertModificationLabel: String {
+        entity.ladybugAction == "enable" ? L10n.t("Revert Modification") : L10n.t("Swap Modification")
     }
 
     var body: some View {
@@ -247,7 +251,7 @@ private struct EntityRow: View {
                         .font(.system(size: 11 * textScale))
                         .foregroundColor(.secondary)
                     if entity.source.isEphemeral {
-                        Text("Ephemeral")
+                        Text(L10n.t("Ephemeral"))
                             .font(.system(size: 9 * textScale, weight: .bold))
                             .foregroundColor(.orange)
                             .padding(.horizontal, 4)
@@ -256,7 +260,7 @@ private struct EntityRow: View {
                             .cornerRadius(3)
                     }
                     if isSuperseded {
-                        Text("Superseded")
+                        Text(L10n.t("Superseded"))
                             .font(.system(size: 9 * textScale, weight: .bold))
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 4)
@@ -291,17 +295,17 @@ private struct EntityRow: View {
                     }
                     .buttonStyle(.plain)
                     .help(entity.source.isEphemeral
-                        ? "Remove from log (resets automatically on next login)"
-                        : "Remove from log")
+                        ? L10n.t("Remove from log (resets automatically on next login)")
+                        : L10n.t("Remove from log"))
                 }
             }
         }
         .padding(.vertical, 4)
         .contextMenu {
             if entity.revertArguments != nil && !isSuperseded {
-                Button("\(revertLabel) Modification") { onRevert() }
+                Button(revertModificationLabel) { onRevert() }
             }
-            Button("Remove from Log") { onRemoveFromLog() }
+            Button(L10n.t("Remove from Log")) { onRemoveFromLog() }
         }
     }
 }
@@ -379,7 +383,7 @@ private struct ToolbarModifier: ViewModifier {
     }
     
     private var closeButton: some View {
-        Button("Close") { presentationMode.wrappedValue.dismiss() }
+        Button(L10n.t("Close")) { presentationMode.wrappedValue.dismiss() }
             .disabled(revertingID != nil)
     }
     
@@ -399,7 +403,7 @@ private struct ToolbarModifier: ViewModifier {
             }
         } label: {
             if iconOnly {
-                Label("Sort", systemImage: sortOrder.icon)
+                Label(L10n.t("Sort"), systemImage: sortOrder.icon)
             } else {
                 Image(systemName: sortOrder.icon)
             }
@@ -407,26 +411,26 @@ private struct ToolbarModifier: ViewModifier {
         .if(!iconOnly) { view in
             view.frame(width: 42)
         }
-        .help("Sort by \(sortOrder.displayName)")
+        .help(L10n.f("Sort by %@", sortOrder.displayName))
         .disabled(tracker.entities.isEmpty || revertingID != nil)
     }
     
     private func actionsMenu(iconOnly: Bool) -> some View {
         Menu {
             if !selection.isEmpty {
-                Button("Remove \(selection.count) Selected from Log") {
+                Button(L10n.f("Remove %d Selected from Log", selection.count)) {
                     tracker.remove(ids: selection)
                     selection.removeAll()
                 }
             }
             if !supersededIDs.isEmpty {
-                Button("Remove \(supersededIDs.count) Superseded") {
+                Button(L10n.f("Remove %d Superseded", supersededIDs.count)) {
                     tracker.remove(ids: supersededIDs)
                     selection.subtract(supersededIDs)
                 }
             }
             if !tracker.entities.isEmpty {
-                Button("Clear Entire Log…") {
+                Button(L10n.t("Clear Entire Log…")) {
                     tracker.removeAll()
                     selection.removeAll()
                 }
@@ -441,7 +445,7 @@ private struct ToolbarModifier: ViewModifier {
         .if(!iconOnly) { view in
             view.frame(width: 42)
         }
-        .help(iconOnly ? "Actions" : "Log actions")
+        .help(iconOnly ? L10n.t("Actions") : L10n.t("Log actions"))
         .disabled(tracker.entities.isEmpty || revertingID != nil)
     }
 }

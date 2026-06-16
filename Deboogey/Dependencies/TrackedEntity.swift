@@ -20,8 +20,8 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
 
         var displayName: String {
             switch self {
-            case .ladybug:   return "Cocoa Debug Menu"
-            case .wsOverlay: return "SkyLight Diagnostics"
+            case .ladybug:   return L10n.t("Cocoa Debug Menu")
+            case .wsOverlay: return L10n.t("SkyLight Diagnostics")
             }
         }
 
@@ -57,11 +57,20 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
     var summary: String {
         switch source {
         case .ladybug:
-            let action = ladybugAction.map { $0.capitalized } ?? "?"
-            let domain = ladybugDomain.map { $0 == "global" ? "Global" : $0 } ?? "?"
+            let action = localizedLadybugAction ?? "?"
+            let domain = ladybugDomain.map { $0 == "global" ? L10n.t("Global") : $0 } ?? "?"
             return "\(action) — \(domain)"
         case .wsOverlay:
-            return "Mask: \(overlayArgument ?? "?")"
+            return L10n.f("Mask: %@", overlayArgument ?? "?")
+        }
+    }
+
+    private var localizedLadybugAction: String? {
+        switch ladybugAction {
+        case "enable": return L10n.t("Enable")
+        case "disable": return L10n.t("Disable")
+        case let action?: return action.capitalized
+        case nil: return nil
         }
     }
 

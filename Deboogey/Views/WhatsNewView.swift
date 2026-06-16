@@ -25,10 +25,12 @@ struct WhatsNewView: View {
                     .fontWeight(.bold)
                 
                 Text(
-                    "What's changed in "
-                        + (shortVersion.isEmpty ? "" : "\(shortVersion)")
-                        + (buildNumber.isEmpty
-                            ? "" : shortVersion.isEmpty ? "\(buildNumber)" : " \(buildNumber)")
+                    L10n.f(
+                        "What's changed in %@",
+                        (shortVersion.isEmpty ? "" : "\(shortVersion)")
+                            + (buildNumber.isEmpty
+                                ? "" : shortVersion.isEmpty ? "\(buildNumber)" : " \(buildNumber)")
+                    )
                 )
                 .font(.title2)
                 .fontWeight(.medium)
@@ -39,35 +41,62 @@ struct WhatsNewView: View {
                 FeatureRow(
                     icon: "exclamationmark.triangle",
                     color: .yellow,
-                    title: "Support",
-                    description: "Release 3.1 and Internal 14 are the final Deboogey releases that will support macOS Big Sur."
+                    title: "Compatiblilty",
+                    description: "Release 4 and Internal 15 or later require macOS Monterey or later."
                 )
                 
                 FeatureRow(
-                    icon: "ladybug",
-                    color: .red,
-                    title: "Bug Fixes",
-                    description: "Addressed an issue where Entity Tracker would not properly take care of deleting ephemeral entries if this was preconfigured by the user to happen automatically."
+                    icon: "hand.wave",
+                    color: .accentColor,
+                    title: "G'day!",
+                    description: "We don't have a description for this version. Check back with later builds."
                 )
             }
             .padding(.horizontal, 40)
             
             Spacer()
 
-            Button(action: onDismiss) {
-                Text("Continue")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.accentColor)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 40)
-            .padding(.bottom, 40)
+            ContinueButton(title: "Continue", color: .accentColor, action: onDismiss)
+                .padding(.horizontal, 40)
+                .padding(.bottom, 40)
         }
         .frame(width: 500, height: 600)
+    }
+}
+
+private struct ContinueButton: View {
+    let title: String
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(L10n.t(title))
+                .font(.headline)
+                .padding(8)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+        }
+        .continueButtonStyle(tint: color)
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func continueButtonStyle(tint color: Color) -> some View {
+        if #available(macOS 26.0, *) {
+            self
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .tint(color)
+        } else {
+            self
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.roundedRectangle)
+                .controlSize(.large)
+                .tint(color)
+        }
     }
 }
 
@@ -85,10 +114,10 @@ struct FeatureRow: View {
                 .frame(width: 40)
             
             VStack(alignment: .leading, spacing: 5) {
-                Text(title)
+                Text(L10n.t(title))
                     .font(.headline)
                 
-                Text(description)
+                Text(L10n.t(description))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

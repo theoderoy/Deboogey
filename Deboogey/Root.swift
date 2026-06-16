@@ -18,34 +18,26 @@ private struct UpgradeCommands: Commands {
         CommandGroup(after: .appInfo) {
             if #available(macOS 13.0, *) {
                 Button(
-                    upgradeChecker.upgradeAvailable ? "Upgrade to \(upgradeChecker.formattedLatestVersion)" : "Check for Upgrades...",
+                    upgradeChecker.upgradeAvailable ? L10n.f("Upgrade to %@", upgradeChecker.formattedLatestVersion) : L10n.t("Check for Upgrades..."),
                     systemImage: networkMonitor.isConnected ? "network" : "network.slash"
                 ) { 
                     UpgradeChecker.shared.requestManualCheck() 
                 }
-                .disabled(!networkMonitor.isConnected || !UpgradeChecker.supportsUpgrades)
+                .disabled(!networkMonitor.isConnected)
                 
-                if !UpgradeChecker.supportsUpgrades {
-                    Text("Upgrade channels are unsupported on this version of macOS")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                } else if !networkMonitor.isConnected {
-                    Text("Network connection required")
+                if !networkMonitor.isConnected {
+                    Text(L10n.t("Network connection required"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             } else {
-                Button(upgradeChecker.upgradeAvailable ? "Upgrade to \(upgradeChecker.formattedLatestVersion)" : "Check for Upgrades...") { 
+                Button(upgradeChecker.upgradeAvailable ? L10n.f("Upgrade to %@", upgradeChecker.formattedLatestVersion) : L10n.t("Check for Upgrades...")) {
                     UpgradeChecker.shared.requestManualCheck() 
                 }
-                .disabled(!networkMonitor.isConnected || !UpgradeChecker.supportsUpgrades)
+                .disabled(!networkMonitor.isConnected)
                 
-                if !UpgradeChecker.supportsUpgrades {
-                    Text("Upgrade channels are unsupported on this version of macOS")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                } else if !networkMonitor.isConnected {
-                    Text("Network connection required")
+                if !networkMonitor.isConnected {
+                    Text(L10n.t("Network connection required"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -74,12 +66,13 @@ private struct SceneSwitcher: Scene {
 @available(macOS 13.0, *)
 private struct LadybugLauncherScene: Scene {
     var body: some Scene {
-        Window("Cocoa Debug Menu", id: "ladybug-launcher") {
+        Window(L10n.t("Cocoa Debug Menu"), id: "ladybug-launcher") {
             NavigationStack {
                 LadybugLauncherView { arguments in
                     EntityTracker.shared.record(source: .ladybug, arguments: arguments)
                 }
             }
+            .environment(\.locale, L10n.locale)
         }
         .defaultSize(width: 520, height: 650)
         .windowResizability(.contentSize)
@@ -89,12 +82,13 @@ private struct LadybugLauncherScene: Scene {
 @available(macOS 13.0, *)
 private struct ws_overlayLauncherScene: Scene {
     var body: some Scene {
-        Window("SkyLight Diagnostics", id: "ws-overlay-launcher") {
+        Window(L10n.t("SkyLight Diagnostics"), id: "ws-overlay-launcher") {
             NavigationStack {
                 ws_overlayLauncherView { argument in
                     EntityTracker.shared.record(source: .wsOverlay, arguments: [argument])
                 }
             }
+            .environment(\.locale, L10n.locale)
         }
         .defaultSize(width: 520, height: 540)
         .windowResizability(.contentSize)
@@ -104,10 +98,11 @@ private struct ws_overlayLauncherScene: Scene {
 @available(macOS 13.0, *)
 private struct EntityTrackerScene: Scene {
     var body: some Scene {
-        Window("Entity Tracker", id: "entity-tracker") {
+        Window(L10n.t("Entity Tracker"), id: "entity-tracker") {
             NavigationStack {
                 EntityTrackerView()
             }
+            .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
         .defaultSize(width: 560, height: 480)
@@ -119,13 +114,14 @@ private struct EntityTrackerScene: Scene {
 struct ConfigurationModern: Scene {
     @Environment(\.openWindow) private var openWindow
     var body: some Scene {
-        Window("Settings", id: "settings") {
+        Window(L10n.t("Settings"), id: "settings") {
             ConfigurationRootView()
+                .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
         .commands {
             CommandGroup(replacing: .appSettings) {
-                Button("Configuration", systemImage: "gear") {
+                Button(L10n.t("Configuration"), systemImage: "gear") {
                     openWindow(id: "settings")
                 }
                 .keyboardShortcut(",", modifiers: .command)
@@ -138,6 +134,7 @@ struct ConfigurationLegacy: Scene {
     var body: some Scene {
         Settings {
             ConfigurationRootView()
+                .environment(\.locale, L10n.locale)
         }
     }
 }
@@ -186,6 +183,7 @@ struct Root: App {
         WindowGroup {
             RootView()
                 .environment(\.sipSatisfied, sipSatisfied)
+                .environment(\.locale, L10n.locale)
         }
         .commands {
             UpgradeCommands()

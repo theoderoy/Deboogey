@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-@available(macOS 12.0, *)
 struct ws_overlayLauncherView: View {
     enum Preset: String, CaseIterable, Identifiable {
         case all, contributor, mouse, foreground, hang, custom
@@ -15,12 +14,12 @@ struct ws_overlayLauncherView: View {
 
         var title: String {
             switch self {
-            case .all: return "All"
-            case .contributor: return "Contributor"
-            case .mouse: return "Mouse"
-            case .foreground: return "Foreground"
-            case .hang: return "Hang"
-            case .custom: return "Custom…"
+            case .all: return L10n.t("All")
+            case .contributor: return L10n.t("Contributor")
+            case .mouse: return L10n.t("Mouse")
+            case .foreground: return L10n.t("Foreground")
+            case .hang: return L10n.t("Hang")
+            case .custom: return L10n.t("Custom…")
             }
         }
 
@@ -37,12 +36,12 @@ struct ws_overlayLauncherView: View {
 
         var description: String {
             switch self {
-            case .all: return "Enable all overlays (0b1111)."
-            case .contributor: return "Enable contributor screen (0b1000)."
-            case .mouse: return "Enable foreground tracking (0b0100)."
-            case .foreground: return "Enable foreground debugger (0b0010)."
-            case .hang: return "Enable framerate & hang sensors (0b0001)."
-            case .custom: return "Provide a custom mask in binary (0b...) or decimal."
+            case .all: return L10n.t("Enable all overlays (0b1111).")
+            case .contributor: return L10n.t("Enable contributor screen (0b1000).")
+            case .mouse: return L10n.t("Enable foreground tracking (0b0100).")
+            case .foreground: return L10n.t("Enable foreground debugger (0b0010).")
+            case .hang: return L10n.t("Enable framerate & hang sensors (0b0001).")
+            case .custom: return L10n.t("Provide a custom mask in binary (0b...) or decimal.")
             }
         }
     }
@@ -61,15 +60,15 @@ struct ws_overlayLauncherView: View {
             VStack(spacing: 24) {
                 VStack(spacing: 0) {
                     Group {
-                        if Bundle.main.url(forResource: "DEBOOGEY_EDUCATION-WS_OVERLAY_h265", withExtension: "mov") != nil {
-                            EducationPlayerView(name: "DEBOOGEY_EDUCATION-WS_OVERLAY_h265", fileExtension: "mov")
+                        if EducationPlayerView.hasAsset(named: "DEBOOGEY_EDUCATION-WS_OVERLAY_h265") {
+                            EducationPlayerView(assetName: "DEBOOGEY_EDUCATION-WS_OVERLAY_h265")
                         } else {
                             Rectangle()
                                 .fill(Color.secondary.opacity(0.1))
                                 .overlay(
                                     VStack(spacing: 12) {
                                         Image(systemName: "macwindow").font(.system(size: 48, weight: .thin))
-                                        Text("SkyLight Diagnostics").font(.headline)
+                                        Text(L10n.t("SkyLight Diagnostics")).font(.headline)
                                     }.foregroundColor(.secondary)
                                 )
                         }
@@ -80,7 +79,7 @@ struct ws_overlayLauncherView: View {
                     .cornerRadius(12)
                     .padding(.horizontal)
 
-                    Text("Take a look at the system's internal diagnostics, such as the refresh rate, collision boxes, screen activity and more.")
+                    Text(L10n.t("Take a look at the system's internal diagnostics, such as the refresh rate, collision boxes, screen activity and more."))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -90,7 +89,7 @@ struct ws_overlayLauncherView: View {
 
                 VStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("PRESET").font(.caption.bold()).foregroundColor(.secondary).padding(.leading, 8)
+                        Text(L10n.t("PRESET")).font(.caption.bold()).foregroundColor(.secondary).padding(.leading, 8)
                         
                         Picker("", selection: $preset) {
                             ForEach(Preset.allCases) { p in Text(p.title).tag(p) }
@@ -129,10 +128,10 @@ struct ws_overlayLauncherView: View {
         .disabled(isRunning)
         Divider()
         HStack {
-            Button("Cancel") { presentationMode.wrappedValue.dismiss() }
+            Button(L10n.t("Cancel")) { presentationMode.wrappedValue.dismiss() }
                 .disabled(isRunning)
             Spacer()
-            Button("Run") { runHelper() }
+            Button(L10n.t("Run")) { runHelper() }
                 .keyboardShortcut(.defaultAction)
                 .disabled(isRunning || (preset == .custom && customMask.isEmpty))
         }
@@ -140,7 +139,7 @@ struct ws_overlayLauncherView: View {
         .padding(.vertical, 12)
         }
         .frame(width: 520, height: 540)
-        .navigationTitle("SkyLight Diagnostics")
+        .navigationTitle(L10n.t("SkyLight Diagnostics"))
     }
 
     private func runHelper() {
@@ -170,8 +169,6 @@ struct ws_overlayLauncherView: View {
     if #available(macOS 13.0, *) {
         NavigationStack { ws_overlayLauncherView() }
     } else {
-        if #available(macOS 12.0, *) {
-            NavigationView { ws_overlayLauncherView() }
-        }
+        NavigationView { ws_overlayLauncherView() }
     }
 }

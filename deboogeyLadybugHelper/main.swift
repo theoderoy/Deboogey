@@ -55,7 +55,7 @@ func printUsage() {
 
       Where <domain> is:
         - "-g" (global domain) when you pass `global`
-        - a bundle identifier (example.myapp) in place of passing `bundle` (macOS 12.0+)
+        - a bundle identifier (example.myapp) in place of passing `bundle`
 
       Optional flags:
         --autokill    After applying, politely ask the target to quit.
@@ -94,13 +94,6 @@ guard let domain = parseDomain(domainArg) else {
     fputs("Unrecognized domain: \(domainArg). Use 'global' or a bundle identifier (e.g., com.apple.TextEdit).\n", stderr)
     printUsage()
     exit(EXIT_FAILURE)
-}
-
-if domain != "-g" {
-    if #unavailable(macOS 12.0) {
-        fputs("Targeting bundle identifiers requires macOS 12.0 (Monterey) or later.\n", stderr)
-        exit(EXIT_FAILURE)
-    }
 }
 
 func runDefaultsWriteAndMaybeKill(action: ToggleAction, domain: String, autoKill: Bool) {
