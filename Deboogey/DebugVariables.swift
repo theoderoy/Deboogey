@@ -18,6 +18,7 @@ enum DebugVariables {
         }
     }
 
+    static var auxiliaryUpgrades = false
     static var alwaysShowWhatsNewView = false
     static var forcedLanguage: Language? = nil
 }

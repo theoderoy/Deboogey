@@ -136,6 +136,13 @@
 "Upgrade available" = "Upgrade available";
 "Upgrade to %@" = "Upgrade to %@";
 "Upgrades" = "Upgrades";
+"Archiving upgrade" = "Archiving upgrade";
+"Downloading upgrade" = "Downloading upgrade";
+"Extracting upgrade" = "Extracting upgrade";
+"Installing upgrade" = "Installing upgrade";
+"Preparing upgrade" = "Preparing upgrade";
+"Auxiliary upgrades have been enabled." = "Auxiliary upgrades have been enabled.";
+"%@ has been baked successfully." = "%@ has been baked successfully.";
 "We don't have a description for this version. Check back with later builds." = "We don't have a description for this version. Check back with later builds.";
 "What's changed in %@" = "What's changed in %@";
 "You might need to manually code-sign after upgrading." = "You might need to manually code-sign after upgrading.";

@@ -90,6 +90,22 @@ struct RootView: View {
             }
         }
     }
+
+    private var shouldShowUpdateCard: Bool {
+        upgradeChecker.isUpdating
+        || (upgradeChecker.upgradeAvailable && (!vars.hideUpgradeAlerts || showUpdateCardOverride) && (!hideUpdateCard || showUpdateCardOverride))
+        || (!networkMonitor.isConnected && !vars.hideUpgradeAlerts && !hideUpdateCard && vars.showNetworkNotices)
+    }
+
+    private var updateCardExpanded: Bool {
+        upgradeChecker.isUpdating
+        || updateCardOpen
+        || (!networkMonitor.isConnected && !upgradeChecker.upgradeAvailable && vars.showNetworkNotices)
+    }
+
+    private var boundedUpdateProgress: Double {
+        min(max(upgradeChecker.updateProgress, 0), 1)
+    }
     
     var body: some View {
         VStack {
@@ -266,13 +282,27 @@ struct RootView: View {
                     .padding(4)
             }
             
-            if (upgradeChecker.upgradeAvailable && (!vars.hideUpgradeAlerts || showUpdateCardOverride) && (!hideUpdateCard || showUpdateCardOverride)) || (!networkMonitor.isConnected && !vars.hideUpgradeAlerts && !hideUpdateCard && vars.showNetworkNotices) {
+            if shouldShowUpdateCard {
                 ZStack {
                     Rectangle()
                         .cornerRadius(20)
                         .foregroundColor(!networkMonitor.isConnected && !upgradeChecker.upgradeAvailable ? .orange : .accentColor)
                         .opacity(0.1)
-                    if updateCardOpen || (!networkMonitor.isConnected && !upgradeChecker.upgradeAvailable && vars.showNetworkNotices) {
+                    if upgradeChecker.isUpdating {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text(L10n.t(upgradeChecker.updateStep.isEmpty ? "Preparing upgrade" : upgradeChecker.updateStep))
+                                    .font(.headline)
+                                Spacer()
+                                Text("\(Int((boundedUpdateProgress * 100).rounded()))%")
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundColor(.secondary)
+                            }
+                            ProgressView(value: boundedUpdateProgress, total: 1)
+                                .progressViewStyle(.linear)
+                        }
+                        .padding(.horizontal, 14)
+                    } else if updateCardExpanded {
                         HStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 2) {
                                 if !networkMonitor.isConnected && !upgradeChecker.upgradeAvailable {
@@ -288,9 +318,7 @@ struct RootView: View {
                                 }
                             }
                             Spacer()
-                            if upgradeChecker.isUpdating {
-                                ProgressView()
-                            } else if upgradeChecker.upgradeAvailable {
+                            if upgradeChecker.upgradeAvailable {
                                 HStack(spacing: 8) {
                                     Button(L10n.t("Upgrade")) {
                                         vars.hasShownWhatsNew = false
@@ -323,7 +351,7 @@ struct RootView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    if (updateCardOpen || (!networkMonitor.isConnected && !upgradeChecker.upgradeAvailable && vars.showNetworkNotices)) && !upgradeChecker.isUpdating {
+                    if updateCardExpanded && !upgradeChecker.isUpdating {
                         VStack {
                             HStack {
                                 Spacer()
@@ -348,8 +376,16 @@ struct RootView: View {
                 )
                 .scaleEffect(highlightUpdateCard ? 1.02 : 1)
                 .animation(.easeInOut(duration: 0.35), value: highlightUpdateCard)
-                .frame(width: 420, height: (updateCardOpen || (!networkMonitor.isConnected && !upgradeChecker.upgradeAvailable && vars.showNetworkNotices)) ? 70 : 38)
+                .frame(width: 420, height: updateCardExpanded ? 70 : 38)
                 .padding(10)
+                
+                if DebugVariables.auxiliaryUpgrades {
+                    Text(L10n.t("Auxiliary upgrades have been enabled."))
+                        .bold()
+                        .foregroundStyle(.orange)
+                        .padding(3)
+                        .padding(.bottom, 8)
+                }
             }
         }
         .sheet(isPresented: $showingws_overlayLauncher) {
@@ -417,6 +453,9 @@ struct RootView: View {
         }
         .onReceive(upgradeChecker.manualCheck) { _ in
             runManualCheck()
+        }
+        .onReceive(upgradeChecker.auxiliaryArchiveCompleted) { filename in
+            activeAlert = .message(L10n.f("%@ has been baked successfully.", filename))
         }
         .onChange(of: upgradeChecker.upgradeAvailable) { available in
             if available && !vars.hideUpgradeAlerts { hideUpdateCard = false; showUpdateCardOverride = false; updateCardOpen = true }

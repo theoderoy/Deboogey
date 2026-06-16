@@ -136,6 +136,13 @@
 "Upgrade available" = "Mise à niveau disponible";
 "Upgrade to %@" = "Mettre à niveau vers %@";
 "Upgrades" = "Mises à niveau";
+"Archiving upgrade" = "Archivage de la mise à niveau";
+"Downloading upgrade" = "Téléchargement de la mise à niveau";
+"Extracting upgrade" = "Extraction de la mise à niveau";
+"Installing upgrade" = "Installation de la mise à niveau";
+"Preparing upgrade" = "Préparation de la mise à niveau";
+"Auxiliary upgrades have been enabled." = "Les mises à niveau auxiliaires ont été activées.";
+"%@ has been baked successfully." = "%@ a été cuit avec succès.";
 "We don't have a description for this version. Check back with later builds." = "Nous n’avons pas de description pour cette version. Revenez consulter les prochains builds.";
 "What's changed in %@" = "Nouveautés de %@";
 "You might need to manually code-sign after upgrading." = "Vous devrez peut-être signer le code manuellement après la mise à niveau.";
