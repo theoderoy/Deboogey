@@ -6,6 +6,19 @@
 //
 
 enum DebugVariables {
-    static var simulateUnsupportedUpgradeChannelVersion = false
+    enum Language: String {
+        case en = "en-GB"
+        case fr
+
+        var localeIdentifier: String {
+            switch self {
+            case .en: return "en_GB"
+            case .fr: return "fr_FR"
+            }
+        }
+    }
+
+    static var auxiliaryUpgrades = false
     static var alwaysShowWhatsNewView = false
+    static var forcedLanguage: Language? = nil
 }

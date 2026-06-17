@@ -18,13 +18,13 @@ enum ws_overlayLauncherError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .toolNotFound:
-            return "ws_overlayHelper not found at Contents/Resources within the app bundle."
+            return L10n.t("ws_overlayHelper not found at Contents/Resources within the app bundle.")
         case .toolOutsideResources(let path):
-            return "Resolved tool path is not inside Contents/Resources. (path: \(path))"
+            return L10n.f("Resolved tool path is not inside Contents/Resources. (path: %@)", path)
         case .toolNotExecutable(let path):
-            return "ws_overlayHelper exists but is not executable. (path: \(path))"
+            return L10n.f("ws_overlayHelper exists but is not executable. (path: %@)", path)
         case .scriptCreationFailed:
-            return "Failed to create AppleScript for privileged execution."
+            return L10n.t("Failed to create AppleScript for privileged execution.")
         case .executionFailed(let userFacing, _):
             return userFacing
         }
@@ -71,9 +71,9 @@ struct ws_overlayLauncher {
             let detailedMessage = (errorDict[NSAppleScript.errorMessage] as? String)
                 ?? (errorDict[NSAppleScript.errorBriefMessage] as? String)
                 ?? (errorDict[NSLocalizedDescriptionKey] as? String)
-                ?? "Unknown AppleScript error"
+                ?? L10n.t("Unknown AppleScript error")
             let number = (errorDict[NSAppleScript.errorNumber] as? Int) ?? 0
-            let userFacing = "Helper failed (code \(number)). \(detailedMessage)"
+            let userFacing = L10n.f("Helper failed (code %d). %@", number, detailedMessage)
 
             var details: [String: Any] = [:]
             details["AppleScriptErrorNumber"] = number
@@ -88,6 +88,6 @@ struct ws_overlayLauncher {
             throw ws_overlayLauncherError.executionFailed(userFacing: userFacing, details: details)
         }
 
-        throw ws_overlayLauncherError.executionFailed(userFacing: "Failed to run ws_overlayHelper with administrator privileges.", details: [:])
+        throw ws_overlayLauncherError.executionFailed(userFacing: L10n.t("Failed to run ws_overlayHelper with administrator privileges."), details: [:])
     }
 }

@@ -19,7 +19,7 @@ private struct LegacyGroupedSection<Content: View>: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(header)
+            Text(L10n.t(header))
                 .font(.footnote)
                 .foregroundColor(.secondary)
                 .padding(.leading, 16)
@@ -89,9 +89,9 @@ private struct SettingsPanelView: View {
         }
         .alert(isPresented: $showResetAlert) {
             Alert(
-                title: Text("Delete Persistent Storage?"),
-                message: Text("This will clear all preferences and then quit the app."),
-                primaryButton: .destructive(Text("Delete")) {
+                title: Text(L10n.t("Delete Persistent Storage?")),
+                message: Text(L10n.t("This will clear all preferences and then quit the app.")),
+                primaryButton: .destructive(Text(L10n.t("Delete"))) {
                     vm.theThirdImpact()
                 },
                 secondaryButton: .cancel()
@@ -128,15 +128,9 @@ private struct SettingsPanelView: View {
             HStack {
                 Text("Scale Size")
                 Spacer()
-                Group {
-                    if #available(macOS 12.0, *) {
-                        Text("\(Int((displayScale * 100).rounded()))%")
-                            .monospacedDigit()
-                    } else {
-                        Text("\(Int((displayScale * 100).rounded()))%")
-                    }
-                }
-                .foregroundColor(.secondary)
+                Text("\(Int((displayScale * 100).rounded()))%")
+                    .monospacedDigit()
+                    .foregroundColor(.secondary)
 
                 Stepper("", value: Binding(
                     get: { rowScale },
@@ -150,30 +144,27 @@ private struct SettingsPanelView: View {
         }
         
         section(header: "Notices") {
-            if #available(macOS 12.0, *) {
-                Toggle(isOn: $vm.pesterMeWithSipping) {
-                    Text("System Integrity Protection")
-                }
-                .disabled(!sipSatisfied)
-                if sipSatisfied {
-                    Text(
-                        "Show a notice when utilities require security adjustments."
-                    )
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                } else {
-                    Text(
-                        "These notices will not be shown until System Integrity Protection is adjusted."
-                    )
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                }
+            Toggle(isOn: $vm.pesterMeWithSipping) {
+                Text("System Integrity Protection")
+            }
+            .disabled(!sipSatisfied)
+            if sipSatisfied {
+                Text(
+                    "Show a notice when utilities require security adjustments."
+                )
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            } else {
+                Text(
+                    "These notices will not be shown until System Integrity Protection is adjusted."
+                )
+                .font(.subheadline)
+                .foregroundColor(.secondary)
             }
             
             Toggle(isOn: $vm.showNetworkNotices) {
                 Text("Network Connection")
             }
-            .disabled(!vm.supportsUpgrades)
             Text(
                 "Show a notice when network connection is required for upgrades."
             )
@@ -195,12 +186,6 @@ private struct SettingsPanelView: View {
                 Text("Release").tag("Release")
                 Text("Internal").tag("Internal")
             }
-            .disabled(!vm.supportsUpgradeChannels)
-            if !vm.supportsUpgradeChannels {
-                Text(UpgradeChecker.unsupportedUpgradeMessage)
-                    .font(.subheadline)
-                    .foregroundColor(.orange)
-            }
             if vm.upgradeChannel == "Internal" {
                 Text("Internal builds are pre-release versions and may be unstable.")
                     .font(.subheadline)
@@ -208,9 +193,7 @@ private struct SettingsPanelView: View {
             }
             
             Toggle("Hide Automatic Notices", isOn: $vm.hideUpgradeAlerts)
-                .disabled(!vm.supportsUpgrades)
             Toggle("Delete Backup on Startup", isOn: $vm.deleteBackupOnStartup)
-                .disabled(!vm.supportsUpgrades)
         }
 
         section(header: "Maintenance") {
@@ -228,11 +211,11 @@ private struct SettingsPanelView: View {
     
     private var descriptionForAutoDelete: String {
         let what = vm.entityTrackerAutoDeleteScope == "ephemerals"
-            ? "Removes ephemeral entries (e.g. SkyLight Diagnostics) from the log"
-            : "Clears the entire Entity Tracker log"
+            ? L10n.t("Removes ephemeral entries (e.g. SkyLight Diagnostics) from the log")
+            : L10n.t("Clears the entire Entity Tracker log")
         let when = vm.entityTrackerAutoDeleteTrigger == "login"
-            ? "once per login session."
-            : "on every app launch."
+            ? L10n.t("once per login session.")
+            : L10n.t("on every app launch.")
         return "\(what) \(when)"
     }
 
@@ -240,7 +223,7 @@ private struct SettingsPanelView: View {
     private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
         if #available(macOS 13.0, *) {
             if let header = header {
-                Section(header: Text(header)) {
+                Section(header: Text(L10n.t(header))) {
                     content()
                 }
             } else {
@@ -402,7 +385,7 @@ private struct AcknowledgementsPanelView: View {
     private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
         if #available(macOS 13.0, *) {
             if let header = header {
-                Section(header: Text(header)) {
+                Section(header: Text(L10n.t(header))) {
                     content()
                 }
             } else {
@@ -442,12 +425,12 @@ enum Panel: String, CaseIterable, Identifiable, Hashable, Codable {
         switch self {
         case .settings:
             if #available(macOS 13.0, *) {
-                return "Settings"
+                return L10n.t("Settings")
             } else {
-                return "Preferences"
+                return L10n.t("Preferences")
             }
         case .acknowledge:
-            return "Acknowledgements"
+            return L10n.t("Acknowledgements")
         }
     }
     var systemImage: String {
@@ -488,9 +471,6 @@ final class ConfigurationViewModel: ObservableObject {
         didSet { vars.deleteBackupOnStartup = deleteBackupOnStartup }
     }
 
-    var supportsUpgradeChannels: Bool { UpgradeChecker.supportsUpgradeChannels }
-    var supportsUpgrades: Bool { UpgradeChecker.supportsUpgrades }
-
     @Published var entityTrackerAutoDeleteEnabled: Bool {
         didSet { vars.entityTrackerAutoDeleteEnabled = entityTrackerAutoDeleteEnabled }
     }
@@ -511,16 +491,12 @@ final class ConfigurationViewModel: ObservableObject {
         self.pesterMeWithSipping = vars.pesterMeWithSipping
         self.showNetworkNotices = vars.showNetworkNotices
         self.showCLTNotices = vars.showCLTNotices
-        self.upgradeChannel = UpgradeChecker.supportsUpgradeChannels ? vars.upgradeChannel : "Release"
+        self.upgradeChannel = vars.upgradeChannel
         self.hideUpgradeAlerts = vars.hideUpgradeAlerts
         self.deleteBackupOnStartup = vars.deleteBackupOnStartup
         self.entityTrackerAutoDeleteEnabled = vars.entityTrackerAutoDeleteEnabled
         self.entityTrackerAutoDeleteScope = vars.entityTrackerAutoDeleteScope
         self.entityTrackerAutoDeleteTrigger = vars.entityTrackerAutoDeleteTrigger
-
-        if !UpgradeChecker.supportsUpgradeChannels {
-            vars.upgradeChannel = "Release"
-        }
     }
     
     func goBack() {
@@ -593,10 +569,10 @@ private struct PanelDetail: View {
             case .acknowledge:
                 AcknowledgementsPanelView(vm: vm)
             case .none:
-                Text("Select a panel")
+                Text(L10n.t("Select a panel"))
             }
         }
-        .navigationTitle(vm.selection?.title ?? "Settings")
+        .navigationTitle(vm.selection?.title ?? L10n.t("Settings"))
     }
 }
 
@@ -647,7 +623,7 @@ private struct ModernNavigationView: View {
                                     }) {
                                         Image(systemName: "sidebar.left")
                                     }
-                                    .help("Show Sidebar")
+                                    .help(L10n.t("Show Sidebar"))
                                     .padding(.leading, 3)
                                     
                                     if #available(macOS 26.0, *) {
@@ -659,7 +635,7 @@ private struct ModernNavigationView: View {
                                 Button(action: vm.goBack) {
                                     Image(systemName: "chevron.left")
                                 }
-                                .help("Go Back")
+                                .help(L10n.t("Go Back"))
                                 .disabled(!vm.canGoBack)
                                 .padding(.leading, columnVisibility == .detailOnly ? 0 : 3)
                                 
@@ -671,7 +647,7 @@ private struct ModernNavigationView: View {
                                 Button(action: vm.goForward) {
                                     Image(systemName: "chevron.right")
                                 }
-                                .help("Go Forward")
+                                .help(L10n.t("Go Forward"))
                                 .disabled(!vm.canGoForward)
                                 .padding(.trailing, 3)
                             }
@@ -695,14 +671,14 @@ private struct ModernNavigationView: View {
                                 Button(action: vm.goBack) {
                                     Image(systemName: "chevron.left")
                                 }
-                                .help("Go Back")
+                                .help(L10n.t("Go Back"))
                                 .disabled(!vm.canGoBack)
                                 .padding(.leading, 3)
                                 
                                 Button(action: vm.goForward) {
                                     Image(systemName: "chevron.right")
                                 }
-                                .help("Go Forward")
+                                .help(L10n.t("Go Forward"))
                                 .disabled(!vm.canGoForward)
                                 .padding(.trailing, 3)
                             }

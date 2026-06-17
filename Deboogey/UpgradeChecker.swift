@@ -9,35 +9,25 @@ import Foundation; import AppKit; import Combine
 
 class UpgradeChecker: ObservableObject {
     static let shared = UpgradeChecker()
-    static var supportsUpgradeChannels: Bool {
-        if DebugVariables.simulateUnsupportedUpgradeChannelVersion {
-            return false
-        }
-        if #available(macOS 12.0, *) {
-            return true
-        } else {
-            return false
-        }
-    }
-    static var supportsUpgrades: Bool {
-        supportsUpgradeChannels
-    }
-    static let unsupportedUpgradeMessage = "Upgrade channels are unsupported on this version of macOS.\n\nRelease 3.1 and Internal 14 are the final Deboogey releases that will support macOS Big Sur."
     let manualCheck = PassthroughSubject<Void,Never>()
+    let auxiliaryArchiveCompleted = PassthroughSubject<String,Never>()
     @Published var upgradeAvailable: Bool = false
     @Published var isUpdating: Bool = false
+    @Published var updateProgress: Double = 0
+    @Published var updateStep: String = ""
     @Published var latestVersion: String = ""
     @Published var pendingUpdateURL: URL?
+    private var downloadProgressObservation: NSKeyValueObservation?
     private init() {}
 
     struct AppVersion: Comparable, CustomStringConvertible {
-        enum Channel: String { case release = "Release"; case internalBuild = "Internal"; case unknown = "Unknown" }
+        enum Channel: String { case release = "Release"; case `internal` = "Internal"; case unknown = "Unknown" }
         let channel: Channel; let major: Int; let minor: Int; let patch: Int; let buildNumber: Int; let originalString: String
         var description: String { return originalString }
         static func < (lhs: AppVersion, rhs: AppVersion) -> Bool {
             if lhs.channel != rhs.channel { return true }
             switch lhs.channel {
-            case .internalBuild: return lhs.buildNumber < rhs.buildNumber
+            case .internal: return lhs.buildNumber < rhs.buildNumber
             case .release:
                 if lhs.major != rhs.major { return lhs.major < rhs.major }
                 if lhs.minor != rhs.minor { return lhs.minor < rhs.minor }
@@ -51,7 +41,7 @@ class UpgradeChecker: ObservableObject {
             if clean.lowercased().starts(with: "internal") || clean.lowercased().starts(with: "int-") {
                 let components = clean.components(separatedBy: CharacterSet.decimalDigits.inverted)
                 let numStr = components.first(where: { !$0.isEmpty }) ?? "0"
-                return AppVersion(channel: .internalBuild, major: 0, minor: 0, patch: 0, buildNumber: Int(numStr) ?? 0, originalString: clean)
+                return AppVersion(channel: .internal, major: 0, minor: 0, patch: 0, buildNumber: Int(numStr) ?? 0, originalString: clean)
             }
             var verStr = clean; let lower = verStr.lowercased()
             if lower.hasPrefix("release") { verStr = String(verStr.dropFirst(7)) }
@@ -77,18 +67,6 @@ class UpgradeChecker: ObservableObject {
     func requestManualCheck() { manualCheck.send() }
     
     func checkForUpdates(force: Bool = false, clearIfNone: Bool = false, completion: ((Bool)->Void)? = nil) {
-        guard Self.supportsUpgrades else {
-            DispatchQueue.main.async {
-                if clearIfNone {
-                    self.latestVersion = ""
-                    self.pendingUpdateURL = nil
-                    self.upgradeAvailable = false
-                }
-                completion?(false)
-            }
-            return
-        }
-
         guard NetworkMonitor.shared.isConnected else {
             DispatchQueue.main.async {
                 if clearIfNone {
@@ -104,10 +82,10 @@ class UpgradeChecker: ObservableObject {
         if !force && UserDefaults.standard.bool(forKey: "hideUpgradeAlerts") { DispatchQueue.main.async { completion?(false) }; return }
         
         let local = currentAppVersion
-        let desiredChannelRaw = Self.supportsUpgradeChannels ? UserDefaults.standard.string(forKey: "upgradeChannel") : nil
+        let desiredChannelRaw = UserDefaults.standard.string(forKey: "upgradeChannel")
         var targetChannel = local.channel
         if let raw = desiredChannelRaw {
-            if raw.caseInsensitiveCompare("Internal") == .orderedSame { targetChannel = .internalBuild }
+            if raw.caseInsensitiveCompare("Internal") == .orderedSame { targetChannel = .internal }
             else if raw.caseInsensitiveCompare("Release") == .orderedSame { targetChannel = .release }
         }
         
@@ -163,21 +141,27 @@ class UpgradeChecker: ObservableObject {
         }.resume()
     }
 
-    func proceedWithUpdate() { guard let url = pendingUpdateURL else { return }; isUpdating = true; downloadAndInstall(from: url) }
+    func proceedWithUpdate() {
+        guard let url = pendingUpdateURL else { return }
+        let version = latestVersion
+        isUpdating = true
+        beginUpdateStep("Preparing upgrade")
+        downloadAndInstall(from: url, version: version)
+    }
     var formattedLatestVersion: String {
         let v = AppVersion.parse(from: latestVersion)
         switch v.channel {
         case .release:
-            var str = "Release \(v.major)"
+            var str = "\(v.major)"
             if v.minor > 0 || v.patch > 0 {
                 str += ".\(v.minor)"
             }
             if v.patch > 0 {
                 str += ".\(v.patch)"
             }
-            return str
-        case .internalBuild:
-            return "Internal \(v.buildNumber)"
+            return L10n.f("Release %@", str)
+        case .internal:
+            return L10n.f("Internal %@", "\(v.buildNumber)")
         default:
             return latestVersion
         }
@@ -192,19 +176,91 @@ class UpgradeChecker: ObservableObject {
         }
     }
 
-    private func downloadAndInstall(from url: URL) {
+    private func downloadAndInstall(from url: URL, version: String) {
         print("Downloading: \(url)")
-        URLSession.shared.downloadTask(with: url) { localUrl, _, error in
-            guard let localUrl = localUrl, error == nil else { DispatchQueue.main.async { self.isUpdating = false }; return }
+        beginUpdateStep("Downloading upgrade")
+        let task = URLSession.shared.downloadTask(with: url) { localUrl, _, error in
+            DispatchQueue.main.async {
+                self.downloadProgressObservation = nil
+            }
+            guard let localUrl = localUrl, error == nil else { self.finishUpdateFlow(); return }
+            self.completeUpdateStep()
             do {
+                if DebugVariables.auxiliaryUpgrades {
+                    self.beginUpdateStep("Archiving upgrade")
+                    let archiveName = try self.archiveDownloadedUpdate(at: localUrl, version: version)
+                    self.completeUpdateStep()
+                    DispatchQueue.main.async {
+                        self.auxiliaryArchiveCompleted.send(archiveName)
+                    }
+                    self.finishUpdateFlow()
+                    return
+                }
+
+                self.beginUpdateStep("Preparing upgrade")
                 let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
                 try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
                 let archivePath = tempDir.appendingPathComponent("Deboogey.aar")
                 try FileManager.default.moveItem(at: localUrl, to: archivePath)
-                if self.extractArchive(at: archivePath, to: tempDir) { self.installUpdate(from: tempDir) }
-                else { DispatchQueue.main.async { self.isUpdating = false } }
-            } catch { DispatchQueue.main.async { self.isUpdating = false }; print("Update failed: \(error)") }
-        }.resume()
+                self.completeUpdateStep()
+                self.beginUpdateStep("Extracting upgrade")
+                if self.extractArchive(at: archivePath, to: tempDir) {
+                    self.completeUpdateStep()
+                    self.installUpdate(from: tempDir)
+                } else {
+                    self.finishUpdateFlow()
+                }
+            } catch { self.finishUpdateFlow(); print("Update failed: \(error)") }
+        }
+        downloadProgressObservation = task.progress.observe(\.fractionCompleted, options: [.new]) { [weak self] progress, _ in
+            DispatchQueue.main.async {
+                self?.updateProgress = progress.fractionCompleted
+            }
+        }
+        task.resume()
+    }
+
+    private func archiveDownloadedUpdate(at localUrl: URL, version: String) throws -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.dateFormat = "dd_MM_yy"
+
+        let archiveName = auxiliaryArchiveName(version: version, date: dateFormatter.string(from: Date()))
+        let destination = Bundle.main.bundleURL
+            .deletingLastPathComponent()
+            .appendingPathComponent(archiveName)
+        if FileManager.default.fileExists(atPath: destination.path) {
+            try FileManager.default.removeItem(at: destination)
+        }
+        try FileManager.default.moveItem(at: localUrl, to: destination)
+        print("Auxiliary upgrade package: \(destination.path)")
+        return archiveName
+    }
+
+    private func auxiliaryArchiveName(version: String, date: String) -> String {
+        let parsedVersion = AppVersion.parse(from: version)
+        let name: String
+        switch parsedVersion.channel {
+        case .internal:
+            name = "DEBOOGEY_INTERNAL_\(parsedVersion.buildNumber)-\(date)"
+        case .release:
+            let releaseVersion = [parsedVersion.major, parsedVersion.minor, parsedVersion.patch]
+                .map(String.init)
+                .joined(separator: "_")
+            name = "DEBOOGEY_RELEASE_\(releaseVersion)-\(date)"
+        default:
+            name = "DEBOOGEY_\(version.uppercased())-\(date)"
+        }
+        return "\(sanitizedArchiveName(name)).aar"
+    }
+
+    private func sanitizedArchiveName(_ name: String) -> String {
+        let invalidCharacters = CharacterSet(charactersIn: "/:")
+            .union(.newlines)
+            .union(.controlCharacters)
+            .union(.whitespaces)
+        return name.components(separatedBy: invalidCharacters).filter { !$0.isEmpty }.joined(separator: "_")
     }
 
     private func extractArchive(at archiveUrl: URL, to destination: URL) -> Bool {
@@ -217,13 +273,41 @@ class UpgradeChecker: ObservableObject {
 
     private func installUpdate(from sourceDir: URL) {
         let appName = "Deboogey.app"; let newPath = sourceDir.appendingPathComponent(appName)
-        guard FileManager.default.fileExists(atPath: newPath.path) else { print("AppName not found"); return }
+        guard FileManager.default.fileExists(atPath: newPath.path) else {
+            finishUpdateFlow()
+            print("AppName not found")
+            return
+        }
         let currentPath = Bundle.main.bundlePath; let oldPath = currentPath + ".old"
         do {
+            beginUpdateStep("Installing upgrade")
             if FileManager.default.fileExists(atPath: oldPath) { try FileManager.default.removeItem(atPath: oldPath) }
             try FileManager.default.moveItem(atPath: currentPath, toPath: oldPath)
             try FileManager.default.moveItem(at: newPath, to: URL(fileURLWithPath: currentPath))
+            completeUpdateStep()
             DispatchQueue.main.async { NSApp.terminate(nil) }
-        } catch { DispatchQueue.main.async { self.isUpdating = false }; print("Install failed: \(error)") }
+        } catch { finishUpdateFlow(); print("Install failed: \(error)") }
+    }
+
+    private func beginUpdateStep(_ step: String) {
+        DispatchQueue.main.async {
+            self.updateStep = step
+            self.updateProgress = 0
+        }
+    }
+
+    private func completeUpdateStep() {
+        DispatchQueue.main.async {
+            self.updateProgress = 1
+        }
+    }
+
+    private func finishUpdateFlow() {
+        DispatchQueue.main.async {
+            self.isUpdating = false
+            self.updateProgress = 0
+            self.updateStep = ""
+            self.downloadProgressObservation = nil
+        }
     }
 }

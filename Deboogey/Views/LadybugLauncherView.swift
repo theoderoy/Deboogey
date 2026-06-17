@@ -11,7 +11,7 @@ struct LadybugLauncherView: View {
     enum Action: String, CaseIterable, Identifiable {
         case enable, disable
         var id: String { rawValue }
-        var title: String { self == .enable ? "Enable" : "Disable" }
+        var title: String { self == .enable ? L10n.t("Enable") : L10n.t("Disable") }
         var helperArgument: String { rawValue }
     }
 
@@ -20,9 +20,9 @@ struct LadybugLauncherView: View {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .global: return "Global"
+            case .global: return L10n.t("Global")
             case .deboogey: return "Deboogey"
-            case .custom: return "Custom…"
+            case .custom: return L10n.t("Custom…")
             }
         }
         var isCustom: Bool { self == .custom }
@@ -47,15 +47,15 @@ struct LadybugLauncherView: View {
             VStack(spacing: 24) {
                 VStack(spacing: 0) {
                     Group {
-                        if Bundle.main.url(forResource: "DEBOOGEY_EDUCATION-LADYBUG_h265", withExtension: "mov") != nil {
-                            EducationPlayerView(name: "DEBOOGEY_EDUCATION-LADYBUG_h265", fileExtension: "mov")
+                        if EducationPlayerView.hasAsset(named: "DEBOOGEY_EDUCATION-LADYBUG_h265") {
+                            EducationPlayerView(assetName: "DEBOOGEY_EDUCATION-LADYBUG_h265")
                         } else {
                             Rectangle()
                                 .fill(Color.secondary.opacity(0.1))
                                 .overlay(
                                     VStack(spacing: 12) {
                                         Image(systemName: "ladybug").font(.system(size: 48, weight: .thin))
-                                        Text("Cocoa Debug Menu").font(.headline)
+                                        Text(L10n.t("Cocoa Debug Menu")).font(.headline)
                                     }.foregroundColor(.secondary)
                                 )
                         }
@@ -66,7 +66,7 @@ struct LadybugLauncherView: View {
                     .cornerRadius(12)
                     .padding(.horizontal)
 
-                    Text("Inspect the sandbox of individual programs and adjust parameters.")
+                    Text(L10n.t("Inspect the sandbox of individual programs and adjust parameters."))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -76,7 +76,7 @@ struct LadybugLauncherView: View {
 
                 VStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("ACTION").font(.caption.bold()).foregroundColor(.secondary).padding(.leading, 8)
+                        Text(L10n.t("ACTION")).font(.caption.bold()).foregroundColor(.secondary).padding(.leading, 8)
                         Picker("", selection: $action) {
                             ForEach(Action.allCases) { a in Text(a.title).tag(a) }
                         }
@@ -88,25 +88,16 @@ struct LadybugLauncherView: View {
                     .cornerRadius(12)
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("TARGET DOMAIN").font(.caption.bold()).foregroundColor(.secondary).padding(.leading, 8)
+                        Text(L10n.t("TARGET DOMAIN")).font(.caption.bold()).foregroundColor(.secondary).padding(.leading, 8)
                         
-                        if #available(macOS 12.0, *) {
-                            Picker("", selection: $domain) {
-                                Text(Domain.global.title).tag(Domain.global)
-                                if bundleID != nil { Text(Domain.deboogey.title).tag(Domain.deboogey) }
-                                Text(Domain.custom.title).tag(Domain.custom)
-                            }
-                            .labelsHidden()
-                            .onChange(of: domain) { newValue in
-                                if newValue == .deboogey { autoKill = false }
-                            }
-                        } else {
-
-                            HStack {
-                                Text("Upgrade to macOS 12 for granular targeting.").font(.footnote).foregroundColor(.secondary)
-                                Spacer()
-                                Image(systemName: "info.circle").foregroundColor(.secondary)
-                            }
+                        Picker("", selection: $domain) {
+                            Text(Domain.global.title).tag(Domain.global)
+                            if bundleID != nil { Text(Domain.deboogey.title).tag(Domain.deboogey) }
+                            Text(Domain.custom.title).tag(Domain.custom)
+                        }
+                        .labelsHidden()
+                        .onChange(of: domain) { newValue in
+                            if newValue == .deboogey { autoKill = false }
                         }
 
                         if domain.isCustom {
@@ -122,8 +113,8 @@ struct LadybugLauncherView: View {
                         if domain != .deboogey {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(domain == .global ? "Auto-Restart" : "Auto-Quit").font(.body)
-                                    Text(domain == .global ? "Restarts your Mac immediately" : "Quits the app immediately").font(.caption).foregroundColor(.secondary)
+                                    Text(domain == .global ? L10n.t("Auto-Restart") : L10n.t("Auto-Quit")).font(.body)
+                                    Text(domain == .global ? L10n.t("Restarts your Mac immediately") : L10n.t("Quits the app immediately")).font(.caption).foregroundColor(.secondary)
                                 }
                                 Spacer()
                                 Toggle("", isOn: $autoKill).toggleStyle(.switch).labelsHidden()
@@ -139,12 +130,12 @@ struct LadybugLauncherView: View {
                     }
 
                     if domain == .deboogey {
-                        Text("Quit Deboogey manually to see changes.")
+                        Text(L10n.t("Quit Deboogey manually to see changes."))
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .padding(.top, 4)
                     } else if !autoKill {
-                        Text(domain == .global ? "Restart your Mac manually to see changes." : "Quit the app manually to see changes.")
+                        Text(domain == .global ? L10n.t("Restart your Mac manually to see changes.") : L10n.t("Quit the app manually to see changes."))
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .padding(.top, 4)
@@ -157,10 +148,10 @@ struct LadybugLauncherView: View {
         .disabled(isRunning)
         Divider()
         HStack {
-            Button("Cancel") { presentationMode.wrappedValue.dismiss() }
+            Button(L10n.t("Cancel")) { presentationMode.wrappedValue.dismiss() }
                 .disabled(isRunning)
             Spacer()
-            Button("Run") { runHelper() }
+            Button(L10n.t("Run")) { runHelper() }
                 .keyboardShortcut(.defaultAction)
                 .disabled(isRunning || (domain == .custom && customBundle.isEmpty))
         }
@@ -168,7 +159,7 @@ struct LadybugLauncherView: View {
         .padding(.vertical, 12)
         }
         .frame(width: 520, height: 650)
-        .navigationTitle("Cocoa Debug Menu")
+        .navigationTitle(L10n.t("Cocoa Debug Menu"))
         .alert(item: Binding<IdentifiableString?>(
             get: { alertMessage.map { IdentifiableString(value: $0) } },
             set: { _ in alertMessage = nil }
