@@ -18,7 +18,8 @@ Deboogey allows you to poke at hidden debugging interfaces built into macOS that
 
 ## Requirements
 
-- Release 3.1 or later requires **macOS Monterey** or later.
+- macOS Monterey is required to use Deboogey.
+(Release 3.1 or earlier supports macOS installations down to macOS Big Sur)
 
 ### Using SkyLight Diagnostics
 To use this tool, you need to have accounted for the following:
