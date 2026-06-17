@@ -58,6 +58,21 @@ private extension View {
                 .tint(color)
         }
     }
+
+    @ViewBuilder
+    func developmentStateCapsuleStyle() -> some View {
+        if #available(macOS 26.0, *) {
+            self
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+                .glassEffect(.regular.tint(.accentColor), in: .capsule)
+        } else {
+            self
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+                .background(Capsule().fill(Color.accentColor))
+        }
+    }
 }
 
 struct RootView: View {
@@ -131,12 +146,10 @@ struct RootView: View {
                         + (buildNumber.isEmpty
                            ? "" : shortVersion.isEmpty ? "\(buildNumber)" : " \(buildNumber)")
                     )
+                    .foregroundColor(.white)
                     .font(.subheadline)
                     .bold()
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.accentColor))
+                    .developmentStateCapsuleStyle()
                 }
                 VStack(spacing: 12) {
                     if #available(macOS 13.0, *) {
