@@ -1,6 +1,6 @@
 //
 //  EducationPlayerView.swift
-//  Deboogey
+//  DeboogeyClient
 //
 //  Created by Théo De Roy on 19/10/2025.
 //

@@ -17,7 +17,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "F07EDA812E9CC3B200AE8D4A"
                BuildableName = "Deboogey.app"
-               BlueprintName = "Deboogey"
+               BlueprintName = "DeboogeyClientClient"
                ReferencedContainer = "container:Deboogey.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -31,22 +31,24 @@
       shouldAutocreateTestPlan = "YES">
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Release"
-      selectedDebuggerIdentifier = ""
-      selectedLauncherIdentifier = "Xcode.IDEFoundation.Launcher.PosixSpawn"
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
-      allowLocationSimulation = "YES">
+      allowLocationSimulation = "YES"
+      showNonLocalizedStrings = "YES"
+      queueDebuggingEnableBacktraceRecording = "Yes">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "F07EDA812E9CC3B200AE8D4A"
             BuildableName = "Deboogey.app"
-            BlueprintName = "Deboogey"
+            BlueprintName = "DeboogeyClientClient"
             ReferencedContainer = "container:Deboogey.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -63,7 +65,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "F07EDA812E9CC3B200AE8D4A"
             BuildableName = "Deboogey.app"
-            BlueprintName = "Deboogey"
+            BlueprintName = "DeboogeyClientClient"
             ReferencedContainer = "container:Deboogey.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

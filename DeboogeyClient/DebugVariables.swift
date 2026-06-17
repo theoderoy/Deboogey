@@ -1,6 +1,6 @@
 //
 //  DebugVariables.swift
-//  Deboogey
+//  DeboogeyClient
 //
 //  Created by Théo De Roy on 15/06/2026.
 //

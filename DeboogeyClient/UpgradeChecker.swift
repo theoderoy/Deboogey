@@ -1,6 +1,6 @@
 //
 //  UpgradeChecker.swift
-//  Deboogey
+//  DeboogeyClient
 //
 //  Created by Théo De Roy on 30/01/2026.
 //

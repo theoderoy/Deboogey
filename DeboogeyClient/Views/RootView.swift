@@ -1,6 +1,6 @@
 //
 //  RootView.swift
-//  Deboogey
+//  DeboogeyClient
 //
 //  Created by Théo De Roy on 13/10/2025.
 //
@@ -437,7 +437,7 @@ struct RootView: View {
             case .sipNotice:
                 return Alert(
                     title: Text(L10n.t("System write-dependent features have been disabled.")),
-                    message: Text(L10n.t("Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks.")),
+                    message: Text(L10n.t("Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. DeboogeyClient does not take malicious advantage of this, but adjust only if you understand the risks.")),
                     primaryButton: .default(Text(L10n.t("Learn More"))) {
                         if let url = URL(string: "https://support.apple.com/guide/security/secb7ea06b49/web") {
                             openURL(url)

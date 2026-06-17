@@ -1,6 +1,6 @@
 //
 //  PersistentVariables.swift
-//  Deboogey
+//  DeboogeyClient
 //
 //  Created by Théo De Roy on 26/10/2025.
 //

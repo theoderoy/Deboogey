@@ -1,6 +1,6 @@
 //
 //  main.swift
-//  deboogeyLadybugHelper
+//  DeboogeyCDMHelper
 //
 //  Created by Théo De Roy on 13/10/2025.
 //
@@ -41,7 +41,7 @@ struct DefaultsToggler {
 let args = CommandLine.arguments
 
 func printUsage() {
-    let tool = (args.first as NSString?)?.lastPathComponent ?? "deboogeyLadybugHelper"
+    let tool = (args.first as NSString?)?.lastPathComponent ?? "DeboogeyCDMHelper"
     let usage = """
     Usage: \(tool) <enable|disable> <global|bundle> [--autokill]
 

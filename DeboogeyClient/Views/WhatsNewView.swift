@@ -1,6 +1,6 @@
 //
 //  WhatsNewView.swift
-//  Deboogey
+//  DeboogeyClient
 //
 //  Created by Théo De Roy on 01/02/2026.
 //
@@ -20,7 +20,7 @@ struct WhatsNewView: View {
                         .frame(width: 80, height: 80)
                 }
                 
-                Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "Deboogey")
+                Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "DeboogeyClient")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                 

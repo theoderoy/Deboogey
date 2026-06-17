@@ -1,6 +1,6 @@
 //
 //  EntityTrackerView.swift
-//  Deboogey
+//  DeboogeyClient
 //
 //  Created by Théo De Roy on 05/04/2026.
 //

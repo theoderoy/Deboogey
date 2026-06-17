@@ -43,7 +43,7 @@
 "Ephemeral" = "Ephemeral";
 "Ephemerals Only" = "Ephemerals Only";
 "Failed to create AppleScript for privileged execution." = "Failed to create AppleScript for privileged execution.";
-"Failed to run ws_overlayHelper with administrator privileges." = "Failed to run ws_overlayHelper with administrator privileges.";
+"Failed to run DeboogeySDHelper with administrator privileges." = "Failed to run DeboogeySDHelper with administrator privileges.";
 "Failed to start helper." = "Failed to start helper.";
 "Foreground" = "Foreground";
 "G'day!" = "G'day!";
@@ -78,12 +78,12 @@
 "No upgrade is present at this time." = "No upgrade is present at this time.";
 "Notices" = "Notices";
 "OK" = "OK";
-"On Deboogey Launch" = "On Deboogey Launch";
+"On DeboogeyClient Launch" = "On DeboogeyClient Launch";
 "On Login" = "On Login";
 "PRESET" = "PRESET";
 "Preferences" = "Preferences";
 "Provide a custom mask in binary (0b...) or decimal." = "Provide a custom mask in binary (0b...) or decimal.";
-"Quit Deboogey manually to see changes." = "Quit Deboogey manually to see changes.";
+"Quit DeboogeyClient manually to see changes." = "Quit DeboogeyClient manually to see changes.";
 "Quit the app manually to see changes." = "Quit the app manually to see changes.";
 "Quits the app immediately" = "Quits the app immediately";
 "Release" = "Release";
@@ -111,7 +111,7 @@
 "Show a notice when utilities require security adjustments." = "Show a notice when utilities require security adjustments.";
 "SkyLight Diagnostics" = "SkyLight Diagnostics";
 "Some features of this app require Command Line Tools for Xcode." = "Some features of this app require Command Line Tools for Xcode.";
-"Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks." = "Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks.";
+"Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. DeboogeyClient does not take malicious advantage of this, but adjust only if you understand the risks." = "Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. DeboogeyClient does not take malicious advantage of this, but adjust only if you understand the risks.";
 "Sort" = "Sort";
 "Sort by %@" = "Sort by %@";
 "Sourced Article" = "Sourced Article";
@@ -146,9 +146,9 @@
 "We don't have a description for this version. Check back with later builds." = "We don't have a description for this version. Check back with later builds.";
 "What's changed in %@" = "What's changed in %@";
 "You might need to manually code-sign after upgrading." = "You might need to manually code-sign after upgrading.";
-"deboogeyLadybugHelper exists but is not executable. (path: %@)" = "deboogeyLadybugHelper exists but is not executable. (path: %@)";
-"deboogeyLadybugHelper not found at Contents/Resources within the app bundle." = "deboogeyLadybugHelper not found at Contents/Resources within the app bundle.";
+"DeboogeyCDMHelper exists but is not executable. (path: %@)" = "DeboogeyCDMHelper exists but is not executable. (path: %@)";
+"DeboogeyCDMHelper not found at Contents/Resources within the app bundle." = "DeboogeyCDMHelper not found at Contents/Resources within the app bundle.";
 "on every app launch." = "on every app launch.";
 "once per login session." = "once per login session.";
-"ws_overlayHelper exists but is not executable. (path: %@)" = "ws_overlayHelper exists but is not executable. (path: %@)";
-"ws_overlayHelper not found at Contents/Resources within the app bundle." = "ws_overlayHelper not found at Contents/Resources within the app bundle.";
+"DeboogeySDHelper exists but is not executable. (path: %@)" = "DeboogeySDHelper exists but is not executable. (path: %@)";
+"DeboogeySDHelper not found at Contents/Resources within the app bundle." = "DeboogeySDHelper not found at Contents/Resources within the app bundle.";

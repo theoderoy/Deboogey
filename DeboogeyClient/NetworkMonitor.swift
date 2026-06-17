@@ -1,6 +1,6 @@
 //
 //  NetworkMonitor.swift
-//  Deboogey
+//  DeboogeyClient
 //
 //  Created by Théo De Roy on 04/04/2026.
 //

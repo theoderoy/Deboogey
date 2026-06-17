@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		F05C72362E9D688C00C13AEC /* deboogeyLadybugHelper in Resources */ = {isa = PBXBuildFile; fileRef = F05C722D2E9D687A00C13AEC /* deboogeyLadybugHelper */; };
-		F07EDA9B2E9CC6EC00AE8D4A /* ws_overlayHelper in Resources */ = {isa = PBXBuildFile; fileRef = F07EDA942E9CC69200AE8D4A /* ws_overlayHelper */; };
+		F05C72362E9D688C00C13AEC /* DeboogeyCDMHelper in Resources */ = {isa = PBXBuildFile; fileRef = F05C722D2E9D687A00C13AEC /* DeboogeyCDMHelper */; };
+		F07EDA9B2E9CC6EC00AE8D4A /* DeboogeySDHelper in Resources */ = {isa = PBXBuildFile; fileRef = F07EDA942E9CC69200AE8D4A /* DeboogeySDHelper */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -17,14 +17,14 @@
 			containerPortal = F07EDA7A2E9CC3B200AE8D4A /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = F05C722C2E9D687A00C13AEC;
-			remoteInfo = deboogeyLadybugHelper;
+			remoteInfo = DeboogeyCDMHelper;
 		};
 		F0A6F90C2E9CCF8400AFAC9F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = F07EDA7A2E9CC3B200AE8D4A /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = F07EDA932E9CC69200AE8D4A;
-			remoteInfo = ws_overlayHelper;
+			remoteInfo = DeboogeySDHelper;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -50,25 +50,50 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		F05C722D2E9D687A00C13AEC /* deboogeyLadybugHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = deboogeyLadybugHelper; sourceTree = BUILT_PRODUCTS_DIR; };
-		F07EDA822E9CC3B200AE8D4A /* Deboogey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Deboogey.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		F07EDA942E9CC69200AE8D4A /* ws_overlayHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ws_overlayHelper; sourceTree = BUILT_PRODUCTS_DIR; };
+		F05C722D2E9D687A00C13AEC /* DeboogeyCDMHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = DeboogeyCDMHelper; sourceTree = BUILT_PRODUCTS_DIR; };
+		F07EDA822E9CC3B200AE8D4A /* DeboogeyClient.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeboogeyClient.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F07EDA942E9CC69200AE8D4A /* DeboogeySDHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = DeboogeySDHelper; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F092A1692FE2DED200178A03 /* Exceptions for "Helpers" folder in "DeboogeyClient" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				DeboogeyCDMHelper/main.swift,
+				DeboogeySDHelper/main.swift,
+			);
+			target = F07EDA812E9CC3B200AE8D4A /* DeboogeyClient */;
+		};
+		F092A16A2FE2DED200178A03 /* Exceptions for "Helpers" folder in "DeboogeySDHelper" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				DeboogeySDHelper/main.swift,
+			);
+			target = F07EDA932E9CC69200AE8D4A /* DeboogeySDHelper */;
+		};
+		F092A16B2FE2DED200178A03 /* Exceptions for "Helpers" folder in "DeboogeyCDMHelper" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				DeboogeyCDMHelper/main.swift,
+			);
+			target = F05C722C2E9D687A00C13AEC /* DeboogeyCDMHelper */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		F05C722E2E9D687A00C13AEC /* deboogeyLadybugHelper */ = {
+		F07EDA842E9CC3B200AE8D4A /* DeboogeyClient */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = deboogeyLadybugHelper;
+			path = DeboogeyClient;
 			sourceTree = "<group>";
 		};
-		F07EDA842E9CC3B200AE8D4A /* Deboogey */ = {
+		F092A1622FE2DECC00178A03 /* Helpers */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Deboogey;
-			sourceTree = "<group>";
-		};
-		F07EDA952E9CC69200AE8D4A /* ws_overlayHelper */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = ws_overlayHelper;
+			exceptions = (
+				F092A1692FE2DED200178A03 /* Exceptions for "Helpers" folder in "DeboogeyClient" target */,
+				F092A16B2FE2DED200178A03 /* Exceptions for "Helpers" folder in "DeboogeyCDMHelper" target */,
+				F092A16A2FE2DED200178A03 /* Exceptions for "Helpers" folder in "DeboogeySDHelper" target */,
+			);
+			path = Helpers;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -101,9 +126,8 @@
 		F07EDA792E9CC3B200AE8D4A = {
 			isa = PBXGroup;
 			children = (
-				F07EDA842E9CC3B200AE8D4A /* Deboogey */,
-				F07EDA952E9CC69200AE8D4A /* ws_overlayHelper */,
-				F05C722E2E9D687A00C13AEC /* deboogeyLadybugHelper */,
+				F092A1622FE2DECC00178A03 /* Helpers */,
+				F07EDA842E9CC3B200AE8D4A /* DeboogeyClient */,
 				F07EDA832E9CC3B200AE8D4A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -111,9 +135,9 @@
 		F07EDA832E9CC3B200AE8D4A /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				F07EDA822E9CC3B200AE8D4A /* Deboogey.app */,
-				F07EDA942E9CC69200AE8D4A /* ws_overlayHelper */,
-				F05C722D2E9D687A00C13AEC /* deboogeyLadybugHelper */,
+				F07EDA822E9CC3B200AE8D4A /* DeboogeyClient.app */,
+				F07EDA942E9CC69200AE8D4A /* DeboogeySDHelper */,
+				F05C722D2E9D687A00C13AEC /* DeboogeyCDMHelper */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -121,9 +145,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		F05C722C2E9D687A00C13AEC /* deboogeyLadybugHelper */ = {
+		F05C722C2E9D687A00C13AEC /* DeboogeyCDMHelper */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F05C72332E9D687A00C13AEC /* Build configuration list for PBXNativeTarget "deboogeyLadybugHelper" */;
+			buildConfigurationList = F05C72332E9D687A00C13AEC /* Build configuration list for PBXNativeTarget "DeboogeyCDMHelper" */;
 			buildPhases = (
 				F05C72292E9D687A00C13AEC /* Sources */,
 				F05C722A2E9D687A00C13AEC /* Frameworks */,
@@ -133,19 +157,16 @@
 			);
 			dependencies = (
 			);
-			fileSystemSynchronizedGroups = (
-				F05C722E2E9D687A00C13AEC /* deboogeyLadybugHelper */,
-			);
-			name = deboogeyLadybugHelper;
+			name = DeboogeyCDMHelper;
 			packageProductDependencies = (
 			);
-			productName = deboogeyLadybugHelper;
-			productReference = F05C722D2E9D687A00C13AEC /* deboogeyLadybugHelper */;
+			productName = DeboogeyCDMHelper;
+			productReference = F05C722D2E9D687A00C13AEC /* DeboogeyCDMHelper */;
 			productType = "com.apple.product-type.tool";
 		};
-		F07EDA812E9CC3B200AE8D4A /* Deboogey */ = {
+		F07EDA812E9CC3B200AE8D4A /* DeboogeyClient */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F07EDA8D2E9CC3B300AE8D4A /* Build configuration list for PBXNativeTarget "Deboogey" */;
+			buildConfigurationList = F07EDA8D2E9CC3B300AE8D4A /* Build configuration list for PBXNativeTarget "DeboogeyClient" */;
 			buildPhases = (
 				F07EDA7E2E9CC3B200AE8D4A /* Sources */,
 				F07EDA7F2E9CC3B200AE8D4A /* Frameworks */,
@@ -158,18 +179,19 @@
 				F0A6F90D2E9CCF8400AFAC9F /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				F07EDA842E9CC3B200AE8D4A /* Deboogey */,
+				F07EDA842E9CC3B200AE8D4A /* DeboogeyClient */,
+				F092A1622FE2DECC00178A03 /* Helpers */,
 			);
-			name = Deboogey;
+			name = DeboogeyClient;
 			packageProductDependencies = (
 			);
-			productName = Deboogey;
-			productReference = F07EDA822E9CC3B200AE8D4A /* Deboogey.app */;
+			productName = DeboogeyClient;
+			productReference = F07EDA822E9CC3B200AE8D4A /* DeboogeyClient.app */;
 			productType = "com.apple.product-type.application";
 		};
-		F07EDA932E9CC69200AE8D4A /* ws_overlayHelper */ = {
+		F07EDA932E9CC69200AE8D4A /* DeboogeySDHelper */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F07EDA982E9CC69200AE8D4A /* Build configuration list for PBXNativeTarget "ws_overlayHelper" */;
+			buildConfigurationList = F07EDA982E9CC69200AE8D4A /* Build configuration list for PBXNativeTarget "DeboogeySDHelper" */;
 			buildPhases = (
 				F07EDA902E9CC69200AE8D4A /* Sources */,
 				F07EDA912E9CC69200AE8D4A /* Frameworks */,
@@ -179,14 +201,11 @@
 			);
 			dependencies = (
 			);
-			fileSystemSynchronizedGroups = (
-				F07EDA952E9CC69200AE8D4A /* ws_overlayHelper */,
-			);
-			name = ws_overlayHelper;
+			name = DeboogeySDHelper;
 			packageProductDependencies = (
 			);
-			productName = ws_overlayHelper;
-			productReference = F07EDA942E9CC69200AE8D4A /* ws_overlayHelper */;
+			productName = DeboogeySDHelper;
+			productReference = F07EDA942E9CC69200AE8D4A /* DeboogeySDHelper */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -210,7 +229,7 @@
 					};
 				};
 			};
-			buildConfigurationList = F07EDA7D2E9CC3B200AE8D4A /* Build configuration list for PBXProject "Deboogey" */;
+			buildConfigurationList = F07EDA7D2E9CC3B200AE8D4A /* Build configuration list for PBXProject "DeboogeyClient" */;
 			developmentRegion = "en-GB";
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -227,9 +246,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				F07EDA812E9CC3B200AE8D4A /* Deboogey */,
-				F07EDA932E9CC69200AE8D4A /* ws_overlayHelper */,
-				F05C722C2E9D687A00C13AEC /* deboogeyLadybugHelper */,
+				F07EDA812E9CC3B200AE8D4A /* DeboogeyClient */,
+				F05C722C2E9D687A00C13AEC /* DeboogeyCDMHelper */,
+				F07EDA932E9CC69200AE8D4A /* DeboogeySDHelper */,
 			);
 		};
 /* End PBXProject section */
@@ -239,8 +258,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F05C72362E9D688C00C13AEC /* deboogeyLadybugHelper in Resources */,
-				F07EDA9B2E9CC6EC00AE8D4A /* ws_overlayHelper in Resources */,
+				F05C72362E9D688C00C13AEC /* DeboogeyCDMHelper in Resources */,
+				F07EDA9B2E9CC6EC00AE8D4A /* DeboogeySDHelper in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -273,12 +292,12 @@
 /* Begin PBXTargetDependency section */
 		F05C72352E9D688300C13AEC /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F05C722C2E9D687A00C13AEC /* deboogeyLadybugHelper */;
+			target = F05C722C2E9D687A00C13AEC /* DeboogeyCDMHelper */;
 			targetProxy = F05C72342E9D688300C13AEC /* PBXContainerItemProxy */;
 		};
 		F0A6F90D2E9CCF8400AFAC9F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F07EDA932E9CC69200AE8D4A /* ws_overlayHelper */;
+			target = F07EDA932E9CC69200AE8D4A /* DeboogeySDHelper */;
 			targetProxy = F0A6F90C2E9CCF8400AFAC9F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -289,7 +308,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.deboogeyLadybugHelper;
+				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.DeboogeyCDMHelper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
@@ -302,7 +321,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.deboogeyLadybugHelper;
+				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.DeboogeyCDMHelper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
@@ -433,22 +452,23 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				APP_BUNDLE_DISPLAY_NAME = DeboogeyClient;
+				APP_BUNDLE_NAME = DeboogeyClient;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Config/DeboogeyClient-Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = Internal;
-				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				MARKETING_VERSION = Development;
+				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.DeboogeyClient;
+				PRODUCT_NAME = DeboogeyClient;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -464,22 +484,24 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				APP_BUNDLE_DISPLAY_NAME = Deboogey;
+				APP_BUNDLE_NAME = Deboogey;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Config/DeboogeyClient-Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = Internal;
+				MARKETING_VERSION = Development;
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = DeboogeyClient;
+				PRODUCT_NAME = Deboogey;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -495,7 +517,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "theoderoy.ws-overlayHelper";
+				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.DeboogeySDHelper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
@@ -508,7 +530,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "theoderoy.ws-overlayHelper";
+				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.DeboogeySDHelper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
@@ -519,7 +541,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		F05C72332E9D687A00C13AEC /* Build configuration list for PBXNativeTarget "deboogeyLadybugHelper" */ = {
+		F05C72332E9D687A00C13AEC /* Build configuration list for PBXNativeTarget "DeboogeyCDMHelper" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F05C72312E9D687A00C13AEC /* Debug */,
@@ -528,7 +550,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F07EDA7D2E9CC3B200AE8D4A /* Build configuration list for PBXProject "Deboogey" */ = {
+		F07EDA7D2E9CC3B200AE8D4A /* Build configuration list for PBXProject "DeboogeyClient" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F07EDA8B2E9CC3B300AE8D4A /* Debug */,
@@ -537,7 +559,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F07EDA8D2E9CC3B300AE8D4A /* Build configuration list for PBXNativeTarget "Deboogey" */ = {
+		F07EDA8D2E9CC3B300AE8D4A /* Build configuration list for PBXNativeTarget "DeboogeyClient" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F07EDA8E2E9CC3B300AE8D4A /* Debug */,
@@ -546,7 +568,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F07EDA982E9CC69200AE8D4A /* Build configuration list for PBXNativeTarget "ws_overlayHelper" */ = {
+		F07EDA982E9CC69200AE8D4A /* Build configuration list for PBXNativeTarget "DeboogeySDHelper" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F07EDA992E9CC69200AE8D4A /* Debug */,

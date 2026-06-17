@@ -1,6 +1,6 @@
 //
 //  Localization.swift
-//  Deboogey
+//  DeboogeyClient
 //
 //  Created by Codex on 16/06/2026.
 //

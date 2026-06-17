@@ -1,6 +1,6 @@
 //
 //  LadybugLauncherView.swift
-//  Deboogey
+//  DeboogeyClient
 //
 //  Created by Théo De Roy on 15/10/2025.
 //
@@ -21,7 +21,7 @@ struct LadybugLauncherView: View {
         var title: String {
             switch self {
             case .global: return L10n.t("Global")
-            case .deboogey: return "Deboogey"
+            case .deboogey: return "DeboogeyClient"
             case .custom: return L10n.t("Custom…")
             }
         }
@@ -130,7 +130,7 @@ struct LadybugLauncherView: View {
                     }
 
                     if domain == .deboogey {
-                        Text(L10n.t("Quit Deboogey manually to see changes."))
+                        Text(L10n.t("Quit DeboogeyClient manually to see changes."))
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .padding(.top, 4)

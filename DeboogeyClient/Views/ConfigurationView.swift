@@ -1,6 +1,6 @@
 //
 //  ConfigurationView.swift
-//  Deboogey
+//  DeboogeyClient
 //
 //  Created by Théo De Roy on 26/10/2025.
 //
@@ -106,7 +106,7 @@ private struct SettingsPanelView: View {
             if vm.entityTrackerAutoDeleteEnabled {
                 Picker("Trigger", selection: $vm.entityTrackerAutoDeleteTrigger) {
                     Text("On Login").tag("login")
-                    Text("On Deboogey Launch").tag("launch")
+                    Text("On DeboogeyClient Launch").tag("launch")
                 }
                 Picker("Scope", selection: $vm.entityTrackerAutoDeleteScope) {
                     Text("Ephemerals Only").tag("ephemerals")

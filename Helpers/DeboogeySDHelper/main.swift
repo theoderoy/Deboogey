@@ -1,6 +1,6 @@
 //
 //  main.swift
-//  ws_overlayHelper
+//  DeboogeySDHelper
 //
 //  Created by Théo De Roy on 13/10/2025.
 //
@@ -153,7 +153,7 @@ struct OverlayEnabler {
 let args = CommandLine.arguments
 
 func printUsage() {
-    let tool = (args.first ?? "ws_overlayHelper")
+    let tool = (args.first ?? "DeboogeySDHelper")
     let usage = """
         Usage: \(tool) <all|contributor|mouse|foreground|hang|custom>
 

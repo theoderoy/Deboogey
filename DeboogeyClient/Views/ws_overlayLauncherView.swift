@@ -1,6 +1,6 @@
 //
 //  ws_overlayLauncherView.swift
-//  Deboogey
+//  DeboogeyClient
 //
 //  Created by Théo De Roy on 25/10/2025.
 //

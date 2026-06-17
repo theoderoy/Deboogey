@@ -1,6 +1,6 @@
 //
 //  Root.swift
-//  Deboogey
+//  DeboogeyClient
 //
 //  Created by Théo De Roy on 13/10/2025.
 //
