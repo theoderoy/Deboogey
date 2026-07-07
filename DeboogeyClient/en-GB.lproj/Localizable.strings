@@ -23,6 +23,7 @@
 "Configuration" = "Configuration";
 "Connect to check for upgrades" = "Connect to check for upgrades";
 "Continue" = "Continue";
+"Compatibility" = "Compatibility";
 "Contributor" = "Contributor";
 "Custom…" = "Custom…";
 "Date (Newest First)" = "Date (Newest First)";
@@ -47,7 +48,6 @@
 "Failed to run DeboogeySDHelper with administrator privileges." = "Failed to run DeboogeySDHelper with administrator privileges.";
 "Failed to start helper." = "Failed to start helper.";
 "Foreground" = "Foreground";
-"G'day!" = "G'day!";
 "Global" = "Global";
 "Go Back" = "Go Back";
 "Go Forward" = "Go Forward";
@@ -119,7 +119,6 @@
 "Sources" = "Sources";
 "Special Thanks" = "Special Thanks";
 "Superseded" = "Superseded";
-"Compatiblilty" = "Compatiblilty";
 "Swap" = "Swap";
 "Swap Modification" = "Swap Modification";
 "System Integrity Protection" = "System Integrity Protection";
@@ -143,8 +142,11 @@
 "Installing upgrade" = "Installing upgrade";
 "Preparing upgrade" = "Preparing upgrade";
 "Auxiliary upgrades have been enabled." = "Auxiliary upgrades have been enabled.";
+"Deboogey now supports displaying itself in French. Visibility will depend on the system language to simplify user experience." = "Deboogey now supports displaying itself in French. Visibility will depend on the system language to simplify user experience.";
+"Improvements" = "Improvements";
+"Localisation" = "Localisation";
+"Mainly focused on stability and faster performance across the board. Configuration has been laid out better." = "Mainly focused on stability and faster performance across the board. Configuration has been laid out better.";
 "%@ has been baked successfully." = "%@ has been baked successfully.";
-"We don't have a description for this version. Check back with later builds." = "We don't have a description for this version. Check back with later builds.";
 "What's changed in %@" = "What's changed in %@";
 "You might need to manually code-sign after upgrading." = "You might need to manually code-sign after upgrading.";
 "DeboogeyCDMHelper exists but is not executable. (path: %@)" = "DeboogeyCDMHelper exists but is not executable. (path: %@)";
