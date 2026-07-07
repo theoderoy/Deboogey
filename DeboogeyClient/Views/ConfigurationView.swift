@@ -1,0 +1,813 @@
+//
+//  ConfigurationView.swift
+//  DeboogeyClient
+//
+//  Created by Théo De Roy on 26/10/2025.
+//
+
+import SwiftUI
+import Combine
+
+struct AppWindowSize {
+    let defaultSize: CGSize
+    let minimumSize: CGSize
+
+    init(width: CGFloat, height: CGFloat, minimumSize: CGSize? = nil) {
+        let size = CGSize(width: width, height: height)
+        self.defaultSize = size
+        self.minimumSize = minimumSize ?? size
+    }
+}
+
+enum AppWindowSizing {
+    static let root = AppWindowSize(width: 620, height: 520)
+
+    enum Configuration {
+        static let sidebarWidth: CGFloat = 200
+        static let detailWidth: CGFloat = 520
+        static let minimumHeight: CGFloat = 520
+
+        static let modern = AppWindowSize(
+            width: sidebarWidth + detailWidth,
+            height: minimumHeight
+        )
+        static let legacy = AppWindowSize(width: detailWidth, height: minimumHeight)
+    }
+}
+
+extension View {
+    func minimumWindowContentSize(_ sizing: AppWindowSize) -> some View {
+        frame(
+            minWidth: sizing.minimumSize.width,
+            minHeight: sizing.minimumSize.height
+        )
+    }
+}
+
+private struct LegacyGroupedSection<Content: View>: View {
+    let header: String
+    let content: Content
+    
+    init(header: String, @ViewBuilder content: () -> Content) {
+        self.header = header
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.t(header))
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .padding(.leading, 16)
+            
+            VStack(alignment: .leading, spacing: 12) {
+                content
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+            )
+        }
+        .padding(.horizontal)
+    }
+}
+
+private struct GeneralPanelView: View {
+    @ObservedObject var vm: ConfigurationViewModel
+    @Environment(\.sipSatisfied) private var sipSatisfied
+    @State private var showResetAlert = false
+    
+    var body: some View {
+        Group {
+            if #available(macOS 13.0, *) {
+                Form {
+                    panels
+                }
+                .formStyle(.grouped)
+            } else {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        panels
+                    }
+                    .padding(.vertical)
+                }
+            }
+        }
+        .alert(isPresented: $showResetAlert) {
+            Alert(
+                title: Text(L10n.t("Delete Persistent Storage?")),
+                message: Text(L10n.t("This will clear all preferences and then quit the app.")),
+                primaryButton: .destructive(Text(L10n.t("Delete"))) {
+                    vm.theThirdImpact()
+                },
+                secondaryButton: .cancel()
+            )
+        }
+    }
+    
+    @ViewBuilder
+    private var panels: some View {
+        section(header: "Notices") {
+            Toggle(isOn: $vm.pesterMeWithSipping) {
+                Text("System Integrity Protection")
+            }
+            .disabled(!sipSatisfied)
+            if sipSatisfied {
+                Text(
+                    "Show a notice when utilities require security adjustments."
+                )
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            } else {
+                Text(
+                    "These notices will not be shown until System Integrity Protection is adjusted."
+                )
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            }
+            
+            Toggle(isOn: $vm.showNetworkNotices) {
+                Text("Network Connection")
+            }
+            Text(
+                "Show a notice when network connection is required for upgrades."
+            )
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+
+            Toggle(isOn: $vm.showCLTNotices) {
+                Text("Command Line Tools for Xcode")
+            }
+            Text(
+                "Show a notice when a feature requires Command Line Tools for Xcode to be installed."
+            )
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+        }
+        
+        section(header: "Upgrades") {
+            Picker("Upgrade Channel", selection: $vm.upgradeChannel) {
+                Text("Release").tag("Release")
+                Text("Internal").tag("Internal")
+            }
+            if vm.upgradeChannel == "Internal" {
+                Text("Internal builds are pre-release versions and may be unstable.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            
+            Toggle("Hide Automatic Notices", isOn: $vm.hideUpgradeAlerts)
+            Toggle("Delete Backup on Startup", isOn: $vm.deleteBackupOnStartup)
+        }
+
+        section(header: "Maintenance") {
+            VStack(alignment: .leading, spacing: 12) {
+                Button(action: { showResetAlert = true }) {
+                    Label("Delete Persistent Storage", systemImage: "trash")
+                }
+                Text("Clears all preferences and then quits the app.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+    
+    @ViewBuilder
+    private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
+        if #available(macOS 13.0, *) {
+            if let header = header {
+                Section(header: Text(L10n.t(header))) {
+                    content()
+                }
+            } else {
+                Section {
+                    content()
+                }
+            }
+        } else {
+            if let header = header {
+                LegacyGroupedSection(header: header) {
+                    content()
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    content()
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(NSColor.controlBackgroundColor))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+                )
+                .padding(.horizontal)
+            }
+        }
+    }
+}
+
+private struct EntityTrackerPanelView: View {
+    @ObservedObject var vm: ConfigurationViewModel
+    @AppStorage("deboogey.entityTracker.rowScale") private var rowScale: Double = 1.0
+    @State private var displayScale: Double = {
+        let stored = UserDefaults.standard.double(forKey: "deboogey.entityTracker.rowScale")
+        return stored.isZero ? 1.0 : stored
+    }()
+    @AppStorage("deboogey.entityTracker.scaleTarget") private var scaleTarget: String = "both"
+    
+    private var preferenceBanner: some View {
+        Image("EntityTrackerConfUnit")
+            .resizable()
+            .scaledToFit()
+            .frame(maxWidth: .infinity)
+            .cornerRadius(10)
+    }
+    
+    var body: some View {
+        Group {
+            if #available(macOS 13.0, *) {
+                Form {
+                    Section {
+                        preferenceBanner
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+
+                    panels
+                }
+                .formStyle(.grouped)
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        preferenceBanner
+                            .padding(.horizontal)
+
+                        VStack(spacing: 20) {
+                            panels
+                        }
+                        .padding(.vertical)
+                    }
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var panels: some View {
+        section(header: "Entity Tracker") {
+            Toggle("Auto-Delete", isOn: $vm.entityTrackerAutoDeleteEnabled)
+            if vm.entityTrackerAutoDeleteEnabled {
+                Picker("Trigger", selection: $vm.entityTrackerAutoDeleteTrigger) {
+                    Text("On Login").tag("login")
+                    Text("On Deboogey Launch").tag("launch")
+                }
+                Picker("Scope", selection: $vm.entityTrackerAutoDeleteScope) {
+                    Text("Ephemerals Only").tag("ephemerals")
+                    Text("All Entries").tag("all")
+                }
+                Text(descriptionForAutoDelete)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        }
+        
+        section {
+            Picker("Display Scale", selection: $scaleTarget) {
+                Text("Icon").tag("icon")
+                Text("Text").tag("text")
+                Text("Both").tag("both")
+            }
+            
+            HStack {
+                Text("Scale Size")
+                Spacer()
+                Text("\(Int((displayScale * 100).rounded()))%")
+                    .monospacedDigit()
+                    .foregroundColor(.secondary)
+
+                Stepper("", value: Binding(
+                    get: { rowScale },
+                    set: { newValue in
+                        rowScale = newValue
+                        displayScale = newValue
+                    }
+                ), in: 0.70...1.50, step: 0.05)
+                    .labelsHidden()
+            }
+        }
+    }
+    
+    private var descriptionForAutoDelete: String {
+        let what = vm.entityTrackerAutoDeleteScope == "ephemerals"
+            ? L10n.t("Removes ephemeral entries (e.g. SkyLight Diagnostics) from the log")
+            : L10n.t("Clears the entire Entity Tracker log")
+        let when = vm.entityTrackerAutoDeleteTrigger == "login"
+            ? L10n.t("once per login session.")
+            : L10n.t("on every app launch.")
+        return "\(what) \(when)"
+    }
+    
+    @ViewBuilder
+    private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
+        if #available(macOS 13.0, *) {
+            if let header = header {
+                Section(header: Text(L10n.t(header))) {
+                    content()
+                }
+            } else {
+                Section {
+                    content()
+                }
+            }
+        } else {
+            if let header = header {
+                LegacyGroupedSection(header: header) {
+                    content()
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    content()
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(NSColor.controlBackgroundColor))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+                )
+                .padding(.horizontal)
+            }
+        }
+    }
+}
+
+private struct AcknowledgementsPanelView: View {
+    @ObservedObject var vm: ConfigurationViewModel
+    @State private var showResetAlert = false
+    @Environment(\.openURL) private var openURL
+    
+    var body: some View {
+        Group {
+            if #available(macOS 13.0, *) {
+                Form {
+                    panels
+                }
+                .formStyle(.grouped)
+            } else {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        panels
+                    }
+                    .padding(.vertical)
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var panels: some View {
+        section(header: "Sources") {
+            Button(action: {
+                openURL(
+                    URL(
+                        string:
+                            "https://mjtsai.com/blog/2024/03/22/_eventfirstresponderchaindescription/"
+                    )!)
+            }) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Cocoa Debug Menu").font(.headline)
+                        Text("Sourced Article").font(.subheadline).foregroundColor(
+                            .secondary)
+                    }
+                } icon: {
+                    Image(systemName: "link").foregroundColor(.blue)
+                }
+            }
+            .buttonStyle(.plain)
+            
+            Button(action: {
+                openURL(
+                    URL(
+                        string:
+                            "https://x.com/khanhduytran0/status/1951637277760999628?s=61")!)
+            }) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("enable_overlay").font(.headline)
+                        Text("Sourced Article").font(.subheadline).foregroundColor(
+                            .secondary)
+                    }
+                } icon: {
+                    Image(systemName: "link").foregroundColor(.blue)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+        
+        section(header: "Special Thanks") {
+            Button(action: { openURL(URL(string: "https://github.com/ogui-775")!) }) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Salty").font(.headline)
+                        Text("Insight").font(.subheadline).foregroundColor(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "star.fill").foregroundColor(.yellow)
+                }
+            }
+            .buttonStyle(.plain)
+            
+            Button(action: { openURL(URL(string: "https://github.com/1davi")!) }) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("1davi").font(.headline)
+                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "gearshape").foregroundColor(.green)
+                }
+            }
+            .buttonStyle(.plain)
+            
+            Button(action: { openURL(URL(string: "https://github.com/aspauldingcode")!) }) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Alex Spaulding").font(.headline)
+                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "gearshape").foregroundColor(.green)
+                }
+            }
+            .buttonStyle(.plain)
+            
+            Button(action: { openURL(URL(string: "https://github.com/MTACS")!) }) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("MTACS").font(.headline)
+                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "gearshape").foregroundColor(.green)
+                }
+            }
+            .buttonStyle(.plain)
+            
+            Button(action: { openURL(URL(string: "https://github.com/oliviaiacovou")!) }) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Olivia Iacovou").font(.headline)
+                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "gearshape").foregroundColor(.green)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    
+    @ViewBuilder
+    private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
+        if #available(macOS 13.0, *) {
+            if let header = header {
+                Section(header: Text(L10n.t(header))) {
+                    content()
+                }
+            } else {
+                Section {
+                    content()
+                }
+            }
+        } else {
+            if let header = header {
+                LegacyGroupedSection(header: header) {
+                    content()
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    content()
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(NSColor.controlBackgroundColor))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+                )
+                .padding(.horizontal)
+            }
+        }
+    }
+}
+
+enum Panel: CaseIterable, Identifiable, Hashable, Codable {
+    case general
+    case entityTracker
+    case acknowledge
+    
+    var id: String {
+        switch self {
+        case .general: return "general"
+        case .entityTracker: return "entityTracker"
+        case .acknowledge: return "acknowledge"
+        }
+    }
+    var title: String {
+        switch self {
+        case .general:
+            return L10n.t("General")
+        case .entityTracker:
+            return L10n.t("Entity Tracker")
+        case .acknowledge:
+            return L10n.t("Acknowledgements")
+        }
+    }
+    var systemImage: String {
+        switch self {
+        case .general: return "gear"
+        case .entityTracker: return "binoculars"
+        case .acknowledge: return "star"
+        }
+    }
+}
+
+final class ConfigurationViewModel: ObservableObject {
+    @Published var selection: Panel?
+    @Published private(set) var backStack: [Panel] = []
+    @Published private(set) var forwardStack: [Panel] = []
+    private var isJumpingViaHistory = false
+    
+    @Published var pesterMeWithSipping: Bool {
+        didSet { vars.pesterMeWithSipping = pesterMeWithSipping }
+    }
+    
+    @Published var showNetworkNotices: Bool {
+        didSet { vars.showNetworkNotices = showNetworkNotices }
+    }
+
+    @Published var showCLTNotices: Bool {
+        didSet { vars.showCLTNotices = showCLTNotices }
+    }
+    
+    @Published var upgradeChannel: String {
+        didSet { vars.upgradeChannel = upgradeChannel }
+    }
+    
+    @Published var hideUpgradeAlerts: Bool {
+        didSet { vars.hideUpgradeAlerts = hideUpgradeAlerts }
+    }
+    
+    @Published var deleteBackupOnStartup: Bool {
+        didSet { vars.deleteBackupOnStartup = deleteBackupOnStartup }
+    }
+
+    @Published var entityTrackerAutoDeleteEnabled: Bool {
+        didSet { vars.entityTrackerAutoDeleteEnabled = entityTrackerAutoDeleteEnabled }
+    }
+
+    @Published var entityTrackerAutoDeleteScope: String {
+        didSet { vars.entityTrackerAutoDeleteScope = entityTrackerAutoDeleteScope }
+    }
+
+    @Published var entityTrackerAutoDeleteTrigger: String {
+        didSet { vars.entityTrackerAutoDeleteTrigger = entityTrackerAutoDeleteTrigger }
+    }
+
+    private let vars: PersistentVariables
+    
+    init(initialSelection: Panel? = .general, vars: PersistentVariables = PersistentVariables()) {
+        self.vars = vars
+        self.selection = initialSelection
+        self.pesterMeWithSipping = vars.pesterMeWithSipping
+        self.showNetworkNotices = vars.showNetworkNotices
+        self.showCLTNotices = vars.showCLTNotices
+        self.upgradeChannel = vars.upgradeChannel
+        self.hideUpgradeAlerts = vars.hideUpgradeAlerts
+        self.deleteBackupOnStartup = vars.deleteBackupOnStartup
+        self.entityTrackerAutoDeleteEnabled = vars.entityTrackerAutoDeleteEnabled
+        self.entityTrackerAutoDeleteScope = vars.entityTrackerAutoDeleteScope
+        self.entityTrackerAutoDeleteTrigger = vars.entityTrackerAutoDeleteTrigger
+    }
+    
+    func goBack() {
+        guard let previous = backStack.popLast() else { return }
+        if let current = selection { forwardStack.append(current) }
+        isJumpingViaHistory = true
+        selection = previous
+    }
+    
+    func goForward() {
+        guard let next = forwardStack.popLast() else { return }
+        if let current = selection { backStack.append(current) }
+        isJumpingViaHistory = true
+        selection = next
+    }
+    
+    func onSelectionChanged(oldValue: Panel?, newValue: Panel?) {
+        guard !isJumpingViaHistory else {
+            isJumpingViaHistory = false
+            return
+        }
+        if let old = oldValue { backStack.append(old) }
+        forwardStack.removeAll()
+    }
+    
+    var canGoBack: Bool { !backStack.isEmpty }
+    var canGoForward: Bool { !forwardStack.isEmpty }
+    
+    func theThirdImpact() {
+        vars.theThirdImpact()
+    }
+}
+
+private struct PanelList: View {
+    @Binding var selection: Panel?
+    
+    var body: some View {
+        if #available(macOS 13.0, *) {
+            List(selection: $selection) {
+                NavigationLink(value: Panel.general) {
+                    Label(Panel.general.title, systemImage: Panel.general.systemImage)
+                }
+                NavigationLink(value: Panel.entityTracker) {
+                    Label(Panel.entityTracker.title, systemImage: Panel.entityTracker.systemImage)
+                }
+                NavigationLink(value: Panel.acknowledge) {
+                    Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+                }
+            }
+        } else {
+            List {
+                Button(action: { selection = .general }) {
+                    Label(Panel.general.title, systemImage: Panel.general.systemImage)
+                }
+                .buttonStyle(.plain)
+                Button(action: { selection = .entityTracker }) {
+                    Label(Panel.entityTracker.title, systemImage: Panel.entityTracker.systemImage)
+                }
+                .buttonStyle(.plain)
+                Button(action: { selection = .acknowledge }) {
+                    Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
+private struct PanelDetail: View {
+    @ObservedObject var vm: ConfigurationViewModel
+    
+    var body: some View {
+        Group {
+            switch vm.selection {
+            case .general:
+                GeneralPanelView(vm: vm)
+            case .entityTracker:
+                EntityTrackerPanelView(vm: vm)
+            case .acknowledge:
+                AcknowledgementsPanelView(vm: vm)
+            case .none:
+                Text(L10n.t("Select a panel"))
+            }
+        }
+        .navigationTitle(vm.selection?.title ?? L10n.t("Configuration"))
+    }
+}
+
+struct ConfigurationRootView: View {
+    @Environment(\.sipSatisfied) private var sipSatisfied
+    @StateObject private var vm = ConfigurationViewModel()
+    
+    var body: some View {
+        if #available(macOS 14.0, *) {
+            ModernNavigationView(vm: vm)
+                .minimumWindowContentSize(AppWindowSizing.Configuration.modern)
+        } else {
+            TabView {
+                GeneralPanelView(vm: vm)
+                    .tabItem {
+                        Label(Panel.general.title, systemImage: Panel.general.systemImage)
+                    }
+                
+                EntityTrackerPanelView(vm: vm)
+                    .tabItem {
+                        Label(Panel.entityTracker.title, systemImage: Panel.entityTracker.systemImage)
+                    }
+                
+                AcknowledgementsPanelView(vm: vm)
+                    .tabItem {
+                        Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+                    }
+            }
+            .minimumWindowContentSize(AppWindowSizing.Configuration.legacy)
+        }
+    }
+}
+
+@available(macOS 13.0, *)
+private struct ModernNavigationView: View {
+    @ObservedObject var vm: ConfigurationViewModel
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    
+    var body: some View {
+        if #available(macOS 14.0, *) {
+            NavigationSplitView(columnVisibility: $columnVisibility) {
+                PanelList(selection: $vm.selection)
+                    .toolbar(removing: .sidebarToggle)
+                    .navigationSplitViewColumnWidth(AppWindowSizing.Configuration.sidebarWidth)
+            } detail: {
+                PanelDetail(vm: vm)
+                    .frame(minWidth: AppWindowSizing.Configuration.detailWidth)
+                    .toolbar {
+                        ToolbarItem(placement: .navigation) {
+                            HStack {
+                                if columnVisibility == .detailOnly {
+                                    Button(action: {
+                                        columnVisibility = .all
+                                    }) {
+                                        Image(systemName: "sidebar.left")
+                                    }
+                                    .help(L10n.t("Show Sidebar"))
+                                    .padding(.leading, 3)
+                                    
+                                    if #available(macOS 26.0, *) {
+                                        Divider()
+                                            .frame(height: 18)
+                                    }
+                                }
+                                
+                                Button(action: vm.goBack) {
+                                    Image(systemName: "chevron.left")
+                                }
+                                .help(L10n.t("Go Back"))
+                                .disabled(!vm.canGoBack)
+                                .padding(.leading, columnVisibility == .detailOnly ? 0 : 3)
+                                
+                                if #available(macOS 26.0, *) {
+                                    Divider()
+                                        .frame(height: 18)
+                                }
+                                
+                                Button(action: vm.goForward) {
+                                    Image(systemName: "chevron.right")
+                                }
+                                .help(L10n.t("Go Forward"))
+                                .disabled(!vm.canGoForward)
+                                .padding(.trailing, 3)
+                            }
+                            .controlSize(.large)
+                        }
+                    }
+                    .onChange(of: vm.selection) { oldValue, newValue in
+                        vm.onSelectionChanged(oldValue: oldValue, newValue: newValue)
+                    }
+            }
+        } else {
+            NavigationSplitView {
+                PanelList(selection: $vm.selection)
+                    .navigationSplitViewColumnWidth(AppWindowSizing.Configuration.sidebarWidth)
+            } detail: {
+                PanelDetail(vm: vm)
+                    .frame(minWidth: AppWindowSizing.Configuration.detailWidth)
+                    .toolbar {
+                        ToolbarItem(placement: .navigation) {
+                            HStack {
+                                Button(action: vm.goBack) {
+                                    Image(systemName: "chevron.left")
+                                }
+                                .help(L10n.t("Go Back"))
+                                .disabled(!vm.canGoBack)
+                                .padding(.leading, 3)
+                                
+                                Button(action: vm.goForward) {
+                                    Image(systemName: "chevron.right")
+                                }
+                                .help(L10n.t("Go Forward"))
+                                .disabled(!vm.canGoForward)
+                                .padding(.trailing, 3)
+                            }
+                            .controlSize(.large)
+                        }
+                    }
+                    .onChange(of: vm.selection) { newValue in
+                        vm.onSelectionChanged(oldValue: nil, newValue: newValue)
+                    }
+            }
+        }
+    }
+}
+
+#Preview {
+    ConfigurationRootView()
+}
