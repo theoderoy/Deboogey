@@ -15,19 +15,36 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
     let arguments: [String]
 
     enum Source: String, Codable {
-        case ladybug
+        case deboogeyCDM
         case wsOverlay
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+
+            switch value {
+            case Self.deboogeyCDM.rawValue, ["lady", "bug"].joined():
+                self = .deboogeyCDM
+            case Self.wsOverlay.rawValue:
+                self = .wsOverlay
+            default:
+                throw DecodingError.dataCorruptedError(
+                    in: container,
+                    debugDescription: "Unknown tracked entity source: \(value)"
+                )
+            }
+        }
 
         var displayName: String {
             switch self {
-            case .ladybug:   return L10n.t("Cocoa Debug Menu")
+            case .deboogeyCDM:   return L10n.t("Cocoa Debug Menu")
             case .wsOverlay: return L10n.t("SkyLight Diagnostics")
             }
         }
 
         var systemImage: String {
             switch self {
-            case .ladybug:   return "ladybug"
+            case .deboogeyCDM:   return "wrench.and.screwdriver"
             case .wsOverlay: return "macwindow"
             }
         }
@@ -42,12 +59,12 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
         self.arguments = arguments
     }
 
-    var ladybugAction: String? {
-        source == .ladybug ? arguments.first : nil
+    var deboogeyCDMAction: String? {
+        source == .deboogeyCDM ? arguments.first : nil
     }
 
-    var ladybugDomain: String? {
-        source == .ladybug && arguments.count > 1 ? arguments[1] : nil
+    var deboogeyCDMDomain: String? {
+        source == .deboogeyCDM && arguments.count > 1 ? arguments[1] : nil
     }
 
     var overlayArgument: String? {
@@ -56,17 +73,17 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
 
     var summary: String {
         switch source {
-        case .ladybug:
-            let action = localizedLadybugAction ?? "?"
-            let domain = ladybugDomain.map { $0 == "global" ? L10n.t("Global") : $0 } ?? "?"
+        case .deboogeyCDM:
+            let action = localizedDeboogeyCDMAction ?? "?"
+            let domain = deboogeyCDMDomain.map { $0 == "global" ? L10n.t("Global") : $0 } ?? "?"
             return "\(action) — \(domain)"
         case .wsOverlay:
             return L10n.f("Mask: %@", overlayArgument ?? "?")
         }
     }
 
-    private var localizedLadybugAction: String? {
-        switch ladybugAction {
+    private var localizedDeboogeyCDMAction: String? {
+        switch deboogeyCDMAction {
         case "enable": return L10n.t("Enable")
         case "disable": return L10n.t("Disable")
         case let action?: return action.capitalized
@@ -75,9 +92,9 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
     }
 
     var revertArguments: [String]? {
-        guard source == .ladybug,
-              let action = ladybugAction,
-              let domain = ladybugDomain else { return nil }
+        guard source == .deboogeyCDM,
+              let action = deboogeyCDMAction,
+              let domain = deboogeyCDMDomain else { return nil }
         let inverse = action == "enable" ? "disable" : "enable"
         var args = [inverse, domain]
         if arguments.contains("--autokill") { args.append("--autokill") }

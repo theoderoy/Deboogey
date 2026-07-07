@@ -8,6 +8,42 @@
 import SwiftUI
 import Combine
 
+struct AppWindowSize {
+    let defaultSize: CGSize
+    let minimumSize: CGSize
+
+    init(width: CGFloat, height: CGFloat, minimumSize: CGSize? = nil) {
+        let size = CGSize(width: width, height: height)
+        self.defaultSize = size
+        self.minimumSize = minimumSize ?? size
+    }
+}
+
+enum AppWindowSizing {
+    static let root = AppWindowSize(width: 620, height: 520)
+
+    enum Configuration {
+        static let sidebarWidth: CGFloat = 200
+        static let detailWidth: CGFloat = 520
+        static let minimumHeight: CGFloat = 520
+
+        static let modern = AppWindowSize(
+            width: sidebarWidth + detailWidth,
+            height: minimumHeight
+        )
+        static let legacy = AppWindowSize(width: detailWidth, height: minimumHeight)
+    }
+}
+
+extension View {
+    func minimumWindowContentSize(_ sizing: AppWindowSize) -> some View {
+        frame(
+            minWidth: sizing.minimumSize.width,
+            minHeight: sizing.minimumSize.height
+        )
+    }
+}
+
 private struct LegacyGroupedSection<Content: View>: View {
     let header: String
     let content: Content
@@ -40,50 +76,24 @@ private struct LegacyGroupedSection<Content: View>: View {
     }
 }
 
-private struct SettingsPanelView: View {
+private struct GeneralPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
     @Environment(\.sipSatisfied) private var sipSatisfied
     @State private var showResetAlert = false
-    @AppStorage("deboogey.entityTracker.rowScale") private var rowScale: Double = 1.0
-    @State private var displayScale: Double = {
-        let stored = UserDefaults.standard.double(forKey: "deboogey.entityTracker.rowScale")
-        return stored.isZero ? 1.0 : stored
-    }()
-    @AppStorage("deboogey.entityTracker.scaleTarget") private var scaleTarget: String = "both"
     
     var body: some View {
-        GeometryReader { geometry in
-            Group {
-                if #available(macOS 13.0, *) {
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            Image("EntityTrackerConfUnit")
-                                .resizable()
-                                .scaledToFit()
-                                .cornerRadius(10)
-                                .padding(16)
-                            
-                            Form {
-                                panels
-                            }
-                            .formStyle(.grouped)
-                        }
+        Group {
+            if #available(macOS 13.0, *) {
+                Form {
+                    panels
+                }
+                .formStyle(.grouped)
+            } else {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        panels
                     }
-                } else {
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            Image("EntityTrackerConfUnit")
-                                .resizable()
-                                .scaledToFit()
-                                .cornerRadius(10)
-                                .padding(16)
-                            
-                            VStack(spacing: 20) {
-                                panels
-                            }
-                            .padding(.vertical)
-                        }
-                    }
+                    .padding(.vertical)
                 }
             }
         }
@@ -101,48 +111,6 @@ private struct SettingsPanelView: View {
     
     @ViewBuilder
     private var panels: some View {
-        section(header: "Entity Tracker") {
-            Toggle("Auto-Delete", isOn: $vm.entityTrackerAutoDeleteEnabled)
-            if vm.entityTrackerAutoDeleteEnabled {
-                Picker("Trigger", selection: $vm.entityTrackerAutoDeleteTrigger) {
-                    Text("On Login").tag("login")
-                    Text("On DeboogeyClient Launch").tag("launch")
-                }
-                Picker("Scope", selection: $vm.entityTrackerAutoDeleteScope) {
-                    Text("Ephemerals Only").tag("ephemerals")
-                    Text("All Entries").tag("all")
-                }
-                Text(descriptionForAutoDelete)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-        }
-        
-        section {
-            Picker("Display Scale", selection: $scaleTarget) {
-                Text("Icon").tag("icon")
-                Text("Text").tag("text")
-                Text("Both").tag("both")
-            }
-            
-            HStack {
-                Text("Scale Size")
-                Spacer()
-                Text("\(Int((displayScale * 100).rounded()))%")
-                    .monospacedDigit()
-                    .foregroundColor(.secondary)
-
-                Stepper("", value: Binding(
-                    get: { rowScale },
-                    set: { newValue in
-                        rowScale = newValue
-                        displayScale = newValue
-                    }
-                ), in: 0.70...1.50, step: 0.05)
-                    .labelsHidden()
-            }
-        }
-        
         section(header: "Notices") {
             Toggle(isOn: $vm.pesterMeWithSipping) {
                 Text("System Integrity Protection")
@@ -209,6 +177,132 @@ private struct SettingsPanelView: View {
         }
     }
     
+    @ViewBuilder
+    private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
+        if #available(macOS 13.0, *) {
+            if let header = header {
+                Section(header: Text(L10n.t(header))) {
+                    content()
+                }
+            } else {
+                Section {
+                    content()
+                }
+            }
+        } else {
+            if let header = header {
+                LegacyGroupedSection(header: header) {
+                    content()
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    content()
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(NSColor.controlBackgroundColor))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+                )
+                .padding(.horizontal)
+            }
+        }
+    }
+}
+
+private struct EntityTrackerPanelView: View {
+    @ObservedObject var vm: ConfigurationViewModel
+    @AppStorage("deboogey.entityTracker.rowScale") private var rowScale: Double = 1.0
+    @State private var displayScale: Double = {
+        let stored = UserDefaults.standard.double(forKey: "deboogey.entityTracker.rowScale")
+        return stored.isZero ? 1.0 : stored
+    }()
+    @AppStorage("deboogey.entityTracker.scaleTarget") private var scaleTarget: String = "both"
+    
+    private var preferenceBanner: some View {
+        Image("EntityTrackerConfUnit")
+            .resizable()
+            .scaledToFit()
+            .frame(maxWidth: .infinity)
+            .cornerRadius(10)
+    }
+    
+    var body: some View {
+        Group {
+            if #available(macOS 13.0, *) {
+                Form {
+                    Section {
+                        preferenceBanner
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+
+                    panels
+                }
+                .formStyle(.grouped)
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        preferenceBanner
+                            .padding(.horizontal)
+
+                        VStack(spacing: 20) {
+                            panels
+                        }
+                        .padding(.vertical)
+                    }
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var panels: some View {
+        section(header: "Entity Tracker") {
+            Toggle("Auto-Delete", isOn: $vm.entityTrackerAutoDeleteEnabled)
+            if vm.entityTrackerAutoDeleteEnabled {
+                Picker("Trigger", selection: $vm.entityTrackerAutoDeleteTrigger) {
+                    Text("On Login").tag("login")
+                    Text("On Deboogey Launch").tag("launch")
+                }
+                Picker("Scope", selection: $vm.entityTrackerAutoDeleteScope) {
+                    Text("Ephemerals Only").tag("ephemerals")
+                    Text("All Entries").tag("all")
+                }
+                Text(descriptionForAutoDelete)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        }
+        
+        section {
+            Picker("Display Scale", selection: $scaleTarget) {
+                Text("Icon").tag("icon")
+                Text("Text").tag("text")
+                Text("Both").tag("both")
+            }
+            
+            HStack {
+                Text("Scale Size")
+                Spacer()
+                Text("\(Int((displayScale * 100).rounded()))%")
+                    .monospacedDigit()
+                    .foregroundColor(.secondary)
+
+                Stepper("", value: Binding(
+                    get: { rowScale },
+                    set: { newValue in
+                        rowScale = newValue
+                        displayScale = newValue
+                    }
+                ), in: 0.70...1.50, step: 0.05)
+                    .labelsHidden()
+            }
+        }
+    }
+    
     private var descriptionForAutoDelete: String {
         let what = vm.entityTrackerAutoDeleteScope == "ephemerals"
             ? L10n.t("Removes ephemeral entries (e.g. SkyLight Diagnostics) from the log")
@@ -218,7 +312,7 @@ private struct SettingsPanelView: View {
             : L10n.t("on every app launch.")
         return "\(what) \(when)"
     }
-
+    
     @ViewBuilder
     private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
         if #available(macOS 13.0, *) {
@@ -416,27 +510,33 @@ private struct AcknowledgementsPanelView: View {
     }
 }
 
-enum Panel: String, CaseIterable, Identifiable, Hashable, Codable {
-    case settings = "Settings"
-    case acknowledge = "Acknowledgements"
+enum Panel: CaseIterable, Identifiable, Hashable, Codable {
+    case general
+    case entityTracker
+    case acknowledge
     
-    var id: String { rawValue }
+    var id: String {
+        switch self {
+        case .general: return "general"
+        case .entityTracker: return "entityTracker"
+        case .acknowledge: return "acknowledge"
+        }
+    }
     var title: String {
         switch self {
-        case .settings:
-            if #available(macOS 13.0, *) {
-                return L10n.t("Settings")
-            } else {
-                return L10n.t("Preferences")
-            }
+        case .general:
+            return L10n.t("General")
+        case .entityTracker:
+            return L10n.t("Entity Tracker")
         case .acknowledge:
             return L10n.t("Acknowledgements")
         }
     }
     var systemImage: String {
         switch self {
-        case .settings: return "gear"
-        case .acknowledge: return "star.fill"
+        case .general: return "gear"
+        case .entityTracker: return "binoculars"
+        case .acknowledge: return "star"
         }
     }
 }
@@ -485,7 +585,7 @@ final class ConfigurationViewModel: ObservableObject {
 
     private let vars: PersistentVariables
     
-    init(initialSelection: Panel? = .settings, vars: PersistentVariables = PersistentVariables()) {
+    init(initialSelection: Panel? = .general, vars: PersistentVariables = PersistentVariables()) {
         self.vars = vars
         self.selection = initialSelection
         self.pesterMeWithSipping = vars.pesterMeWithSipping
@@ -536,8 +636,11 @@ private struct PanelList: View {
     var body: some View {
         if #available(macOS 13.0, *) {
             List(selection: $selection) {
-                NavigationLink(value: Panel.settings) {
-                    Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
+                NavigationLink(value: Panel.general) {
+                    Label(Panel.general.title, systemImage: Panel.general.systemImage)
+                }
+                NavigationLink(value: Panel.entityTracker) {
+                    Label(Panel.entityTracker.title, systemImage: Panel.entityTracker.systemImage)
                 }
                 NavigationLink(value: Panel.acknowledge) {
                     Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
@@ -545,8 +648,12 @@ private struct PanelList: View {
             }
         } else {
             List {
-                Button(action: { selection = .settings }) {
-                    Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
+                Button(action: { selection = .general }) {
+                    Label(Panel.general.title, systemImage: Panel.general.systemImage)
+                }
+                .buttonStyle(.plain)
+                Button(action: { selection = .entityTracker }) {
+                    Label(Panel.entityTracker.title, systemImage: Panel.entityTracker.systemImage)
                 }
                 .buttonStyle(.plain)
                 Button(action: { selection = .acknowledge }) {
@@ -564,15 +671,17 @@ private struct PanelDetail: View {
     var body: some View {
         Group {
             switch vm.selection {
-            case .settings:
-                SettingsPanelView(vm: vm)
+            case .general:
+                GeneralPanelView(vm: vm)
+            case .entityTracker:
+                EntityTrackerPanelView(vm: vm)
             case .acknowledge:
                 AcknowledgementsPanelView(vm: vm)
             case .none:
                 Text(L10n.t("Select a panel"))
             }
         }
-        .navigationTitle(vm.selection?.title ?? L10n.t("Settings"))
+        .navigationTitle(vm.selection?.title ?? L10n.t("Configuration"))
     }
 }
 
@@ -583,11 +692,17 @@ struct ConfigurationRootView: View {
     var body: some View {
         if #available(macOS 14.0, *) {
             ModernNavigationView(vm: vm)
+                .minimumWindowContentSize(AppWindowSizing.Configuration.modern)
         } else {
             TabView {
-                SettingsPanelView(vm: vm)
+                GeneralPanelView(vm: vm)
                     .tabItem {
-                        Label(Panel.settings.title, systemImage: Panel.settings.systemImage)
+                        Label(Panel.general.title, systemImage: Panel.general.systemImage)
+                    }
+                
+                EntityTrackerPanelView(vm: vm)
+                    .tabItem {
+                        Label(Panel.entityTracker.title, systemImage: Panel.entityTracker.systemImage)
                     }
                 
                 AcknowledgementsPanelView(vm: vm)
@@ -595,7 +710,7 @@ struct ConfigurationRootView: View {
                         Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
                     }
             }
-            .frame(width: 520, height: 400)
+            .minimumWindowContentSize(AppWindowSizing.Configuration.legacy)
         }
     }
 }
@@ -610,10 +725,10 @@ private struct ModernNavigationView: View {
             NavigationSplitView(columnVisibility: $columnVisibility) {
                 PanelList(selection: $vm.selection)
                     .toolbar(removing: .sidebarToggle)
-                    .navigationSplitViewColumnWidth(200)
+                    .navigationSplitViewColumnWidth(AppWindowSizing.Configuration.sidebarWidth)
             } detail: {
                 PanelDetail(vm: vm)
-                    .frame(width: 520)
+                    .frame(minWidth: AppWindowSizing.Configuration.detailWidth)
                     .toolbar {
                         ToolbarItem(placement: .navigation) {
                             HStack {
@@ -661,10 +776,10 @@ private struct ModernNavigationView: View {
         } else {
             NavigationSplitView {
                 PanelList(selection: $vm.selection)
-                    .navigationSplitViewColumnWidth(200)
+                    .navigationSplitViewColumnWidth(AppWindowSizing.Configuration.sidebarWidth)
             } detail: {
                 PanelDetail(vm: vm)
-                    .frame(width: 520)
+                    .frame(minWidth: AppWindowSizing.Configuration.detailWidth)
                     .toolbar {
                         ToolbarItem(placement: .navigation) {
                             HStack {

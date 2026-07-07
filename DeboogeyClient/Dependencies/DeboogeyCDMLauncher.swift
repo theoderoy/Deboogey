@@ -1,5 +1,5 @@
 //
-//  ladybugLauncher.swift
+//  DeboogeyCDMLauncher.swift
 //  DeboogeyClient
 //
 //  Created by Théo De Roy on 13/10/2025.
@@ -8,7 +8,7 @@
 import Foundation
 import AppKit
 
-enum ladybugLauncherError: LocalizedError {
+enum DeboogeyCDMLauncherError: LocalizedError {
     case invalidArguments(userFacing: String, details: [String: Any])
     case toolNotFound
     case toolOutsideResources(path: String)
@@ -34,33 +34,33 @@ enum ladybugLauncherError: LocalizedError {
     }
 }
 
-struct ladybugLauncher {
-    static func runLadybugHelper(arguments: [String]) throws -> String {
+struct DeboogeyCDMLauncher {
+    static func runDeboogeyCDMHelper(arguments: [String]) throws -> String {
         guard arguments.count == 2 || arguments.count == 3 else {
-            throw ladybugLauncherError.invalidArguments(userFacing: L10n.t("Invalid arguments. Expected: enable|disable <bundle-id|global> [--autokill]"), details: ["arguments": arguments])
+            throw DeboogeyCDMLauncherError.invalidArguments(userFacing: L10n.t("Invalid arguments. Expected: enable|disable <bundle-id|global> [--autokill]"), details: ["arguments": arguments])
         }
 
         let action = arguments[0]
         guard action == "enable" || action == "disable" else {
-            throw ladybugLauncherError.invalidArguments(userFacing: L10n.t("Invalid arguments. First argument must be 'enable' or 'disable'"), details: ["arguments": arguments])
+            throw DeboogeyCDMLauncherError.invalidArguments(userFacing: L10n.t("Invalid arguments. First argument must be 'enable' or 'disable'"), details: ["arguments": arguments])
         }
 
         let domain = arguments[1]
 
         if arguments.count == 3 {
             guard arguments[2] == "--autokill" else {
-                throw ladybugLauncherError.invalidArguments(userFacing: L10n.f("Invalid arguments. Unknown flag: %@", arguments[2]), details: ["arguments": arguments])
+                throw DeboogeyCDMLauncherError.invalidArguments(userFacing: L10n.f("Invalid arguments. Unknown flag: %@", arguments[2]), details: ["arguments": arguments])
             }
         }
         
         guard let toolPath = Bundle.main.path(forResource: "DeboogeyCDMHelper", ofType: nil) else {
-            throw ladybugLauncherError.toolNotFound
+            throw DeboogeyCDMLauncherError.toolNotFound
         }
         if !toolPath.contains("/Contents/Resources/") {
-            throw ladybugLauncherError.toolOutsideResources(path: toolPath)
+            throw DeboogeyCDMLauncherError.toolOutsideResources(path: toolPath)
         }
         if !FileManager.default.isExecutableFile(atPath: toolPath) {
-            throw ladybugLauncherError.toolNotExecutable(path: toolPath)
+            throw DeboogeyCDMLauncherError.toolNotExecutable(path: toolPath)
         }
 
         let process = Process()
@@ -97,7 +97,7 @@ struct ladybugLauncher {
         } catch {
             stdoutPipe.fileHandleForReading.readabilityHandler = nil
             stderrPipe.fileHandleForReading.readabilityHandler = nil
-            throw ladybugLauncherError.processStartFailed(details: ["error": String(describing: error)])
+            throw DeboogeyCDMLauncherError.processStartFailed(details: ["error": String(describing: error)])
         }
         process.waitUntilExit()
 
@@ -133,7 +133,7 @@ struct ladybugLauncher {
             print("[DeboogeyCDMHelper] Exit status: \(status). Args: \(arguments)\nSTDERR:\n\(stderr)\nSTDOUT:\n\(stdout)")
             #endif
 
-            throw ladybugLauncherError.executionFailed(userFacing: userFacing, details: details)
+            throw DeboogeyCDMLauncherError.executionFailed(userFacing: userFacing, details: details)
         }
 
         return stdout

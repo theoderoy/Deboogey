@@ -1,5 +1,5 @@
 //
-//  ws_overlayLauncherView.swift
+//  DeboogeySDLauncherView.swift
 //  DeboogeyClient
 //
 //  Created by Théo De Roy on 25/10/2025.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ws_overlayLauncherView: View {
+struct DeboogeySDLauncherView: View {
     enum Preset: String, CaseIterable, Identifiable {
         case all, contributor, mouse, foreground, hang, custom
         var id: String { rawValue }
@@ -44,6 +44,17 @@ struct ws_overlayLauncherView: View {
             case .custom: return L10n.t("Provide a custom mask in binary (0b...) or decimal.")
             }
         }
+
+        var systemImage: String {
+            switch self {
+            case .all: return "square.grid.2x2"
+            case .contributor: return "person.crop.rectangle"
+            case .mouse: return "cursorarrow.motionlines"
+            case .foreground: return "macwindow"
+            case .hang: return "speedometer"
+            case .custom: return "slider.horizontal.3"
+            }
+        }
     }
 
     @State private var preset: Preset = .all
@@ -60,8 +71,8 @@ struct ws_overlayLauncherView: View {
             VStack(spacing: 24) {
                 VStack(spacing: 0) {
                     Group {
-                        if EducationPlayerView.hasAsset(named: "DEBOOGEY_EDUCATION-WS_OVERLAY_h265") {
-                            EducationPlayerView(assetName: "DEBOOGEY_EDUCATION-WS_OVERLAY_h265")
+                        if EducationPlayerView.hasAsset(named: "DEBOOGEY_EDUCATION-DEBOOGEYSD_h265") {
+                            EducationPlayerView(assetName: "DEBOOGEY_EDUCATION-DEBOOGEYSD_h265")
                         } else {
                             Rectangle()
                                 .fill(Color.secondary.opacity(0.1))
@@ -89,29 +100,34 @@ struct ws_overlayLauncherView: View {
 
                 VStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(L10n.t("PRESET")).font(.caption.bold()).foregroundColor(.secondary).padding(.leading, 8)
-                        
-                        Picker("", selection: $preset) {
-                            ForEach(Preset.allCases) { p in Text(p.title).tag(p) }
-                        }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
-
-                        if preset == .custom {
-                            TextField("0x...", text: $customMask)
-                                .textFieldStyle(.plain)
-                                .font(.system(.body, design: .monospaced))
-                                .padding(8)
-                                .background(Color.secondary.opacity(0.05))
-                                .cornerRadius(6)
-                        }
-
-                        Divider().opacity(0.5)
-
-                        Text(preset.description)
-                            .font(.footnote)
+                        Text(L10n.t("PRESET"))
+                            .font(.caption.bold())
                             .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.leading, 8)
+
+                        TabView(selection: $preset) {
+                            ForEach(Preset.allCases, id: \.id) { tabPreset in
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text(tabPreset.description)
+                                        .font(.footnote)
+                                        .foregroundColor(.secondary)
+
+                                    if tabPreset == .custom {
+                                        TextField("0x...", text: $customMask)
+                                            .textFieldStyle(.plain)
+                                            .font(.system(.body, design: .monospaced))
+                                            .padding(8)
+                                            .background(Color.secondary.opacity(0.05))
+                                            .cornerRadius(6)
+                                    }
+                                }
+                                .tabItem {
+                                    Label(tabPreset.title, systemImage: tabPreset.systemImage)
+                                }
+                                .tag(tabPreset)
+                            }
+                            .padding(12)
+                        }
                     }
                     .padding(12)
                     .background(Color.secondary.opacity(0.05))
@@ -149,7 +165,7 @@ struct ws_overlayLauncherView: View {
 
         Task.detached {
             do {
-                _ = try ws_overlayLauncher.runOverlayHelper(arguments: [argument])
+                _ = try DeboogeySDLauncher.runOverlayHelper(arguments: [argument])
                 await MainActor.run {
                     onRun(argument)
                     isRunning = false
@@ -167,8 +183,9 @@ struct ws_overlayLauncherView: View {
 
 #Preview {
     if #available(macOS 13.0, *) {
-        NavigationStack { ws_overlayLauncherView() }
+        NavigationStack { DeboogeySDLauncherView() }
     } else {
-        NavigationView { ws_overlayLauncherView() }
+        NavigationView { DeboogeySDLauncherView() }
     }
 }
+

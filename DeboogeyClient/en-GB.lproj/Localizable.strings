@@ -38,6 +38,7 @@
 "Enable contributor screen (0b1000)." = "Enable contributor screen (0b1000).";
 "Enable foreground debugger (0b0010)." = "Enable foreground debugger (0b0010).";
 "Enable foreground tracking (0b0100)." = "Enable foreground tracking (0b0100).";
+"General" = "General";
 "Enable framerate & hang sensors (0b0001)." = "Enable framerate & hang sensors (0b0001).";
 "Entity Tracker" = "Entity Tracker";
 "Ephemeral" = "Ephemeral";
@@ -78,12 +79,12 @@
 "No upgrade is present at this time." = "No upgrade is present at this time.";
 "Notices" = "Notices";
 "OK" = "OK";
-"On DeboogeyClient Launch" = "On DeboogeyClient Launch";
+"On Deboogey Launch" = "On Deboogey Launch";
 "On Login" = "On Login";
 "PRESET" = "PRESET";
 "Preferences" = "Preferences";
 "Provide a custom mask in binary (0b...) or decimal." = "Provide a custom mask in binary (0b...) or decimal.";
-"Quit DeboogeyClient manually to see changes." = "Quit DeboogeyClient manually to see changes.";
+"Quit Deboogey manually to see changes." = "Quit Deboogey manually to see changes.";
 "Quit the app manually to see changes." = "Quit the app manually to see changes.";
 "Quits the app immediately" = "Quits the app immediately";
 "Release" = "Release";
@@ -111,7 +112,7 @@
 "Show a notice when utilities require security adjustments." = "Show a notice when utilities require security adjustments.";
 "SkyLight Diagnostics" = "SkyLight Diagnostics";
 "Some features of this app require Command Line Tools for Xcode." = "Some features of this app require Command Line Tools for Xcode.";
-"Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. DeboogeyClient does not take malicious advantage of this, but adjust only if you understand the risks." = "Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. DeboogeyClient does not take malicious advantage of this, but adjust only if you understand the risks.";
+"Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks." = "Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks.";
 "Sort" = "Sort";
 "Sort by %@" = "Sort by %@";
 "Sourced Article" = "Sourced Article";

@@ -47,6 +47,8 @@ private struct UpgradeCommands: Commands {
 }
 
 private struct SceneSwitcher: Scene {
+    let sipSatisfied: Bool
+
     @SceneBuilder
     var body: some Scene {
         ConfigurationLegacy()
@@ -56,42 +58,80 @@ private struct SceneSwitcher: Scene {
         }
 
         if #available(macOS 13.0, *) {
-            LadybugLauncherScene()
-            ws_overlayLauncherScene()
+            DeboogeyCDMLauncherScene()
+            DeboogeySDLauncherScene(sipSatisfied: sipSatisfied)
             EntityTrackerScene()
         }
     }
 }
 
 @available(macOS 13.0, *)
-private struct LadybugLauncherScene: Scene {
+private struct DeboogeyCDMLauncherScene: Scene {
     var body: some Scene {
-        Window(L10n.t("Cocoa Debug Menu"), id: "ladybug-launcher") {
+        Window(L10n.t("Cocoa Debug Menu"), id: "deboogey-cdm-launcher") {
             NavigationStack {
-                LadybugLauncherView { arguments in
-                    EntityTracker.shared.record(source: .ladybug, arguments: arguments)
+                DeboogeyCDMLauncherView { arguments in
+                    EntityTracker.shared.record(source: .deboogeyCDM, arguments: arguments)
                 }
             }
             .environment(\.locale, L10n.locale)
         }
+        .commandsRemoved()
         .defaultSize(width: 520, height: 650)
         .windowResizability(.contentSize)
     }
 }
 
 @available(macOS 13.0, *)
-private struct ws_overlayLauncherScene: Scene {
+private struct DeboogeySDLauncherScene: Scene {
+    let sipSatisfied: Bool
+
     var body: some Scene {
-        Window(L10n.t("SkyLight Diagnostics"), id: "ws-overlay-launcher") {
+        Window(L10n.t("SkyLight Diagnostics"), id: "deboogey-sd-launcher") {
             NavigationStack {
-                ws_overlayLauncherView { argument in
-                    EntityTracker.shared.record(source: .wsOverlay, arguments: [argument])
+                if sipSatisfied {
+                    VStack(spacing: 12) {
+                        Image(systemName: "macwindow")
+                            .font(.system(size: 48, weight: .thin))
+                            .foregroundColor(.secondary)
+                        Text(L10n.t("SkyLight Diagnostics"))
+                            .font(.headline)
+                        Text(L10n.t("System write-dependent features have been disabled."))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .multilineTextAlignment(.center)
+                    .padding()
+                } else {
+                    DeboogeySDLauncherView { argument in
+                        EntityTracker.shared.record(source: .wsOverlay, arguments: [argument])
+                    }
                 }
             }
             .environment(\.locale, L10n.locale)
         }
+        .commandsRemoved()
         .defaultSize(width: 520, height: 540)
         .windowResizability(.contentSize)
+    }
+}
+
+@available(macOS 13.0, *)
+private struct WindowLauncherCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+    let sipSatisfied: Bool
+
+    var body: some Commands {
+        CommandGroup(after: .windowArrangement) {
+            Button(L10n.t("Cocoa Debug Menu"), systemImage: "wrench.and.screwdriver") {
+                openWindow(id: "deboogey-cdm-launcher")
+            }
+
+            Button(L10n.t("SkyLight Diagnostics"), systemImage: "macwindow") {
+                openWindow(id: "deboogey-sd-launcher")
+            }
+            .disabled(sipSatisfied)
+        }
     }
 }
 
@@ -127,6 +167,11 @@ struct ConfigurationModern: Scene {
                 .keyboardShortcut(",", modifiers: .command)
             }
         }
+        .defaultSize(
+            width: AppWindowSizing.Configuration.modern.defaultSize.width,
+            height: AppWindowSizing.Configuration.modern.defaultSize.height
+        )
+        .windowResizability(.contentMinSize)
     }
 }
 
@@ -187,9 +232,14 @@ struct Root: App {
         }
         .commands {
             UpgradeCommands()
+            if #available(macOS 13.0, *) {
+                WindowLauncherCommands(sipSatisfied: sipSatisfied)
+            } else {
+                EmptyCommands()
+            }
         }
 
-        SceneSwitcher()
+        SceneSwitcher(sipSatisfied: sipSatisfied)
     }
 }
 

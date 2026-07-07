@@ -1,5 +1,5 @@
 //
-//  ws_overlayLauncher.swift
+//  DeboogeySDLauncher.swift
 //  DeboogeyClient
 //
 //  Created by Théo De Roy on 13/10/2025.
@@ -8,7 +8,7 @@
 import Foundation
 import AppKit
 
-enum ws_overlayLauncherError: LocalizedError {
+enum DeboogeySDLauncherError: LocalizedError {
     case toolNotFound
     case toolOutsideResources(path: String)
     case toolNotExecutable(path: String)
@@ -31,20 +31,20 @@ enum ws_overlayLauncherError: LocalizedError {
     }
 }
 
-struct ws_overlayLauncher {
+struct DeboogeySDLauncher {
     static func runOverlayHelper(arguments: [String]) throws -> String {
         if !Thread.isMainThread {
-            return try DispatchQueue.main.sync { try ws_overlayLauncher.runOverlayHelper(arguments: arguments) }
+            return try DispatchQueue.main.sync { try DeboogeySDLauncher.runOverlayHelper(arguments: arguments) }
         }
 
         guard let toolPath = Bundle.main.path(forResource: "DeboogeySDHelper", ofType: nil) else {
-            throw ws_overlayLauncherError.toolNotFound
+            throw DeboogeySDLauncherError.toolNotFound
         }
         if !toolPath.contains("/Contents/Resources/") {
-            throw ws_overlayLauncherError.toolOutsideResources(path: toolPath)
+            throw DeboogeySDLauncherError.toolOutsideResources(path: toolPath)
         }
         if !FileManager.default.isExecutableFile(atPath: toolPath) {
-            throw ws_overlayLauncherError.toolNotExecutable(path: toolPath)
+            throw DeboogeySDLauncherError.toolNotExecutable(path: toolPath)
         }
 
         @inline(__always)
@@ -59,7 +59,7 @@ struct ws_overlayLauncher {
             .replacingOccurrences(of: "\"", with: "\\\"") + "\" with administrator privileges"
 
         guard let script = NSAppleScript(source: scriptSource) else {
-            throw ws_overlayLauncherError.scriptCreationFailed
+            throw DeboogeySDLauncherError.scriptCreationFailed
         }
 
         var errorDict: NSDictionary? = nil
@@ -85,9 +85,9 @@ struct ws_overlayLauncher {
             #if DEBUG
             print("[DeboogeyClient] AppleScript error (\(number)): \(detailedMessage)\nDict: \(errorDict)\nCommand: \(command)\nTool: \(toolPath)")
             #endif
-            throw ws_overlayLauncherError.executionFailed(userFacing: userFacing, details: details)
+            throw DeboogeySDLauncherError.executionFailed(userFacing: userFacing, details: details)
         }
 
-        throw ws_overlayLauncherError.executionFailed(userFacing: L10n.t("Failed to run DeboogeySDHelper with administrator privileges."), details: [:])
+        throw DeboogeySDLauncherError.executionFailed(userFacing: L10n.t("Failed to run DeboogeySDHelper with administrator privileges."), details: [:])
     }
 }

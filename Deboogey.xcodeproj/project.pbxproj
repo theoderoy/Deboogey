@@ -229,7 +229,7 @@
 					};
 				};
 			};
-			buildConfigurationList = F07EDA7D2E9CC3B200AE8D4A /* Build configuration list for PBXProject "DeboogeyClient" */;
+			buildConfigurationList = F07EDA7D2E9CC3B200AE8D4A /* Build configuration list for PBXProject "Deboogey" */;
 			developmentRegion = "en-GB";
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -450,17 +450,17 @@
 		F07EDA8E2E9CC3B300AE8D4A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				APP_BUNDLE_DISPLAY_NAME = DeboogeyClient;
 				APP_BUNDLE_NAME = DeboogeyClient;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = Config/DeboogeyClient-Info.plist;
+				INFOPLIST_FILE = "Config/DeboogeyClient-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -482,17 +482,17 @@
 		F07EDA8F2E9CC3B300AE8D4A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				APP_BUNDLE_DISPLAY_NAME = Deboogey;
 				APP_BUNDLE_NAME = Deboogey;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = Config/DeboogeyClient-Info.plist;
+				INFOPLIST_FILE = "Config/DeboogeyClient-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -550,7 +550,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F07EDA7D2E9CC3B200AE8D4A /* Build configuration list for PBXProject "DeboogeyClient" */ = {
+		F07EDA7D2E9CC3B200AE8D4A /* Build configuration list for PBXProject "Deboogey" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F07EDA8B2E9CC3B300AE8D4A /* Debug */,

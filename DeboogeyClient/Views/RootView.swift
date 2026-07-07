@@ -15,6 +15,72 @@ let shortVersion =
 Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
 let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
 
+private struct WindowDefaultSizeApplier: NSViewRepresentable {
+    let sizing: AppWindowSize
+    let onWindowPrepared: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(
+            sizing: sizing,
+            onWindowPrepared: onWindowPrepared
+        )
+    }
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            context.coordinator.applySizing(to: view.window)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            context.coordinator.applySizing(to: nsView.window)
+        }
+    }
+
+    final class Coordinator {
+        private let sizing: AppWindowSize
+        private let onWindowPrepared: () -> Void
+        private var didApplyDefaultSize = false
+        private var didPrepareWindow = false
+
+        init(
+            sizing: AppWindowSize,
+            onWindowPrepared: @escaping () -> Void
+        ) {
+            self.sizing = sizing
+            self.onWindowPrepared = onWindowPrepared
+        }
+
+        func applySizing(to window: NSWindow?) {
+            guard let window else { return }
+
+            let minimumFrameSize = window.frameRect(
+                forContentRect: NSRect(origin: .zero, size: sizing.minimumSize)
+            ).size
+            window.minSize = minimumFrameSize
+
+            let currentContentSize = window.contentLayoutRect.size
+            if !didApplyDefaultSize || currentContentSize.isSmaller(than: sizing.minimumSize) {
+                window.setContentSize(sizing.defaultSize)
+                didApplyDefaultSize = true
+            }
+
+            guard !didPrepareWindow else { return }
+            didPrepareWindow = true
+            onWindowPrepared()
+        }
+    }
+}
+
+private extension CGSize {
+    func isSmaller(than other: CGSize) -> Bool {
+        width < other.width || height < other.height
+    }
+}
+
 struct IdentifiableString: Identifiable {
     let id = UUID()
     let value: String
@@ -77,8 +143,8 @@ private extension View {
 
 struct RootView: View {
     @State private var activeAlert: ActiveAlert?
-    @State private var showingLadybugLauncher = false
-    @State private var showingws_overlayLauncher = false
+    @State private var showingDeboogeyCDMLauncher = false
+    @State private var showingDeboogeySDLauncher = false
     @State private var showingEntityTracker = false
     @State private var showingWhatsNew = false
     @State private var updateCardOpen = false
@@ -86,6 +152,7 @@ struct RootView: View {
     @State private var showUpdateCardOverride = false
     @State private var highlightUpdateCard = false
     @State private var cltInstalled: Bool = true
+    @State private var didRunStartupFlow = false
     @StateObject private var vars = PersistentVariables()
     @ObservedObject var upgradeChecker = UpgradeChecker.shared
     @ObservedObject var networkMonitor = NetworkMonitor.shared
@@ -153,14 +220,14 @@ struct RootView: View {
                 }
                 VStack(spacing: 12) {
                     if #available(macOS 13.0, *) {
-                        LadybugWindowLauncher()
+                        DeboogeyCDMWindowLauncher()
                     } else {
                         LauncherButton(
                             title: "Cocoa Debug Menu",
-                            icon: "ladybug",
+                            icon: "wrench.and.screwdriver",
                             color: .accentColor
                         ) {
-                            showingLadybugLauncher = true
+                            showingDeboogeyCDMLauncher = true
                         }
                     }
                     
@@ -202,7 +269,7 @@ struct RootView: View {
                                 .buttonStyle(.plain)
                             }
                         } else {
-                            ws_overlayWindowLauncher()
+                            DeboogeySDWindowLauncher()
                         }
                     } else {
                         if sipSatisfied {
@@ -247,7 +314,7 @@ struct RootView: View {
                                 icon: "macwindow",
                                 color: .accentColor
                             ) {
-                                showingws_overlayLauncher = true
+                                showingDeboogeySDLauncher = true
                             }
                         }
                     }
@@ -401,18 +468,18 @@ struct RootView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingws_overlayLauncher) {
+        .sheet(isPresented: $showingDeboogeySDLauncher) {
             NavigationView {
-                ws_overlayLauncherView { argument in
+                DeboogeySDLauncherView { argument in
                     EntityTracker.shared.record(source: .wsOverlay, arguments: [argument])
                 }
             }
             .frame(width: 520, height: 540)
         }
-        .sheet(isPresented: $showingLadybugLauncher) {
+        .sheet(isPresented: $showingDeboogeyCDMLauncher) {
             NavigationView {
-                LadybugLauncherView { arguments in
-                    EntityTracker.shared.record(source: .ladybug, arguments: arguments)
+                DeboogeyCDMLauncherView { arguments in
+                    EntityTracker.shared.record(source: .deboogeyCDM, arguments: arguments)
                 }
             }
             .frame(width: 520, height: 650)
@@ -437,7 +504,7 @@ struct RootView: View {
             case .sipNotice:
                 return Alert(
                     title: Text(L10n.t("System write-dependent features have been disabled.")),
-                    message: Text(L10n.t("Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. DeboogeyClient does not take malicious advantage of this, but adjust only if you understand the risks.")),
+                    message: Text(L10n.t("Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks.")),
                     primaryButton: .default(Text(L10n.t("Learn More"))) {
                         if let url = URL(string: "https://support.apple.com/guide/security/secb7ea06b49/web") {
                             openURL(url)
@@ -457,11 +524,8 @@ struct RootView: View {
             }
         }
         .onAppear {
-            checkCLT()
-            if DebugVariables.alwaysShowWhatsNewView || !vars.hasShownWhatsNew {
-                showingWhatsNew = true
-            } else {
-                performStartupChecks()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                prepareStartupFlowIfNeeded()
             }
         }
         .onReceive(upgradeChecker.manualCheck) { _ in
@@ -476,7 +540,23 @@ struct RootView: View {
         .onChange(of: vars.hideUpgradeAlerts) { hide in
             if hide { updateCardOpen = false; hideUpdateCard = true; showUpdateCardOverride = false }
         }
-        .frame(width: 520, height: 610)
+        .minimumWindowContentSize(AppWindowSizing.root)
+        .background(
+            WindowDefaultSizeApplier(sizing: AppWindowSizing.root) {
+                prepareStartupFlowIfNeeded()
+            }
+        )
+    }
+
+    private func prepareStartupFlowIfNeeded() {
+        guard !didRunStartupFlow else { return }
+        didRunStartupFlow = true
+        checkCLT()
+        if DebugVariables.alwaysShowWhatsNewView || !vars.hasShownWhatsNew {
+            showingWhatsNew = true
+        } else {
+            performStartupChecks()
+        }
     }
     
     private func installCLT() {
@@ -548,21 +628,21 @@ struct RootView: View {
 }
 
 @available(macOS 13.0, *)
-private struct LadybugWindowLauncher: View {
+private struct DeboogeyCDMWindowLauncher: View {
     @Environment(\.openWindow) var openWindow
     var body: some View {
-        LauncherButton(title: "Cocoa Debug Menu", icon: "ladybug", color: .accentColor) {
-            openWindow(id: "ladybug-launcher")
+        LauncherButton(title: "Cocoa Debug Menu", icon: "wrench.and.screwdriver", color: .accentColor) {
+            openWindow(id: "deboogey-cdm-launcher")
         }
     }
 }
 
 @available(macOS 13.0, *)
-private struct ws_overlayWindowLauncher: View {
+private struct DeboogeySDWindowLauncher: View {
     @Environment(\.openWindow) var openWindow
     var body: some View {
         LauncherButton(title: "SkyLight Diagnostics", icon: "macwindow", color: .accentColor) {
-            openWindow(id: "ws-overlay-launcher")
+            openWindow(id: "deboogey-sd-launcher")
         }
     }
 }

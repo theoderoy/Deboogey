@@ -1,5 +1,5 @@
 //
-//  LadybugLauncherView.swift
+//  DeboogeyCDMLauncherView.swift
 //  DeboogeyClient
 //
 //  Created by Théo De Roy on 15/10/2025.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct LadybugLauncherView: View {
+struct DeboogeyCDMLauncherView: View {
     enum Action: String, CaseIterable, Identifiable {
         case enable, disable
         var id: String { rawValue }
@@ -21,7 +21,7 @@ struct LadybugLauncherView: View {
         var title: String {
             switch self {
             case .global: return L10n.t("Global")
-            case .deboogey: return "DeboogeyClient"
+            case .deboogey: return "Deboogey"
             case .custom: return L10n.t("Custom…")
             }
         }
@@ -47,14 +47,14 @@ struct LadybugLauncherView: View {
             VStack(spacing: 24) {
                 VStack(spacing: 0) {
                     Group {
-                        if EducationPlayerView.hasAsset(named: "DEBOOGEY_EDUCATION-LADYBUG_h265") {
-                            EducationPlayerView(assetName: "DEBOOGEY_EDUCATION-LADYBUG_h265")
+                        if EducationPlayerView.hasAsset(named: "DEBOOGEY_EDUCATION-DEBOOGEYCDM_h265") {
+                            EducationPlayerView(assetName: "DEBOOGEY_EDUCATION-DEBOOGEYCDM_h265")
                         } else {
                             Rectangle()
                                 .fill(Color.secondary.opacity(0.1))
                                 .overlay(
                                     VStack(spacing: 12) {
-                                        Image(systemName: "ladybug").font(.system(size: 48, weight: .thin))
+                                        Image(systemName: "wrench.and.screwdriver").font(.system(size: 48, weight: .thin))
                                         Text(L10n.t("Cocoa Debug Menu")).font(.headline)
                                     }.foregroundColor(.secondary)
                                 )
@@ -130,7 +130,7 @@ struct LadybugLauncherView: View {
                     }
 
                     if domain == .deboogey {
-                        Text(L10n.t("Quit DeboogeyClient manually to see changes."))
+                        Text(L10n.t("Quit Deboogey manually to see changes."))
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .padding(.top, 4)
@@ -182,7 +182,7 @@ struct LadybugLauncherView: View {
 
         Task.detached {
             do {
-                _ = try ladybugLauncher.runLadybugHelper(arguments: arguments)
+                _ = try DeboogeyCDMLauncher.runDeboogeyCDMHelper(arguments: arguments)
                 await MainActor.run {
                     onRun(arguments)
                     isRunning = false
@@ -208,8 +208,8 @@ struct LadybugLauncherView: View {
 
 #Preview {
     if #available(macOS 13.0, *) {
-        NavigationStack { LadybugLauncherView(onRun: { _ in }) }
+        NavigationStack { DeboogeyCDMLauncherView(onRun: { _ in }) }
     } else {
-        NavigationView { LadybugLauncherView(onRun: { _ in }) }
+        NavigationView { DeboogeyCDMLauncherView(onRun: { _ in }) }
     }
 }

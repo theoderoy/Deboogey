@@ -65,15 +65,15 @@ struct EntityTrackerView: View {
                 switch $0.source {
                 case .wsOverlay:
                     leftTarget = $0.overlayArgument ?? ""
-                case .ladybug:
-                    leftTarget = $0.ladybugDomain ?? ""
+                case .deboogeyCDM:
+                    leftTarget = $0.deboogeyCDMDomain ?? ""
                 }
                 
                 switch $1.source {
                 case .wsOverlay:
                     rightTarget = $1.overlayArgument ?? ""
-                case .ladybug:
-                    rightTarget = $1.ladybugDomain ?? ""
+                case .deboogeyCDM:
+                    rightTarget = $1.deboogeyCDMDomain ?? ""
                 }
                 
                 return leftTarget < rightTarget
@@ -166,22 +166,22 @@ struct EntityTrackerView: View {
 
     private var supersededIDs: Set<UUID> {
         var seenDomains = Set<String>()
-        var seenws_overlay = false
+        var seenDeboogeySD = false
         var result = Set<UUID>()
         for entity in tracker.entities {
             switch entity.source {
-            case .ladybug:
-                let domain = entity.ladybugDomain ?? ""
+            case .deboogeyCDM:
+                let domain = entity.deboogeyCDMDomain ?? ""
                 if seenDomains.contains(domain) {
                     result.insert(entity.id)
                 } else {
                     seenDomains.insert(domain)
                 }
             case .wsOverlay:
-                if seenws_overlay {
+                if seenDeboogeySD {
                     result.insert(entity.id)
                 } else {
-                    seenws_overlay = true
+                    seenDeboogeySD = true
                 }
             }
         }
@@ -195,8 +195,8 @@ struct EntityTrackerView: View {
 
         Task {
             do {
-                _ = try await MainActor.run { try ladybugLauncher.runLadybugHelper(arguments: args) }
-                EntityTracker.shared.record(source: .ladybug, arguments: args)
+                _ = try await MainActor.run { try DeboogeyCDMLauncher.runDeboogeyCDMHelper(arguments: args) }
+                EntityTracker.shared.record(source: .deboogeyCDM, arguments: args)
                 revertingID = nil
             } catch {
                 errorMessage = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
@@ -223,11 +223,11 @@ private struct EntityRow: View {
     }()
 
     private var revertLabel: String {
-        entity.ladybugAction == "enable" ? L10n.t("Revert") : L10n.t("Swap")
+        entity.deboogeyCDMAction == "enable" ? L10n.t("Revert") : L10n.t("Swap")
     }
 
     private var revertModificationLabel: String {
-        entity.ladybugAction == "enable" ? L10n.t("Revert Modification") : L10n.t("Swap Modification")
+        entity.deboogeyCDMAction == "enable" ? L10n.t("Revert Modification") : L10n.t("Swap Modification")
     }
 
     var body: some View {
@@ -333,13 +333,13 @@ private struct AppIconImage: View {
     private var fallbackSystemImage: String {
         switch entity.source {
         case .wsOverlay: return entity.source.systemImage
-        case .ladybug:   return entity.ladybugDomain == "global" ? "globe" : entity.source.systemImage
+        case .deboogeyCDM:   return entity.deboogeyCDMDomain == "global" ? "globe" : entity.source.systemImage
         }
     }
 
     private func loadIcon() {
-        guard entity.source == .ladybug,
-              let domain = entity.ladybugDomain,
+        guard entity.source == .deboogeyCDM,
+              let domain = entity.deboogeyCDMDomain,
               domain != "global" else { return }
         DispatchQueue.global(qos: .userInitiated).async {
             guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: domain) else { return }

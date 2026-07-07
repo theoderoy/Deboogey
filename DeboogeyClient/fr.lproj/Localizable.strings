@@ -38,6 +38,7 @@
 "Enable contributor screen (0b1000)." = "Active l’écran contributeur (0b1000).";
 "Enable foreground debugger (0b0010)." = "Active le débogueur de premier plan (0b0010).";
 "Enable foreground tracking (0b0100)." = "Active le suivi de premier plan (0b0100).";
+"General" = "Général";
 "Enable framerate & hang sensors (0b0001)." = "Active les capteurs de fréquence d’images et de blocage (0b0001).";
 "Entity Tracker" = "Suivi des entités";
 "Ephemeral" = "Éphémère";
@@ -78,12 +79,12 @@
 "No upgrade is present at this time." = "Aucune mise à niveau n’est disponible pour le moment.";
 "Notices" = "Avis";
 "OK" = "OK";
-"On DeboogeyClient Launch" = "Au lancement de DeboogeyClient";
+"On Deboogey Launch" = "Au lancement de Deboogey";
 "On Login" = "À la connexion";
 "PRESET" = "PRÉRÉGLAGE";
 "Preferences" = "Préférences";
 "Provide a custom mask in binary (0b...) or decimal." = "Indiquez un masque personnalisé en binaire (0b...) ou en décimal.";
-"Quit DeboogeyClient manually to see changes." = "Quittez DeboogeyClient manuellement pour voir les changements.";
+"Quit Deboogey manually to see changes." = "Quittez Deboogey manuellement pour voir les changements.";
 "Quits the app immediately" = "Quitte l’app immédiatement";
 "Quit the app manually to see changes." = "Quittez l’app manuellement pour voir les changements.";
 "Release" = "Release";
@@ -111,7 +112,7 @@
 "Show a notice when utilities require security adjustments." = "Afficher un avis lorsque des utilitaires nécessitent des ajustements de sécurité.";
 "SkyLight Diagnostics" = "Diagnostics SkyLight";
 "Some features of this app require Command Line Tools for Xcode." = "Certaines fonctionnalités de cette app nécessitent Command Line Tools for Xcode.";
-"Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. DeboogeyClient does not take malicious advantage of this, but adjust only if you understand the risks." = "Certaines fonctionnalités de cette app nécessitent la levée des restrictions de débogage.\n\nCes restrictions contribuent à protéger votre Mac. DeboogeyClient n’en tire pas parti de façon malveillante, mais ne les ajustez que si vous comprenez les risques.";
+"Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks." = "Certaines fonctionnalités de cette app nécessitent la levée des restrictions de débogage.\n\nCes restrictions contribuent à protéger votre Mac. Deboogey n’en tire pas parti de façon malveillante, mais ne les ajustez que si vous comprenez les risques.";
 "Sort" = "Trier";
 "Sort by %@" = "Trier par %@";
 "Sourced Article" = "Article source";
