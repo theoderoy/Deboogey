@@ -23,6 +23,7 @@
 "Configuration" = "Configuration";
 "Connect to check for upgrades" = "Connectez-vous pour rechercher des mises à niveau";
 "Continue" = "Continuer";
+"Compatibility" = "Compatibilité";
 "Contributor" = "Contributeur";
 "Custom…" = "Personnalisé…";
 "Date (Newest First)" = "Date (plus récentes d’abord)";
@@ -47,7 +48,6 @@
 "Failed to run DeboogeySDHelper with administrator privileges." = "Impossible d’exécuter DeboogeySDHelper avec les privilèges administrateur.";
 "Failed to start helper." = "Impossible de démarrer l’assistant.";
 "Foreground" = "Premier plan";
-"G'day!" = "Bonjour !";
 "Global" = "Global";
 "Go Back" = "Revenir";
 "Go Forward" = "Avancer";
@@ -119,7 +119,6 @@
 "Sources" = "Sources";
 "Special Thanks" = "Remerciements particuliers";
 "Superseded" = "Remplacé";
-"Compatiblilty" = "Compatibilite";
 "Swap" = "Inverser";
 "Swap Modification" = "Inverser la modification";
 "System Integrity Protection" = "La fonctionnalité Protection de l’intégrité du système";
@@ -143,8 +142,11 @@
 "Installing upgrade" = "Installation de la mise à niveau";
 "Preparing upgrade" = "Préparation de la mise à niveau";
 "Auxiliary upgrades have been enabled." = "Les mises à niveau auxiliaires ont été activées.";
+"Deboogey now supports displaying itself in French. Visibility will depend on the system language to simplify user experience." = "Deboogey peut désormais s’afficher en français. La langue utilisée dépend de la langue du système afin de simplifier l’expérience.";
+"Improvements" = "Améliorations";
+"Localisation" = "Localisation";
+"Mainly focused on stability and faster performance across the board. Configuration has been laid out better." = "Stabilité améliorée et performances plus rapides dans toute l’app. La configuration a également été mieux organisée.";
 "%@ has been baked successfully." = "%@ a été cuit avec succès.";
-"We don't have a description for this version. Check back with later builds." = "Nous n’avons pas de description pour cette version. Revenez consulter les prochains builds.";
 "What's changed in %@" = "Nouveautés de %@";
 "You might need to manually code-sign after upgrading." = "Vous devrez peut-être signer le code manuellement après la mise à niveau.";
 "DeboogeyCDMHelper exists but is not executable. (path: %@)" = "DeboogeyCDMHelper existe, mais n’est pas exécutable. (chemin : %@)";

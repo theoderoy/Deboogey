@@ -39,17 +39,24 @@ struct WhatsNewView: View {
             
             VStack(alignment: .leading, spacing: 25) {
                 FeatureRow(
-                    icon: "exclamationmark.triangle",
+                    icon: "exclamationmark.triangle.fill",
                     color: .yellow,
-                    title: "Compatiblilty",
+                    title: "Compatibility",
                     description: "Release 4 and Internal 15 or later require macOS Monterey or later."
                 )
                 
                 FeatureRow(
-                    icon: "hand.wave",
+                    icon: "flag.fill",
                     color: .accentColor,
-                    title: "G'day!",
-                    description: "We don't have a description for this version. Check back with later builds."
+                    title: "Localisation",
+                    description: "Deboogey now supports displaying itself in French. Visibility will depend on the system language to simplify user experience."
+                )
+                
+                FeatureRow(
+                    icon: "info.circle.fill",
+                    color: .blue,
+                    title: "Improvements",
+                    description: "Mainly focused on stability and faster performance across the board. Configuration has been laid out better."
                 )
             }
             .padding(.horizontal, 40)
@@ -100,7 +107,7 @@ private extension View {
     }
 }
 
-struct FeatureRow: View {
+private struct FeatureRow: View {
     let icon: String
     let color: Color
     let title: String
