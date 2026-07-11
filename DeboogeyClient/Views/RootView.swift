@@ -142,33 +142,41 @@ private extension View {
 }
 
 struct RootView: View {
+    @Environment(\.openURL) private var openURL
+    @Environment(\.sipSatisfied) private var sipSatisfied
+
+    @ObservedObject var networkMonitor = NetworkMonitor.shared
+    @ObservedObject var upgradeChecker = UpgradeChecker.shared
+
+    @StateObject private var vars = PersistentVariables()
+
     @State private var activeAlert: ActiveAlert?
+    @State private var cltInstalled: Bool = false
+    @State private var didRunStartupFlow = false
+
     @State private var showingDeboogeyCDMLauncher = false
     @State private var showingDeboogeySDLauncher = false
     @State private var showingEntityTracker = false
     @State private var showingWhatsNew = false
-    @State private var updateCardOpen = false
+
     @State private var hideUpdateCard = false
-    @State private var showUpdateCardOverride = false
     @State private var highlightUpdateCard = false
-    @State private var cltInstalled: Bool = true
-    @State private var didRunStartupFlow = false
-    @StateObject private var vars = PersistentVariables()
-    @ObservedObject var upgradeChecker = UpgradeChecker.shared
-    @ObservedObject var networkMonitor = NetworkMonitor.shared
-    @Environment(\.sipSatisfied) private var sipSatisfied
-    @Environment(\.openURL) private var openURL
-    
+    @State private var showUpdateCardOverride = false
+    @State private var updateCardOpen = false
+    @State private var hideExperimentalBuildCard = false
+
     enum ActiveAlert: Identifiable, Equatable {
         case message(String)
         case sipNotice
         case cltNotice
+        case internalUpgradeNotice
         
         var id: String {
             switch self {
             case .message(let str): return "message-\(str)"
             case .sipNotice: return "sipNotice"
             case .cltNotice: return "cltNotice"
+            case .internalUpgradeNotice: return "internalUpgradeNotice"
             }
         }
     }
@@ -191,6 +199,33 @@ struct RootView: View {
     
     var body: some View {
         VStack {
+            if upgradeChecker.isExperimentalBuild && !hideExperimentalBuildCard {
+                ZStack(alignment: .topTrailing) {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(upgradeChecker.isDevelopmentBuild ? .red : .orange)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(L10n.t(upgradeChecker.isDevelopmentBuild ? "PlaceholderText1" : "This version of Deboogey is experimental."))
+                                .font(.headline)
+                            Text(L10n.t(upgradeChecker.isDevelopmentBuild ? "PlaceholderText2" : "This build contains experimental features and is not officially notarised by Apple. Use caution when running it."))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 22)
+                    }
+                    Button(action: { hideExperimentalBuildCard = true }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(8)
+                }
+                .padding(12)
+                .frame(width: 420)
+                .background((upgradeChecker.isDevelopmentBuild ? Color.red : Color.orange).opacity(0.12), in: RoundedRectangle(cornerRadius: 20))
+                .padding(.top, 8)
+            }
+
             if sipSatisfied == true && vars.pesterMeWithSipping == true {
                 Text(L10n.t("System write-dependent features have been disabled."))
                     .foregroundStyle(.tertiary)
@@ -203,7 +238,7 @@ struct RootView: View {
                     Image(nsImage: NSImage(named: NSImage.applicationIconName) ?? NSImage())
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 128, height: 128)
+                        .frame(width: 120, height: 120)
                     
                     Text(appName ?? "DEBOOGEY_DEVELOPMENT_STATE")
                         .font(.largeTitle)
@@ -401,9 +436,7 @@ struct RootView: View {
                             if upgradeChecker.upgradeAvailable {
                                 HStack(spacing: 8) {
                                     Button(L10n.t("Upgrade")) {
-                                        vars.hasShownWhatsNew = false
-                                        upgradeChecker.upgradeAvailable = false
-                                        upgradeChecker.proceedWithUpdate()
+                                        beginUpgrade()
                                     }
                                     .buttonStyle(.bordered)
                                     .disabled(!networkMonitor.isConnected)
@@ -461,11 +494,15 @@ struct RootView: View {
                 
                 if DebugVariables.auxiliaryUpgrades {
                     Text(L10n.t("Auxiliary upgrades have been enabled."))
-                        .bold()
                         .foregroundStyle(.orange)
-                        .padding(3)
                         .padding(.bottom, 8)
                 }
+            }
+
+            if let forced = DebugVariables.forcedVersionType {
+                Text(L10n.f("Parameters pose this build type as %@.", forced.localizedName))
+                    .foregroundStyle(.orange)
+                    .padding(.bottom, 8)
             }
         }
         .sheet(isPresented: $showingDeboogeySDLauncher) {
@@ -518,6 +555,15 @@ struct RootView: View {
                     message: Text(L10n.t("Some features of this app require Command Line Tools for Xcode.")),
                     primaryButton: .default(Text(L10n.t("Install"))) {
                         installCLT()
+                    },
+                    secondaryButton: .cancel()
+                )
+            case .internalUpgradeNotice:
+                return Alert(
+                    title: Text(L10n.t("Upgrade to an experimental build?")),
+                    message: Text(L10n.t("This build contains experimental features and is not officially notarised by Apple. Use caution when running it.")),
+                    primaryButton: .destructive(Text(L10n.t("Continue"))) {
+                        performUpgrade()
                     },
                     secondaryButton: .cancel()
                 )
@@ -613,9 +659,7 @@ struct RootView: View {
         upgradeChecker.checkForUpdates(force: true, clearIfNone: true) { found in
             if found {
                 if updateCardOpen {
-                    vars.hasShownWhatsNew = false
-                    upgradeChecker.upgradeAvailable = false
-                    upgradeChecker.proceedWithUpdate()
+                    beginUpgrade()
                 } else {
                     showUpdateCardOverride = vars.hideUpgradeAlerts || hideUpdateCard
                     updateCardOpen = true
@@ -624,6 +668,20 @@ struct RootView: View {
                 }
             } else { activeAlert = .message(L10n.t("No upgrade is present at this time.")) }
         }
+    }
+
+    private func beginUpgrade() {
+        if upgradeChecker.shouldConfirmInternalUpgrade {
+            activeAlert = .internalUpgradeNotice
+        } else {
+            performUpgrade()
+        }
+    }
+
+    private func performUpgrade() {
+        vars.hasShownWhatsNew = false
+        upgradeChecker.upgradeAvailable = false
+        upgradeChecker.proceedWithUpdate()
     }
 }
 
@@ -675,3 +733,4 @@ private struct ModernSettingsLauncher: View {
 #Preview {
     RootView()
 }
+
