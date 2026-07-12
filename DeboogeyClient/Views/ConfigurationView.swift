@@ -155,7 +155,7 @@ private struct GeneralPanelView: View {
                 Text("Internal").tag("Internal")
             }
             if vm.upgradeChannel == "Internal" {
-                Text("Internal builds are pre-release versions and may be unstable.")
+                Text("Internal builds contain experimental features and are not notarised by Apple.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }

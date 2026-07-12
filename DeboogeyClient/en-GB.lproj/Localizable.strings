@@ -60,7 +60,7 @@
 "Inspect the sandbox of individual programs and adjust parameters." = "Inspect the sandbox of individual programs and adjust parameters.";
 "Internal" = "Internal";
 "Internal %@" = "Internal %@";
-"Internal builds are pre-release versions and may be unstable." = "Internal builds are pre-release versions and may be unstable.";
+"Internal builds contain experimental features and are not notarised by Apple." = "Internal builds contain experimental features and are not notarised by Apple.";
 "This version of Deboogey is experimental." = "This version of Deboogey is experimental.";
 "PlaceholderText1" = "G'day!";
 "PlaceholderText2" = "Strings, text, variables, placeholders and the sort.";
