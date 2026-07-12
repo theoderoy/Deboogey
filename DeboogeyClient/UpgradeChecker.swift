@@ -5,7 +5,9 @@
 //  Created by Théo De Roy on 30/01/2026.
 //
 
-import Foundation; import AppKit; import Combine
+import Foundation
+import AppKit
+import Combine
 
 class UpgradeChecker: ObservableObject {
     static let shared = UpgradeChecker()
@@ -57,11 +59,34 @@ class UpgradeChecker: ObservableObject {
     }
 
     private var currentAppVersion: AppVersion {
-        let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
+        let forcedVersionType = DebugVariables.forcedVersionType
+        let short = forcedVersionType?.rawValue
+            ?? Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+            ?? "Exception"
+        let build = forcedVersionType == nil
+            ? Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
+            : "0"
         if short == "Release" { return AppVersion.parse(from: "Release \(build)") }
         if short == "Internal" { return AppVersion.parse(from: "Internal \(build)") }
         return AppVersion.parse(from: short)
+    }
+
+    var isExperimentalBuild: Bool {
+        let versionType = DebugVariables.forcedVersionType?.rawValue
+            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+            ?? ""
+        return ["Internal", "Development"].contains { versionType.caseInsensitiveCompare($0) == .orderedSame }
+    }
+
+    var isDevelopmentBuild: Bool {
+        let versionType = DebugVariables.forcedVersionType?.rawValue
+            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+            ?? ""
+        return versionType.caseInsensitiveCompare("Development") == .orderedSame
+    }
+
+    var shouldConfirmInternalUpgrade: Bool {
+        AppVersion.parse(from: latestVersion).channel == .internal
     }
 
     func requestManualCheck() { manualCheck.send() }

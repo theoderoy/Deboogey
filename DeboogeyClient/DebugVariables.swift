@@ -6,6 +6,16 @@
 //
 
 enum DebugVariables {
+    enum VersionType: String {
+        case release = "Release"
+        case `internal` = "Internal"
+        case development = "Development"
+
+        var localizedName: String {
+            L10n.t(rawValue)
+        }
+    }
+
     enum Language: String {
         case en = "en-GB"
         case fr
@@ -20,5 +30,7 @@ enum DebugVariables {
 
     static var auxiliaryUpgrades = false
     static var alwaysShowWhatsNewView = false
+    static var pseudoSystemIntegrityProtection = false
     static var forcedLanguage: Language? = nil
+    static var forcedVersionType: VersionType? = nil
 }

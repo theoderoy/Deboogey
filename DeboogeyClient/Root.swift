@@ -190,7 +190,9 @@ struct Root: App {
 
     init() {
         csrutilChecker.refreshSIPStatus()
-        self._sipSatisfied = State(initialValue: isSIPSatisfied)
+        self._sipSatisfied = State(
+            initialValue: DebugVariables.pseudoSystemIntegrityProtection ? false : isSIPSatisfied
+        )
         print("csrutil: \(isSIPSatisfied)")
 
         PersistentVariables.registerDefaults()

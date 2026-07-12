@@ -41,22 +41,22 @@ struct WhatsNewView: View {
                 FeatureRow(
                     icon: "exclamationmark.triangle.fill",
                     color: .yellow,
-                    title: "Compatibility",
-                    description: "Release 4 and Internal 15 or later require macOS Monterey or later."
+                    title: "Notarisation",
+                    description: "Starting from Release 4, Deboogey versions in the ''Release'' upgrade branch will now be officially signed by Apple. You can upgrade from the previously installed version or install Release 4 (or later) fresh without having to notarise the program manually."
                 )
                 
                 FeatureRow(
-                    icon: "flag.fill",
+                    icon: "loupe",
                     color: .accentColor,
-                    title: "Localisation",
-                    description: "Deboogey now supports displaying itself in French. Visibility will depend on the system language to simplify user experience."
+                    title: "PlaceholderText1",
+                    description: "PlaceholderText2"
                 )
                 
                 FeatureRow(
                     icon: "info.circle.fill",
                     color: .blue,
-                    title: "Improvements",
-                    description: "Mainly focused on stability and faster performance across the board. Configuration has been laid out better."
+                    title: "PlaceholderText1",
+                    description: "PlaceholderText2"
                 )
             }
             .padding(.horizontal, 40)
