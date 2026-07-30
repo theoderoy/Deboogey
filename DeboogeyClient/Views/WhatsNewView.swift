@@ -17,7 +17,7 @@ struct WhatsNewView: View {
                     Image(nsImage: appIcon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 80, height: 80)
+                        .frame(width: 128, height: 128)
                 }
                 
                 Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "DeboogeyClient")
@@ -61,13 +61,11 @@ struct WhatsNewView: View {
             }
             .padding(.horizontal, 40)
             
-            Spacer()
-
             ContinueButton(title: "Continue", color: .accentColor, action: onDismiss)
                 .padding(.horizontal, 40)
                 .padding(.bottom, 40)
         }
-        .frame(width: 500, height: 600)
+        .frame(width: 500)
     }
 }
 

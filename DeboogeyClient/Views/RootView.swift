@@ -108,21 +108,12 @@ struct LauncherButton: View {
 }
 
 private extension View {
-    @ViewBuilder
     func launcherButtonStyle(tint color: Color) -> some View {
-        if #available(macOS 26.0, *) {
-            self
-                .buttonStyle(.glass)
-                .buttonBorderShape(.roundedRectangle)
-                .controlSize(.large)
-                .tint(color)
-        } else {
-            self
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.roundedRectangle)
-                .controlSize(.large)
-                .tint(color)
-        }
+        self
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.roundedRectangle)
+            .controlSize(.large)
+            .tint(color)
     }
 
     @ViewBuilder
@@ -254,6 +245,12 @@ struct RootView: View {
                     .developmentStateCapsuleStyle()
                 }
                 VStack(spacing: 12) {
+                    if #available(macOS 13.0, *) {
+                        DeboogeyLoupeWindowLauncher()
+                    } else {
+                        DeboogeyLoupeLegacyWindowLauncher()
+                    }
+
                     if #available(macOS 13.0, *) {
                         DeboogeyCDMWindowLauncher()
                     } else {
@@ -389,12 +386,6 @@ struct RootView: View {
                     }
                 }
                 .padding()
-            }
-            
-            Link(destination: URL(string: "https://github.com/theoderoy")!) {
-                Text("github.com/theoderoy")
-                    .bold()
-                    .padding(4)
             }
             
             if shouldShowUpdateCard {
@@ -685,6 +676,106 @@ struct RootView: View {
     }
 }
 
+private struct DeboogeyLoupeLauncherMenu: View {
+    let openDocument: () -> Void
+    let createDocument: () -> Void
+    @AppStorage("theoderoy.Deboogey.LoupeMachine.hasShownEducation")
+    private var hasShownEducation = false
+    @State private var showingEducation = false
+    @State private var showingActions = false
+    @State private var pendingAction: Action = .open
+
+    private enum Action {
+        case open
+        case create
+    }
+
+    var body: some View {
+        LauncherButton(
+            title: "Loupe Machine",
+            icon: "loupe",
+            color: .accentColor
+        ) {
+            showingActions = true
+        }
+        .popover(isPresented: $showingActions, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 0) {
+                Button {
+                    request(.open)
+                } label: {
+                    Label(L10n.t("Open Loupe Machine Document"), systemImage: "doc.text.magnifyingglass")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(12)
+                .padding(.horizontal, 4)
+
+                Divider()
+
+                Button {
+                    request(.create)
+                } label: {
+                    Label(L10n.t("Create New Document…"), systemImage: "plus.app")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(12)
+                .padding(.horizontal, 4)
+            }
+            .frame(minWidth: 280)
+        }
+        .sheet(isPresented: $showingEducation) {
+            LoupeMachineEducationView {
+                hasShownEducation = true
+                showingEducation = false
+                DispatchQueue.main.async {
+                    perform(pendingAction)
+                }
+            }
+        }
+    }
+
+    private func request(_ action: Action) {
+        showingActions = false
+        pendingAction = action
+        if hasShownEducation && !DebugVariables.alwaysShowLMEducation {
+            perform(action)
+        } else {
+            showingEducation = true
+        }
+    }
+
+    private func perform(_ action: Action) {
+        switch action {
+        case .open: openDocument()
+        case .create: createDocument()
+        }
+    }
+}
+
+@available(macOS 13.0, *)
+private struct DeboogeyLoupeWindowLauncher: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        DeboogeyLoupeLauncherMenu(
+            openDocument: { LoupeMachineNavigation.chooseDocument(using: openWindow) },
+            createDocument: { LoupeMachineNavigation.open(documentAt: nil, using: openWindow) }
+        )
+    }
+}
+
+private struct DeboogeyLoupeLegacyWindowLauncher: View {
+    var body: some View {
+        DeboogeyLoupeLauncherMenu(
+            openDocument: LoupeMachineNavigation.chooseDocumentLegacy,
+            createDocument: { LoupeMachineNavigation.openLegacy(documentAt: nil) }
+        )
+    }
+}
+
 @available(macOS 13.0, *)
 private struct DeboogeyCDMWindowLauncher: View {
     @Environment(\.openWindow) var openWindow
@@ -733,4 +824,3 @@ private struct ModernSettingsLauncher: View {
 #Preview {
     RootView()
 }
-

@@ -17,6 +17,7 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
     enum Source: String, Codable {
         case deboogeyCDM
         case wsOverlay
+        case loupeMachine
 
         init(from decoder: Decoder) throws {
             let container = try decoder.singleValueContainer()
@@ -27,6 +28,8 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
                 self = .deboogeyCDM
             case Self.wsOverlay.rawValue:
                 self = .wsOverlay
+            case Self.loupeMachine.rawValue:
+                self = .loupeMachine
             default:
                 throw DecodingError.dataCorruptedError(
                     in: container,
@@ -39,6 +42,7 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
             switch self {
             case .deboogeyCDM:   return L10n.t("Cocoa Debug Menu")
             case .wsOverlay: return L10n.t("SkyLight Diagnostics")
+            case .loupeMachine: return L10n.t("Loupe Machine")
             }
         }
 
@@ -46,6 +50,7 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
             switch self {
             case .deboogeyCDM:   return "wrench.and.screwdriver"
             case .wsOverlay: return "macwindow"
+            case .loupeMachine: return "scope"
             }
         }
 
@@ -71,6 +76,14 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
         source == .wsOverlay ? arguments.first : nil
     }
 
+    var loupeFlagName: String? {
+        source == .loupeMachine ? arguments.first : nil
+    }
+
+    var loupeApplicationIdentifier: String? {
+        source == .loupeMachine && arguments.count > 1 ? arguments[1] : nil
+    }
+
     var summary: String {
         switch source {
         case .deboogeyCDM:
@@ -79,6 +92,8 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
             return "\(action) — \(domain)"
         case .wsOverlay:
             return L10n.f("Mask: %@", overlayArgument ?? "?")
+        case .loupeMachine:
+            return "\(loupeFlagName ?? "?") — \(loupeApplicationIdentifier ?? "?")"
         }
     }
 
@@ -107,7 +122,7 @@ final class EntityTracker: ObservableObject {
 
     @Published private(set) var entities: [TrackedEntity] = []
 
-    private let defaultsKey = "deboogey.entityTracker.entities"
+    private let defaultsKey = "theoderoy.Deboogey.EntityTracker.entities"
 
     private init() { load() }
 

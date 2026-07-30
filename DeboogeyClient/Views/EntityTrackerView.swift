@@ -14,9 +14,9 @@ struct EntityTrackerView: View {
     @State private var revertingID: UUID? = nil
     @State private var errorMessage: String? = nil
     @Environment(\.presentationMode) private var presentationMode
-    @AppStorage("deboogey.entityTracker.rowScale") private var rowScale: Double = 1.0
-    @AppStorage("deboogey.entityTracker.scaleTarget") private var scaleTarget: String = "both"
-    @AppStorage("deboogey.entityTracker.sortOrder") private var sortOrder: SortOrder = .dateNewest
+    @AppStorage("theoderoy.Deboogey.EntityTracker.rowScale") private var rowScale: Double = 1.0
+    @AppStorage("theoderoy.Deboogey.EntityTracker.scaleTarget") private var scaleTarget: String = "both"
+    @AppStorage("theoderoy.Deboogey.EntityTracker.sortOrder") private var sortOrder: SortOrder = .dateNewest
     
     enum SortOrder: String, CaseIterable, Codable {
         case dateNewest = "date_newest"
@@ -67,6 +67,8 @@ struct EntityTrackerView: View {
                     leftTarget = $0.overlayArgument ?? ""
                 case .deboogeyCDM:
                     leftTarget = $0.deboogeyCDMDomain ?? ""
+                case .loupeMachine:
+                    leftTarget = $0.loupeApplicationIdentifier ?? ""
                 }
                 
                 switch $1.source {
@@ -74,6 +76,8 @@ struct EntityTrackerView: View {
                     rightTarget = $1.overlayArgument ?? ""
                 case .deboogeyCDM:
                     rightTarget = $1.deboogeyCDMDomain ?? ""
+                case .loupeMachine:
+                    rightTarget = $1.loupeApplicationIdentifier ?? ""
                 }
                 
                 return leftTarget < rightTarget
@@ -110,7 +114,7 @@ struct EntityTrackerView: View {
             Text(L10n.t("No modifications recorded yet."))
                 .font(.headline)
                 .foregroundColor(.secondary)
-            Text(L10n.t("Modifications made via Cocoa Debug Menu and SkyLight Diagnostics will appear here."))
+            Text(L10n.t("Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, and Loupe Machine will appear here."))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -166,6 +170,7 @@ struct EntityTrackerView: View {
 
     private var supersededIDs: Set<UUID> {
         var seenDomains = Set<String>()
+        var seenLoupeTargets = Set<String>()
         var seenDeboogeySD = false
         var result = Set<UUID>()
         for entity in tracker.entities {
@@ -182,6 +187,14 @@ struct EntityTrackerView: View {
                     result.insert(entity.id)
                 } else {
                     seenDeboogeySD = true
+                }
+            case .loupeMachine:
+                let target = [entity.loupeApplicationIdentifier ?? "", entity.loupeFlagName ?? ""]
+                    .joined(separator: "\u{0}")
+                if seenLoupeTargets.contains(target) {
+                    result.insert(entity.id)
+                } else {
+                    seenLoupeTargets.insert(target)
                 }
             }
         }
@@ -334,12 +347,18 @@ private struct AppIconImage: View {
         switch entity.source {
         case .wsOverlay: return entity.source.systemImage
         case .deboogeyCDM:   return entity.deboogeyCDMDomain == "global" ? "globe" : entity.source.systemImage
+        case .loupeMachine: return entity.source.systemImage
         }
     }
 
     private func loadIcon() {
-        guard entity.source == .deboogeyCDM,
-              let domain = entity.deboogeyCDMDomain,
+        let domain: String?
+        switch entity.source {
+        case .deboogeyCDM: domain = entity.deboogeyCDMDomain
+        case .loupeMachine: domain = entity.loupeApplicationIdentifier
+        case .wsOverlay: domain = nil
+        }
+        guard let domain,
               domain != "global" else { return }
         DispatchQueue.global(qos: .userInitiated).async {
             guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: domain) else { return }
@@ -355,7 +374,7 @@ private struct ToolbarModifier: ViewModifier {
     let revertingID: UUID?
     let supersededIDs: Set<UUID>
     let presentationMode: Binding<PresentationMode>
-    @AppStorage("deboogey.entityTracker.sortOrder") private var sortOrder: EntityTrackerView.SortOrder = .dateNewest
+    @AppStorage("theoderoy.Deboogey.EntityTracker.sortOrder") private var sortOrder: EntityTrackerView.SortOrder = .dateNewest
     
     func body(content: Content) -> some View {
         if #available(macOS 13.0, *) {

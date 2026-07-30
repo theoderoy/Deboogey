@@ -10,6 +10,41 @@ import AppKit
 
 public private(set) var isSIPSatisfied: Bool = true
 
+@MainActor
+private final class AboutWindowController: NSWindowController {
+    static let shared = AboutWindowController()
+
+    private init() {
+        let window = NSWindow(contentViewController: NSHostingController(rootView: AboutView()))
+        window.title = L10n.t("About Deboogey")
+        window.styleMask = [.titled, .closable]
+        window.isReleasedWhenClosed = false
+        window.center()
+        super.init(window: window)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func show() {
+        window?.center()
+        showWindow(nil)
+        window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+}
+
+private struct AboutCommands: Commands {
+    var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button(L10n.t("About Deboogey")) {
+                AboutWindowController.shared.show()
+            }
+        }
+    }
+}
+
 private struct UpgradeCommands: Commands {
     @ObservedObject var networkMonitor = NetworkMonitor.shared
     @ObservedObject var upgradeChecker = UpgradeChecker.shared
@@ -46,6 +81,82 @@ private struct UpgradeCommands: Commands {
     }
 }
 
+@available(macOS 13.0, *)
+private struct LoupeMachineCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        LoupeMachineCommandSet(
+            createDocument: { LoupeMachineNavigation.open(documentAt: nil, using: openWindow) },
+            openDocument: { LoupeMachineNavigation.chooseDocument(using: openWindow) }
+        )
+    }
+}
+
+private struct LoupeMachineLegacyCommands: Commands {
+    var body: some Commands {
+        LoupeMachineCommandSet(
+            createDocument: { LoupeMachineNavigation.openLegacy(documentAt: nil) },
+            openDocument: LoupeMachineNavigation.chooseDocumentLegacy
+        )
+    }
+}
+
+private struct LegacyWindowLauncherCommands: Commands {
+    let sipSatisfied: Bool
+
+    var body: some Commands {
+        CommandGroup(after: .windowArrangement) {
+            Button(L10n.t("Deboogey")) {
+                DeboogeyWindowController.open(.main, sipSatisfied: sipSatisfied)
+            }
+
+            Button(L10n.t("Loupe Machine")) {
+                LoupeMachineNavigation.openLegacy(documentAt: nil)
+            }
+
+            Button(L10n.t("Cocoa Debug Menu")) {
+                DeboogeyWindowController.open(.cocoaDebugMenu, sipSatisfied: sipSatisfied)
+            }
+
+            Button(L10n.t("SkyLight Diagnostics")) {
+                DeboogeyWindowController.open(.skyLightDiagnostics, sipSatisfied: sipSatisfied)
+            }
+            .disabled(sipSatisfied)
+        }
+    }
+}
+
+private struct LoupeMachineCommandSet: Commands {
+    let createDocument: () -> Void
+    let openDocument: () -> Void
+    @ObservedObject private var router = LoupeMachineCommandRouter.shared
+
+    var body: some Commands {
+        CommandGroup(replacing: .newItem) {
+            Button(L10n.t("New Loupe Machine Document")) {
+                createDocument()
+            }
+            .keyboardShortcut("n", modifiers: .command)
+
+            Button(L10n.t("Open Loupe Machine Document…")) {
+                openDocument()
+            }
+            .keyboardShortcut("o", modifiers: .command)
+
+            Divider()
+
+            Button(L10n.t("Save")) { router.save(saveAs: false) }
+                .keyboardShortcut("s", modifiers: .command)
+                .disabled(!router.canSave)
+
+            Button(L10n.t("Save As…")) { router.save(saveAs: true) }
+                .keyboardShortcut("s", modifiers: [.command, .shift])
+                .disabled(!router.canSave)
+        }
+    }
+}
+
 private struct SceneSwitcher: Scene {
     let sipSatisfied: Bool
 
@@ -58,10 +169,37 @@ private struct SceneSwitcher: Scene {
         }
 
         if #available(macOS 13.0, *) {
+            DeboogeyLoupeScene()
             DeboogeyCDMLauncherScene()
             DeboogeySDLauncherScene(sipSatisfied: sipSatisfied)
             EntityTrackerScene()
         }
+    }
+}
+
+@available(macOS 13.0, *)
+private struct DeboogeyLoupeScene: Scene {
+    var body: some Scene {
+        WindowGroup(
+            L10n.t("Loupe Machine"),
+            id: LoupeMachineNavigation.windowID,
+            for: LoupeMachineWindowRequest.self
+        ) { request in
+            NavigationStack {
+                if let request = request.wrappedValue {
+                    LoupeMachineView(request: request)
+                }
+            }
+            .environment(\.locale, L10n.locale)
+        }
+        .commands {
+            LoupeMachineCommands()
+        }
+        .defaultSize(
+            width: AppWindowSizing.loupeMachine.defaultSize.width,
+            height: AppWindowSizing.loupeMachine.defaultSize.height
+        )
+        .windowResizability(.contentMinSize)
     }
 }
 
@@ -123,6 +261,14 @@ private struct WindowLauncherCommands: Commands {
 
     var body: some Commands {
         CommandGroup(after: .windowArrangement) {
+            Button(L10n.t("Deboogey"), systemImage: "macwindow") {
+                DeboogeyWindowController.open(.main, sipSatisfied: sipSatisfied)
+            }
+
+            Button(L10n.t("Loupe Machine"), systemImage: "scope") {
+                LoupeMachineNavigation.open(documentAt: nil, using: openWindow)
+            }
+
             Button(L10n.t("Cocoa Debug Menu"), systemImage: "wrench.and.screwdriver") {
                 openWindow(id: "deboogey-cdm-launcher")
             }
@@ -196,15 +342,15 @@ struct Root: App {
         print("csrutil: \(isSIPSatisfied)")
 
         PersistentVariables.registerDefaults()
-        if UserDefaults.standard.bool(forKey: "deboogey.entityTracker.autoDeleteEnabled") {
-            let scope = UserDefaults.standard.string(forKey: "deboogey.entityTracker.autoDeleteScope") ?? "ephemerals"
-            let trigger = UserDefaults.standard.string(forKey: "deboogey.entityTracker.autoDeleteTrigger") ?? "login"
+        if UserDefaults.standard.bool(forKey: "theoderoy.Deboogey.EntityTracker.autoDeleteEnabled") {
+            let scope = UserDefaults.standard.string(forKey: "theoderoy.Deboogey.EntityTracker.autoDeleteScope") ?? "ephemerals"
+            let trigger = UserDefaults.standard.string(forKey: "theoderoy.Deboogey.EntityTracker.autoDeleteTrigger") ?? "login"
 
             let shouldDelete: Bool
             if trigger == "launch" {
                 shouldDelete = true
             } else {
-                let sessionKey = "deboogey.entityTracker.lastKnownSessionID"
+                let sessionKey = "theoderoy.Deboogey.EntityTracker.lastKnownSessionID"
                 let currentSession = loginSessionID()
                 let storedSession = UserDefaults.standard.string(forKey: sessionKey)
                 
@@ -228,20 +374,54 @@ struct Root: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            RootContentView()
                 .environment(\.sipSatisfied, sipSatisfied)
                 .environment(\.locale, L10n.locale)
         }
         .commands {
+            AboutCommands()
             UpgradeCommands()
             if #available(macOS 13.0, *) {
                 WindowLauncherCommands(sipSatisfied: sipSatisfied)
             } else {
-                EmptyCommands()
+                LoupeMachineLegacyCommands()
+                LegacyWindowLauncherCommands(sipSatisfied: sipSatisfied)
             }
         }
 
         SceneSwitcher(sipSatisfied: sipSatisfied)
+    }
+}
+
+@available(macOS 13.0, *)
+private struct LoupeMachineExternalDocumentHandler: ViewModifier {
+    @Environment(\.openWindow) private var openWindow
+
+    func body(content: Content) -> some View {
+        content.onOpenURL { url in
+            guard url.pathExtension.lowercased() == "loum" else { return }
+            LoupeMachineNavigation.open(documentAt: url, using: openWindow)
+        }
+    }
+}
+
+private struct LoupeMachineLegacyExternalDocumentHandler: ViewModifier {
+    func body(content: Content) -> some View {
+        content.onOpenURL { url in
+            guard url.pathExtension.lowercased() == "loum" else { return }
+            LoupeMachineNavigation.openLegacy(documentAt: url)
+        }
+    }
+}
+
+private struct RootContentView: View {
+    @ViewBuilder
+    var body: some View {
+        if #available(macOS 13.0, *) {
+            RootView().modifier(LoupeMachineExternalDocumentHandler())
+        } else {
+            RootView().modifier(LoupeMachineLegacyExternalDocumentHandler())
+        }
     }
 }
 
@@ -265,7 +445,6 @@ private func loginSessionID() -> String {
     if sysctl(&mib, 2, &bootTime, &size, nil, 0) == 0 {
         bootTimestamp = bootTime.tv_sec
     } else {
-        // Extremely unlikely to instate, but let's not abandon ship guys.
         bootTimestamp = Int(Date().timeIntervalSince1970)
     }
 

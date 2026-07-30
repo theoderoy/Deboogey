@@ -21,6 +21,7 @@ struct AppWindowSize {
 
 enum AppWindowSizing {
     static let root = AppWindowSize(width: 620, height: 520)
+    static let loupeMachine = AppWindowSize(width: 960, height: 720)
 
     enum Configuration {
         static let sidebarWidth: CGFloat = 200
@@ -147,6 +148,13 @@ private struct GeneralPanelView: View {
             )
             .font(.subheadline)
             .foregroundColor(.secondary)
+
+            Toggle(isOn: $vm.showLoupeApplyVerification) {
+                Text(L10n.t("Verify Loupe Machine Changes"))
+            }
+            Text(L10n.t("Ask for confirmation before Loupe Machine applies changes to an application."))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
         }
         
         section(header: "Upgrades") {
@@ -214,12 +222,12 @@ private struct GeneralPanelView: View {
 
 private struct EntityTrackerPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
-    @AppStorage("deboogey.entityTracker.rowScale") private var rowScale: Double = 1.0
+    @AppStorage("theoderoy.Deboogey.EntityTracker.rowScale") private var rowScale: Double = 1.0
     @State private var displayScale: Double = {
-        let stored = UserDefaults.standard.double(forKey: "deboogey.entityTracker.rowScale")
+        let stored = UserDefaults.standard.double(forKey: "theoderoy.Deboogey.EntityTracker.rowScale")
         return stored.isZero ? 1.0 : stored
     }()
-    @AppStorage("deboogey.entityTracker.scaleTarget") private var scaleTarget: String = "both"
+    @AppStorage("theoderoy.Deboogey.EntityTracker.scaleTarget") private var scaleTarget: String = "both"
     
     private var preferenceBanner: some View {
         Image("EntityTrackerConfUnit")
@@ -558,6 +566,10 @@ final class ConfigurationViewModel: ObservableObject {
     @Published var showCLTNotices: Bool {
         didSet { vars.showCLTNotices = showCLTNotices }
     }
+
+    @Published var showLoupeApplyVerification: Bool {
+        didSet { vars.showLoupeApplyVerification = showLoupeApplyVerification }
+    }
     
     @Published var upgradeChannel: String {
         didSet { vars.upgradeChannel = upgradeChannel }
@@ -591,6 +603,7 @@ final class ConfigurationViewModel: ObservableObject {
         self.pesterMeWithSipping = vars.pesterMeWithSipping
         self.showNetworkNotices = vars.showNetworkNotices
         self.showCLTNotices = vars.showCLTNotices
+        self.showLoupeApplyVerification = vars.showLoupeApplyVerification
         self.upgradeChannel = vars.upgradeChannel
         self.hideUpgradeAlerts = vars.hideUpgradeAlerts
         self.deleteBackupOnStartup = vars.deleteBackupOnStartup

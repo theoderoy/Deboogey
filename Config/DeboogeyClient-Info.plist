@@ -4,6 +4,27 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeIconFile</key>
+			<string>LoumDocumentIcon.icns</string>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>loum</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>Loupe Machine Document</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>theoderoy.Deboogey.LoupeMachine</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>$(APP_BUNDLE_DISPLAY_NAME)</string>
 	<key>CFBundleExecutable</key>
@@ -28,5 +49,29 @@
 	<string>AccentColor</string>
 	<key>NSHumanReadableCopyright</key>
 	<string></string>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Loupe Machine Document</string>
+			<key>UTTypeIconFile</key>
+			<string>LoumDocumentIcon.icns</string>
+			<key>UTTypeIdentifier</key>
+			<string>theoderoy.Deboogey.LoupeMachine</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>loum</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/vnd.deboogey.loupe-machine+json</string>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>

@@ -17,10 +17,11 @@ public final class PersistentVariables: ObservableObject {
         static let hideUpgradeAlerts = "hideUpgradeAlerts"
         static let deleteBackupOnStartup = "deleteBackupOnStartup"
         static let hasShownWhatsNew = "hasShownWhatsNew"
-        static let entityTrackerAutoDeleteEnabled = "deboogey.entityTracker.autoDeleteEnabled"
-        static let entityTrackerAutoDeleteScope = "deboogey.entityTracker.autoDeleteScope"
-        static let entityTrackerAutoDeleteTrigger = "deboogey.entityTracker.autoDeleteTrigger"
+        static let entityTrackerAutoDeleteEnabled = "theoderoy.Deboogey.EntityTracker.autoDeleteEnabled"
+        static let entityTrackerAutoDeleteScope = "theoderoy.Deboogey.EntityTracker.autoDeleteScope"
+        static let entityTrackerAutoDeleteTrigger = "theoderoy.Deboogey.EntityTracker.autoDeleteTrigger"
         static let showCLTNotices = "showCLTNotices"
+        static let showLoupeApplyVerification = "showLoupeApplyVerification"
     }
 
     private let defaults: UserDefaults
@@ -35,7 +36,8 @@ public final class PersistentVariables: ObservableObject {
         Keys.entityTrackerAutoDeleteEnabled: true,
         Keys.entityTrackerAutoDeleteScope: "ephemerals",
         Keys.entityTrackerAutoDeleteTrigger: "login",
-        Keys.showCLTNotices: true
+        Keys.showCLTNotices: true,
+        Keys.showLoupeApplyVerification: true
     ]
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {
@@ -82,6 +84,10 @@ public final class PersistentVariables: ObservableObject {
         didSet { defaults.set(showCLTNotices, forKey: Keys.showCLTNotices) }
     }
 
+    @Published public var showLoupeApplyVerification: Bool {
+        didSet { defaults.set(showLoupeApplyVerification, forKey: Keys.showLoupeApplyVerification) }
+    }
+
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         Self.registerDefaults(in: self.defaults)
@@ -95,6 +101,7 @@ public final class PersistentVariables: ObservableObject {
         self.entityTrackerAutoDeleteScope = self.defaults.string(forKey: Keys.entityTrackerAutoDeleteScope) ?? "ephemerals"
         self.entityTrackerAutoDeleteTrigger = self.defaults.string(forKey: Keys.entityTrackerAutoDeleteTrigger) ?? "login"
         self.showCLTNotices = self.defaults.bool(forKey: Keys.showCLTNotices)
+        self.showLoupeApplyVerification = self.defaults.bool(forKey: Keys.showLoupeApplyVerification)
     }
     
     public func theThirdImpact() {
