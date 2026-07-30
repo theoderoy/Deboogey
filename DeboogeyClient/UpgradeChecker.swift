@@ -72,26 +72,28 @@ class UpgradeChecker: ObservableObject {
     }
 
     var isExperimentalBuild: Bool {
-        let versionType = DebugVariables.forcedVersionType?.rawValue
-            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-            ?? ""
-        return ["Internal", "Development"].contains { versionType.caseInsensitiveCompare($0) == .orderedSame }
+        guard let versionType = DebugVariables.effectiveVersionType else { return false }
+        return [.internal, .development].contains(versionType)
     }
 
     var isDevelopmentBuild: Bool {
-        let versionType = DebugVariables.forcedVersionType?.rawValue
-            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-            ?? ""
-        return versionType.caseInsensitiveCompare("Development") == .orderedSame
+        DebugVariables.effectiveVersionType == .development
     }
 
     var shouldConfirmInternalUpgrade: Bool {
         AppVersion.parse(from: latestVersion).channel == .internal
     }
 
-    func requestManualCheck() { manualCheck.send() }
+    func requestManualCheck() {
+        guard !DebugVariables.isMarketplaceCandidateEditionBuild else { return }
+        manualCheck.send()
+    }
     
     func checkForUpdates(force: Bool = false, clearIfNone: Bool = false, completion: ((Bool)->Void)? = nil) {
+        guard !DebugVariables.isMarketplaceCandidateEditionBuild else {
+            completion?(false)
+            return
+        }
         guard NetworkMonitor.shared.isConnected else {
             DispatchQueue.main.async {
                 if clearIfNone {
@@ -167,6 +169,7 @@ class UpgradeChecker: ObservableObject {
     }
 
     func proceedWithUpdate() {
+        guard !DebugVariables.isMarketplaceCandidateEditionBuild else { return }
         guard let url = pendingUpdateURL else { return }
         let version = latestVersion
         isUpdating = true

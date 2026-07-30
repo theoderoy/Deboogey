@@ -10,6 +10,13 @@ import SwiftUI
 struct WhatsNewView: View {
     let onDismiss: () -> Void
 
+    private var versionHeading: String {
+        let version = (shortVersion.isEmpty ? "" : shortVersion)
+            + (buildNumber.isEmpty
+                ? "" : shortVersion.isEmpty ? buildNumber : " \(buildNumber)")
+        return L10n.f("What's changed in %@", version)
+    }
+
     var body: some View {
         VStack(spacing: 30) {
             VStack(spacing: 8) {
@@ -17,23 +24,16 @@ struct WhatsNewView: View {
                     Image(nsImage: appIcon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 80, height: 80)
+                        .frame(width: 128, height: 128)
                 }
                 
                 Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "DeboogeyClient")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                 
-                Text(
-                    L10n.f(
-                        "What's changed in %@",
-                        (shortVersion.isEmpty ? "" : "\(shortVersion)")
-                            + (buildNumber.isEmpty
-                                ? "" : shortVersion.isEmpty ? "\(buildNumber)" : " \(buildNumber)")
-                    )
-                )
-                .font(.title2)
-                .fontWeight(.medium)
+                Text(versionHeading)
+                    .font(.title2)
+                    .fontWeight(.medium)
             }
             .padding(.top, 40)
             
@@ -61,13 +61,11 @@ struct WhatsNewView: View {
             }
             .padding(.horizontal, 40)
             
-            Spacer()
-
             ContinueButton(title: "Continue", color: .accentColor, action: onDismiss)
                 .padding(.horizontal, 40)
                 .padding(.bottom, 40)
         }
-        .frame(width: 500, height: 600)
+        .frame(width: 500)
     }
 }
 

@@ -108,40 +108,89 @@ struct LauncherButton: View {
 }
 
 private extension View {
-    @ViewBuilder
     func launcherButtonStyle(tint color: Color) -> some View {
-        if #available(macOS 26.0, *) {
-            self
-                .buttonStyle(.glass)
-                .buttonBorderShape(.roundedRectangle)
-                .controlSize(.large)
-                .tint(color)
-        } else {
-            self
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.roundedRectangle)
-                .controlSize(.large)
-                .tint(color)
-        }
-    }
-
-    @ViewBuilder
-    func developmentStateCapsuleStyle() -> some View {
-        if #available(macOS 26.0, *) {
-            self
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .glassEffect(.regular.tint(.accentColor), in: .capsule)
-        } else {
-            self
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(Capsule().fill(Color.accentColor))
-        }
+        self
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.roundedRectangle)
+            .controlSize(.large)
+            .tint(color)
     }
 }
 
 struct RootView: View {
+#if DEBOOGEY_MCE
+    @State private var showingEntityTracker = false
+
+    var body: some View {
+        VStack {
+            HStack {
+                VStack(spacing: 8) {
+                    Image(nsImage: NSImage(named: NSImage.applicationIconName) ?? NSImage())
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 120, height: 120)
+
+                    Text(appName ?? "DEBOOGEY_DEVELOPMENT_STATE")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                }
+
+                VStack(spacing: 12) {
+                    if #available(macOS 13.0, *) {
+                        DeboogeyLoupeWindowLauncher()
+                    } else {
+                        DeboogeyLoupeLegacyWindowLauncher()
+                    }
+
+                    Divider()
+                        .frame(width: 220)
+
+                    if #available(macOS 13.0, *) {
+                        EntityTrackerWindowLauncher()
+                    } else {
+                        LauncherButton(
+                            title: "Entity Tracker",
+                            icon: "binoculars",
+                            color: .accentColor
+                        ) {
+                            showingEntityTracker = true
+                        }
+                    }
+
+                    if #available(macOS 14.0, *) {
+                        ModernSettingsLauncher()
+                    } else {
+                        LauncherButton(
+                            title: {
+                                if #available(macOS 13.0, *) { return "Settings" }
+                                return "Preferences"
+                            }(),
+                            icon: "gear",
+                            color: .gray
+                        ) {
+                            if #available(macOS 13.0, *) {
+                                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                            } else {
+                                NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                            }
+                        }
+                    }
+                }
+                .padding()
+            }
+        }
+        .sheet(isPresented: $showingEntityTracker) {
+            NavigationView {
+                EntityTrackerView()
+            }
+            .frame(width: 560, height: 480)
+        }
+        .minimumWindowContentSize(AppWindowSizing.root)
+        .background(
+            WindowDefaultSizeApplier(sizing: AppWindowSizing.root) {}
+        )
+    }
+#else
     @Environment(\.openURL) private var openURL
     @Environment(\.sipSatisfied) private var sipSatisfied
 
@@ -182,9 +231,10 @@ struct RootView: View {
     }
 
     private var shouldShowUpdateCard: Bool {
-        upgradeChecker.isUpdating
+        !DebugVariables.isMarketplaceCandidateEditionBuild
+        && (upgradeChecker.isUpdating
         || (upgradeChecker.upgradeAvailable && (!vars.hideUpgradeAlerts || showUpdateCardOverride) && (!hideUpdateCard || showUpdateCardOverride))
-        || (!networkMonitor.isConnected && !vars.hideUpgradeAlerts && !hideUpdateCard && vars.showNetworkNotices)
+        || (!networkMonitor.isConnected && !vars.hideUpgradeAlerts && !hideUpdateCard && vars.showNetworkNotices))
     }
 
     private var updateCardExpanded: Bool {
@@ -226,7 +276,9 @@ struct RootView: View {
                 .padding(.top, 8)
             }
 
-            if sipSatisfied == true && vars.pesterMeWithSipping == true {
+            if !DebugVariables.isMarketplaceCandidateEditionBuild,
+               sipSatisfied == true,
+               vars.pesterMeWithSipping == true {
                 Text(L10n.t("System write-dependent features have been disabled."))
                     .foregroundStyle(.tertiary)
                     .padding(3)
@@ -243,17 +295,14 @@ struct RootView: View {
                     Text(appName ?? "DEBOOGEY_DEVELOPMENT_STATE")
                         .font(.largeTitle)
                         .fontWeight(.bold)
-                    Text(
-                        (shortVersion.isEmpty ? "" : "\(shortVersion)")
-                        + (buildNumber.isEmpty
-                           ? "" : shortVersion.isEmpty ? "\(buildNumber)" : " \(buildNumber)")
-                    )
-                    .foregroundColor(.white)
-                    .font(.subheadline)
-                    .bold()
-                    .developmentStateCapsuleStyle()
                 }
                 VStack(spacing: 12) {
+                    if #available(macOS 13.0, *) {
+                        DeboogeyLoupeWindowLauncher()
+                    } else {
+                        DeboogeyLoupeLegacyWindowLauncher()
+                    }
+
                     if #available(macOS 13.0, *) {
                         DeboogeyCDMWindowLauncher()
                     } else {
@@ -266,90 +315,92 @@ struct RootView: View {
                         }
                     }
                     
-                    if #available(macOS 13.0, *) {
-                        if sipSatisfied {
-                            HStack {
-                                LauncherButton(
-                                    title: "SkyLight Diagnostics",
-                                    icon: "macwindow",
-                                    color: .accentColor
-                                ) { }
-                                    .disabled(true)
-                                
-                                Button(action: {
-                                    activeAlert = .sipNotice
-                                }) {
-                                    Image(systemName: "questionmark.circle")
-                                        .font(.title2)
-                                        .foregroundStyle(.tertiary)
+                    if !DebugVariables.isMarketplaceCandidateEditionBuild {
+                        if #available(macOS 13.0, *) {
+                            if sipSatisfied {
+                                HStack {
+                                    LauncherButton(
+                                        title: "SkyLight Diagnostics",
+                                        icon: "macwindow",
+                                        color: .accentColor
+                                    ) { }
+                                        .disabled(true)
+
+                                    Button(action: {
+                                        activeAlert = .sipNotice
+                                    }) {
+                                        Image(systemName: "questionmark.circle")
+                                            .font(.title2)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
-                            }
-                        } else if !cltInstalled {
-                            HStack {
-                                LauncherButton(
-                                    title: "SkyLight Diagnostics",
-                                    icon: "macwindow",
-                                    color: .accentColor
-                                ) { }
-                                    .disabled(true)
-                                
-                                Button(action: {
-                                    activeAlert = .cltNotice
-                                }) {
-                                    Image(systemName: "questionmark.circle")
-                                        .font(.title2)
-                                        .foregroundColor(.secondary)
+                            } else if !cltInstalled {
+                                HStack {
+                                    LauncherButton(
+                                        title: "SkyLight Diagnostics",
+                                        icon: "macwindow",
+                                        color: .accentColor
+                                    ) { }
+                                        .disabled(true)
+
+                                    Button(action: {
+                                        activeAlert = .cltNotice
+                                    }) {
+                                        Image(systemName: "questionmark.circle")
+                                            .font(.title2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
-                            }
-                        } else {
-                            DeboogeySDWindowLauncher()
-                        }
-                    } else {
-                        if sipSatisfied {
-                            HStack {
-                                LauncherButton(
-                                    title: "SkyLight Diagnostics",
-                                    icon: "macwindow",
-                                    color: .accentColor
-                                ) { }
-                                    .disabled(true)
-                                
-                                Button(action: {
-                                    activeAlert = .sipNotice
-                                }) {
-                                    Image(systemName: "questionmark.circle")
-                                        .font(.title2)
-                                        .foregroundColor(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        } else if !cltInstalled {
-                            HStack {
-                                LauncherButton(
-                                    title: "SkyLight Diagnostics",
-                                    icon: "macwindow",
-                                    color: .accentColor
-                                ) { }
-                                    .disabled(true)
-                                
-                                Button(action: {
-                                    activeAlert = .cltNotice
-                                }) {
-                                    Image(systemName: "questionmark.circle")
-                                        .font(.title2)
-                                        .foregroundColor(.secondary)
-                                }
-                                .buttonStyle(.plain)
+                            } else {
+                                DeboogeySDWindowLauncher()
                             }
                         } else {
-                            LauncherButton(
-                                title: "SkyLight Diagnostics",
-                                icon: "macwindow",
-                                color: .accentColor
-                            ) {
-                                showingDeboogeySDLauncher = true
+                            if sipSatisfied {
+                                HStack {
+                                    LauncherButton(
+                                        title: "SkyLight Diagnostics",
+                                        icon: "macwindow",
+                                        color: .accentColor
+                                    ) { }
+                                        .disabled(true)
+
+                                    Button(action: {
+                                        activeAlert = .sipNotice
+                                    }) {
+                                        Image(systemName: "questionmark.circle")
+                                            .font(.title2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            } else if !cltInstalled {
+                                HStack {
+                                    LauncherButton(
+                                        title: "SkyLight Diagnostics",
+                                        icon: "macwindow",
+                                        color: .accentColor
+                                    ) { }
+                                        .disabled(true)
+
+                                    Button(action: {
+                                        activeAlert = .cltNotice
+                                    }) {
+                                        Image(systemName: "questionmark.circle")
+                                            .font(.title2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            } else {
+                                LauncherButton(
+                                    title: "SkyLight Diagnostics",
+                                    icon: "macwindow",
+                                    color: .accentColor
+                                ) {
+                                    showingDeboogeySDLauncher = true
+                                }
                             }
                         }
                     }
@@ -381,20 +432,14 @@ struct RootView: View {
                             color: .gray
                         ) {
                             if #available(macOS 13.0, *) {
-                                NSApp.sendAction(Selector("showSettingsWindow:"), to: nil, from: nil)
+                                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
                             } else {
-                                NSApp.sendAction(Selector("showPreferencesWindow:"), to: nil, from: nil)
+                                NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
                             }
                         }
                     }
                 }
                 .padding()
-            }
-            
-            Link(destination: URL(string: "https://github.com/theoderoy")!) {
-                Text("github.com/theoderoy")
-                    .bold()
-                    .padding(4)
             }
             
             if shouldShowUpdateCard {
@@ -597,7 +642,9 @@ struct RootView: View {
     private func prepareStartupFlowIfNeeded() {
         guard !didRunStartupFlow else { return }
         didRunStartupFlow = true
-        checkCLT()
+        if !DebugVariables.isMarketplaceCandidateEditionBuild {
+            checkCLT()
+        }
         if DebugVariables.alwaysShowWhatsNewView || !vars.hasShownWhatsNew {
             showingWhatsNew = true
         } else {
@@ -634,20 +681,28 @@ struct RootView: View {
     }
     
     private func performStartupChecks() {
-        if sipSatisfied == true && vars.pesterMeWithSipping == true {
+        if !DebugVariables.isMarketplaceCandidateEditionBuild,
+           sipSatisfied == true,
+           vars.pesterMeWithSipping == true {
             DispatchQueue.main.async {
                 activeAlert = .sipNotice
             }
-        } else if sipSatisfied == false && !cltInstalled && vars.showCLTNotices == true {
+        } else if !DebugVariables.isMarketplaceCandidateEditionBuild,
+                  sipSatisfied == false,
+                  !cltInstalled,
+                  vars.showCLTNotices == true {
             DispatchQueue.main.async {
                 activeAlert = .cltNotice
             }
         }
-        upgradeChecker.cleanUpOldApp()
-        upgradeChecker.checkForUpdates()
+        if !DebugVariables.isMarketplaceCandidateEditionBuild {
+            upgradeChecker.cleanUpOldApp()
+            upgradeChecker.checkForUpdates()
+        }
     }
     
     private func runManualCheck() {
+        guard !DebugVariables.isMarketplaceCandidateEditionBuild else { return }
         if !networkMonitor.isConnected && !upgradeChecker.upgradeAvailable {
             if vars.showNetworkNotices {
                 showUpdateCardOverride = true
@@ -682,6 +737,107 @@ struct RootView: View {
         vars.hasShownWhatsNew = false
         upgradeChecker.upgradeAvailable = false
         upgradeChecker.proceedWithUpdate()
+    }
+#endif
+}
+
+private struct DeboogeyLoupeLauncherMenu: View {
+    let openDocument: () -> Void
+    let createDocument: () -> Void
+    @AppStorage("theoderoy.Deboogey.LoupeMachine.hasShownEducation")
+    private var hasShownEducation = false
+    @State private var showingEducation = false
+    @State private var showingActions = false
+    @State private var pendingAction: Action = .open
+
+    private enum Action {
+        case open
+        case create
+    }
+
+    var body: some View {
+        LauncherButton(
+            title: "Loupe Machine",
+            icon: "loupe",
+            color: .accentColor
+        ) {
+            showingActions = true
+        }
+        .popover(isPresented: $showingActions, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 0) {
+                Button {
+                    request(.open)
+                } label: {
+                    Label(L10n.t("Open Loupe Machine Document"), systemImage: "doc.text.magnifyingglass")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(12)
+                .padding(.horizontal, 4)
+
+                Divider()
+
+                Button {
+                    request(.create)
+                } label: {
+                    Label(L10n.t("Create New Document…"), systemImage: "plus.app")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(12)
+                .padding(.horizontal, 4)
+            }
+            .frame(minWidth: 280)
+        }
+        .sheet(isPresented: $showingEducation) {
+            LoupeMachineEducationView {
+                hasShownEducation = true
+                showingEducation = false
+                DispatchQueue.main.async {
+                    perform(pendingAction)
+                }
+            }
+        }
+    }
+
+    private func request(_ action: Action) {
+        showingActions = false
+        pendingAction = action
+        if hasShownEducation && !DebugVariables.alwaysShowLMEducation {
+            perform(action)
+        } else {
+            showingEducation = true
+        }
+    }
+
+    private func perform(_ action: Action) {
+        switch action {
+        case .open: openDocument()
+        case .create: createDocument()
+        }
+    }
+}
+
+@available(macOS 13.0, *)
+private struct DeboogeyLoupeWindowLauncher: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        DeboogeyLoupeLauncherMenu(
+            openDocument: { LoupeMachineNavigation.chooseDocument(using: openWindow) },
+            createDocument: { LoupeMachineNavigation.open(documentAt: nil, using: openWindow) }
+        )
+    }
+}
+
+private struct DeboogeyLoupeLegacyWindowLauncher: View {
+    var body: some View {
+        DeboogeyLoupeLauncherMenu(
+            openDocument: LoupeMachineNavigation.chooseDocumentLegacy,
+            createDocument: { LoupeMachineNavigation.openLegacy(documentAt: nil) }
+        )
     }
 }
 
@@ -733,4 +889,3 @@ private struct ModernSettingsLauncher: View {
 #Preview {
     RootView()
 }
-

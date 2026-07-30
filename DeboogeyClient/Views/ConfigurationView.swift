@@ -8,42 +8,6 @@
 import SwiftUI
 import Combine
 
-struct AppWindowSize {
-    let defaultSize: CGSize
-    let minimumSize: CGSize
-
-    init(width: CGFloat, height: CGFloat, minimumSize: CGSize? = nil) {
-        let size = CGSize(width: width, height: height)
-        self.defaultSize = size
-        self.minimumSize = minimumSize ?? size
-    }
-}
-
-enum AppWindowSizing {
-    static let root = AppWindowSize(width: 620, height: 520)
-
-    enum Configuration {
-        static let sidebarWidth: CGFloat = 200
-        static let detailWidth: CGFloat = 520
-        static let minimumHeight: CGFloat = 520
-
-        static let modern = AppWindowSize(
-            width: sidebarWidth + detailWidth,
-            height: minimumHeight
-        )
-        static let legacy = AppWindowSize(width: detailWidth, height: minimumHeight)
-    }
-}
-
-extension View {
-    func minimumWindowContentSize(_ sizing: AppWindowSize) -> some View {
-        frame(
-            minWidth: sizing.minimumSize.width,
-            minHeight: sizing.minimumSize.height
-        )
-    }
-}
-
 private struct LegacyGroupedSection<Content: View>: View {
     let header: String
     let content: Content
@@ -59,7 +23,7 @@ private struct LegacyGroupedSection<Content: View>: View {
                 .font(.footnote)
                 .foregroundColor(.secondary)
                 .padding(.leading, 16)
-            
+
             VStack(alignment: .leading, spacing: 12) {
                 content
             }
@@ -78,7 +42,9 @@ private struct LegacyGroupedSection<Content: View>: View {
 
 private struct GeneralPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
+#if !DEBOOGEY_MCE
     @Environment(\.sipSatisfied) private var sipSatisfied
+#endif
     @State private var showResetAlert = false
     
     var body: some View {
@@ -111,6 +77,16 @@ private struct GeneralPanelView: View {
     
     @ViewBuilder
     private var panels: some View {
+        section(header: "Indexing") {
+            Toggle(isOn: $vm.playIndexingDoneSound) {
+                Text(L10n.t("Play a sound when indexing finishes"))
+            }
+            Text(L10n.t("Play a sound after an application is completely indexed."))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        
+#if !DEBOOGEY_MCE
         section(header: "Notices") {
             Toggle(isOn: $vm.pesterMeWithSipping) {
                 Text("System Integrity Protection")
@@ -129,7 +105,7 @@ private struct GeneralPanelView: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             }
-            
+
             Toggle(isOn: $vm.showNetworkNotices) {
                 Text("Network Connection")
             }
@@ -147,6 +123,13 @@ private struct GeneralPanelView: View {
             )
             .font(.subheadline)
             .foregroundColor(.secondary)
+
+            Toggle(isOn: $vm.showLoupeApplyVerification) {
+                Text(L10n.t("Verify Loupe Machine Changes"))
+            }
+            Text(L10n.t("Ask for confirmation before Loupe Machine applies changes to an application."))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
         }
         
         section(header: "Upgrades") {
@@ -159,10 +142,11 @@ private struct GeneralPanelView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
-            
+
             Toggle("Hide Automatic Notices", isOn: $vm.hideUpgradeAlerts)
             Toggle("Delete Backup on Startup", isOn: $vm.deleteBackupOnStartup)
         }
+#endif
 
         section(header: "Maintenance") {
             VStack(alignment: .leading, spacing: 12) {
@@ -214,12 +198,12 @@ private struct GeneralPanelView: View {
 
 private struct EntityTrackerPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
-    @AppStorage("deboogey.entityTracker.rowScale") private var rowScale: Double = 1.0
+    @AppStorage("theoderoy.Deboogey.EntityTracker.rowScale") private var rowScale: Double = 1.0
     @State private var displayScale: Double = {
-        let stored = UserDefaults.standard.double(forKey: "deboogey.entityTracker.rowScale")
+        let stored = UserDefaults.standard.double(forKey: "theoderoy.Deboogey.EntityTracker.rowScale")
         return stored.isZero ? 1.0 : stored
     }()
-    @AppStorage("deboogey.entityTracker.scaleTarget") private var scaleTarget: String = "both"
+    @AppStorage("theoderoy.Deboogey.EntityTracker.scaleTarget") private var scaleTarget: String = "both"
     
     private var preferenceBanner: some View {
         Image("EntityTrackerConfUnit")
@@ -267,13 +251,23 @@ private struct EntityTrackerPanelView: View {
                     Text("On Login").tag("login")
                     Text("On Deboogey Launch").tag("launch")
                 }
+#if !DEBOOGEY_MCE
                 Picker("Scope", selection: $vm.entityTrackerAutoDeleteScope) {
                     Text("Ephemerals Only").tag("ephemerals")
                     Text("All Entries").tag("all")
                 }
+#endif
+                if DebugVariables.isMarketplaceCandidateEditionBuild
+                    || vm.entityTrackerAutoDeleteScope == "all" {
+                    Picker("File and indexing entries", selection: $vm.entityTrackerAutoDeleteLoupeActivities) {
+                        Text("Remove these entries").tag(true)
+                        Text("Leave these entries out").tag(false)
+                    }
+                    .pickerStyle(.radioGroup)
+                }
                 Text(descriptionForAutoDelete)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                .foregroundColor(.secondary)
             }
         }
         
@@ -304,9 +298,18 @@ private struct EntityTrackerPanelView: View {
     }
     
     private var descriptionForAutoDelete: String {
-        let what = vm.entityTrackerAutoDeleteScope == "ephemerals"
-            ? L10n.t("Removes ephemeral entries (e.g. SkyLight Diagnostics) from the log")
-            : L10n.t("Clears the entire Entity Tracker log")
+        let what = !DebugVariables.isMarketplaceCandidateEditionBuild
+            && vm.entityTrackerAutoDeleteScope == "ephemerals"
+            ? L10n.t(
+                DebugVariables.isMarketplaceCandidateEditionBuild
+                    ? "Removes ephemeral entries from the log"
+                    : "Removes ephemeral entries (e.g. SkyLight Diagnostics) from the log"
+            )
+            : L10n.t(
+                vm.entityTrackerAutoDeleteLoupeActivities
+                    ? "Clears the entire Entity Tracker log"
+                    : "Clears the Entity Tracker log except file and indexing entries"
+            )
         let when = vm.entityTrackerAutoDeleteTrigger == "login"
             ? L10n.t("once per login session.")
             : L10n.t("on every app launch.")
@@ -373,6 +376,7 @@ private struct AcknowledgementsPanelView: View {
     
     @ViewBuilder
     private var panels: some View {
+#if !DEBOOGEY_MCE
         section(header: "Sources") {
             Button(action: {
                 openURL(
@@ -411,6 +415,7 @@ private struct AcknowledgementsPanelView: View {
             }
             .buttonStyle(.plain)
         }
+#endif
         
         section(header: "Special Thanks") {
             Button(action: { openURL(URL(string: "https://github.com/ogui-775")!) }) {
@@ -558,6 +563,10 @@ final class ConfigurationViewModel: ObservableObject {
     @Published var showCLTNotices: Bool {
         didSet { vars.showCLTNotices = showCLTNotices }
     }
+
+    @Published var showLoupeApplyVerification: Bool {
+        didSet { vars.showLoupeApplyVerification = showLoupeApplyVerification }
+    }
     
     @Published var upgradeChannel: String {
         didSet { vars.upgradeChannel = upgradeChannel }
@@ -583,6 +592,14 @@ final class ConfigurationViewModel: ObservableObject {
         didSet { vars.entityTrackerAutoDeleteTrigger = entityTrackerAutoDeleteTrigger }
     }
 
+    @Published var entityTrackerAutoDeleteLoupeActivities: Bool {
+        didSet { vars.entityTrackerAutoDeleteLoupeActivities = entityTrackerAutoDeleteLoupeActivities }
+    }
+
+    @Published var playIndexingDoneSound: Bool {
+        didSet { vars.playIndexingDoneSound = playIndexingDoneSound }
+    }
+
     private let vars: PersistentVariables
     
     init(initialSelection: Panel? = .general, vars: PersistentVariables = PersistentVariables()) {
@@ -591,12 +608,15 @@ final class ConfigurationViewModel: ObservableObject {
         self.pesterMeWithSipping = vars.pesterMeWithSipping
         self.showNetworkNotices = vars.showNetworkNotices
         self.showCLTNotices = vars.showCLTNotices
+        self.showLoupeApplyVerification = vars.showLoupeApplyVerification
         self.upgradeChannel = vars.upgradeChannel
         self.hideUpgradeAlerts = vars.hideUpgradeAlerts
         self.deleteBackupOnStartup = vars.deleteBackupOnStartup
         self.entityTrackerAutoDeleteEnabled = vars.entityTrackerAutoDeleteEnabled
         self.entityTrackerAutoDeleteScope = vars.entityTrackerAutoDeleteScope
         self.entityTrackerAutoDeleteTrigger = vars.entityTrackerAutoDeleteTrigger
+        self.entityTrackerAutoDeleteLoupeActivities = vars.entityTrackerAutoDeleteLoupeActivities
+        self.playIndexingDoneSound = vars.playIndexingDoneSound
     }
     
     func goBack() {
@@ -686,7 +706,6 @@ private struct PanelDetail: View {
 }
 
 struct ConfigurationRootView: View {
-    @Environment(\.sipSatisfied) private var sipSatisfied
     @StateObject private var vm = ConfigurationViewModel()
     
     var body: some View {

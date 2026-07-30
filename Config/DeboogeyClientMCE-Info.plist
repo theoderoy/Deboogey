@@ -10,9 +10,7 @@
 			<key>CFBundleTypeIconFile</key>
 			<string>LoumDocumentIcon.icns</string>
 			<key>CFBundleTypeExtensions</key>
-			<array>
-				<string>loum</string>
-			</array>
+			<array><string>loum</string></array>
 			<key>CFBundleTypeName</key>
 			<string>Loupe Machine Document</string>
 			<key>CFBundleTypeRole</key>
@@ -20,9 +18,7 @@
 			<key>LSHandlerRank</key>
 			<string>Owner</string>
 			<key>LSItemContentTypes</key>
-			<array>
-				<string>theoderoy.Deboogey.LoupeMachine</string>
-			</array>
+			<array><string>theoderoy.Deboogey.LoupeMachine</string></array>
 		</dict>
 	</array>
 	<key>CFBundleDisplayName</key>
@@ -43,19 +39,23 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>DeboogeyEdition</key>
+	<string>$(DEBOOGEY_EDITION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.developer-tools</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSAccentColorName</key>
 	<string>AccentColor</string>
 	<key>NSHumanReadableCopyright</key>
-	<string></string>
+	<string>$(APP_COPYRIGHT)</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
 			<key>UTTypeConformsTo</key>
-			<array>
-				<string>public.json</string>
-			</array>
+			<array><string>public.json</string></array>
 			<key>UTTypeDescription</key>
 			<string>Loupe Machine Document</string>
 			<key>UTTypeIconFile</key>
@@ -65,9 +65,7 @@
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>
-				<array>
-					<string>loum</string>
-				</array>
+				<array><string>loum</string></array>
 				<key>public.mime-type</key>
 				<string>application/vnd.deboogey.loupe-machine+json</string>
 			</dict>
