@@ -48,17 +48,27 @@ struct EntityTrackerView: View {
 
     private var iconScale: Double { scaleTarget != "text" ? rowScale : 1.0 }
     private var textScale: Double { scaleTarget != "icon" ? rowScale : 1.0 }
+
+    private var visibleEntities: [TrackedEntity] {
+        tracker.entities.filter {
+#if DEBOOGEY_MCE
+            $0.source == .loupeMachine
+#else
+            true
+#endif
+        }
+    }
     
     private var sortedEntities: [TrackedEntity] {
         switch sortOrder {
         case .dateNewest:
-            return tracker.entities.sorted { $0.timestamp > $1.timestamp }
+            return visibleEntities.sorted { $0.timestamp > $1.timestamp }
         case .dateOldest:
-            return tracker.entities.sorted { $0.timestamp < $1.timestamp }
+            return visibleEntities.sorted { $0.timestamp < $1.timestamp }
         case .alphabeticalAction:
-            return tracker.entities.sorted { $0.summary < $1.summary }
+            return visibleEntities.sorted { $0.summary < $1.summary }
         case .alphabeticalTarget:
-            return tracker.entities.sorted { 
+            return visibleEntities.sorted {
                 let leftTarget: String
                 let rightTarget: String
 
@@ -68,7 +78,7 @@ struct EntityTrackerView: View {
                 case .deboogeyCDM:
                     leftTarget = $0.deboogeyCDMDomain ?? ""
                 case .loupeMachine:
-                    leftTarget = $0.loupeApplicationIdentifier ?? ""
+                    leftTarget = $0.loupeApplicationIdentifier ?? $0.loupeActivityTarget ?? ""
                 }
                 
                 switch $1.source {
@@ -77,19 +87,19 @@ struct EntityTrackerView: View {
                 case .deboogeyCDM:
                     rightTarget = $1.deboogeyCDMDomain ?? ""
                 case .loupeMachine:
-                    rightTarget = $1.loupeApplicationIdentifier ?? ""
+                    rightTarget = $1.loupeApplicationIdentifier ?? $1.loupeActivityTarget ?? ""
                 }
                 
                 return leftTarget < rightTarget
             }
         case .alphabeticalTool:
-            return tracker.entities.sorted { $0.source.displayName < $1.source.displayName }
+            return visibleEntities.sorted { $0.source.displayName < $1.source.displayName }
         }
     }
 
     var body: some View {
         Group {
-            if tracker.entities.isEmpty {
+            if visibleEntities.isEmpty {
                 emptyState
             } else {
                 entityList
@@ -114,7 +124,13 @@ struct EntityTrackerView: View {
             Text(L10n.t("No modifications recorded yet."))
                 .font(.headline)
                 .foregroundColor(.secondary)
-            Text(L10n.t("Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, and Loupe Machine will appear here."))
+            Text(
+                L10n.t(
+                    DebugVariables.isMarketplaceCandidateEditionBuild
+                        ? "Modifications made via Loupe Machine will appear here."
+                        : "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, and Loupe Machine will appear here."
+                )
+            )
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -189,6 +205,7 @@ struct EntityTrackerView: View {
                     seenDeboogeySD = true
                 }
             case .loupeMachine:
+                guard entity.loupeActivity == nil else { continue }
                 let target = [entity.loupeApplicationIdentifier ?? "", entity.loupeFlagName ?? ""]
                     .joined(separator: "\u{0}")
                 if seenLoupeTargets.contains(target) {
@@ -202,6 +219,9 @@ struct EntityTrackerView: View {
     }
     
     private func revertEntity(_ entity: TrackedEntity) {
+#if DEBOOGEY_MCE
+        return
+#else
         guard let args = entity.revertArguments else { return }
         revertingID = entity.id
         errorMessage = nil
@@ -216,6 +236,7 @@ struct EntityTrackerView: View {
                 revertingID = nil
             }
         }
+#endif
     }
 }
 
@@ -355,7 +376,10 @@ private struct AppIconImage: View {
         let domain: String?
         switch entity.source {
         case .deboogeyCDM: domain = entity.deboogeyCDMDomain
-        case .loupeMachine: domain = entity.loupeApplicationIdentifier
+        case .loupeMachine:
+            domain = entity.loupeActivity == .applicationIndexed
+                ? entity.loupeIndexedApplicationIdentifier
+                : entity.loupeApplicationIdentifier
         case .wsOverlay: domain = nil
         }
         guard let domain,

@@ -64,6 +64,7 @@ final class LoupeMachineWindowController: NSWindowController {
     }
 }
 
+#if !DEBOOGEY_MCE
 @MainActor
 final class DeboogeyWindowController: NSWindowController, NSWindowDelegate {
     enum Kind: Hashable {
@@ -140,3 +141,4 @@ final class DeboogeyWindowController: NSWindowController, NSWindowDelegate {
         Self.openWindows.removeValue(forKey: kind)
     }
 }
+#endif

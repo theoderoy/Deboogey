@@ -10,6 +10,7 @@ import Darwin
 import CoreFoundation
 import AppKit
 
+#if !DEBOOGEY_MCE
 enum LoupeApplicationDataError: LocalizedError {
     case applicationUnavailable
     case unsupportedFlag(String)
@@ -186,6 +187,7 @@ struct LoupeApplicationData {
         return value is NSNull ? nil : value
     }
 }
+#endif
 
 enum DeboogeyLoupeLauncherError: LocalizedError {
     case toolNotFound
@@ -332,7 +334,12 @@ struct DeboogeyLoupeLauncher {
         inspection: DeboogeyLoupeInspection? = nil,
         didLoad: (([LoupeFlag]) -> Void)? = nil
     ) throws -> [LoupeFlag] {
-        guard let toolURL = Bundle.main.url(forResource: "DeboogeyLoupe", withExtension: nil) else {
+#if DEBOOGEY_MCE
+        let toolURL = Bundle.main.url(forAuxiliaryExecutable: "DeboogeyLoupeMCE")
+#else
+        let toolURL = Bundle.main.url(forResource: "DeboogeyLoupe", withExtension: nil)
+#endif
+        guard let toolURL else {
             throw DeboogeyLoupeLauncherError.toolNotFound
         }
         guard FileManager.default.isExecutableFile(atPath: toolURL.path) else {
@@ -343,6 +350,10 @@ struct DeboogeyLoupeLauncher {
         process.executableURL = toolURL
         process.arguments = [appURL.path]
         var environment = ProcessInfo.processInfo.environment
+#if DEBOOGEY_MCE
+        let bookmark = try appURL.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
+        environment["DEBOOGEY_LOUPE_APP_BOOKMARK"] = bookmark.base64EncodedString()
+#endif
         environment["DEBOOGEY_LOUPE_GUI_LAUNCH"] = "1"
         process.environment = environment
         process.standardInput = FileHandle.nullDevice
@@ -428,14 +439,14 @@ struct DeboogeyLoupeLauncher {
         return result.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
-    static func displayValue(at url: URL) -> String? {
+    nonisolated static func displayValue(at url: URL) -> String? {
         guard let data = try? Data(contentsOf: url),
               let wrapper = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let value = wrapper["value"] else { return nil }
         return displayValue(value)
     }
 
-    private static func displayValue(_ value: Any) -> String {
+    nonisolated private static func displayValue(_ value: Any) -> String {
         if value is NSNull {
             return L10n.t("Unassigned")
         }

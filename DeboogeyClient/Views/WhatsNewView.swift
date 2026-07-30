@@ -10,6 +10,13 @@ import SwiftUI
 struct WhatsNewView: View {
     let onDismiss: () -> Void
 
+    private var versionHeading: String {
+        let version = (shortVersion.isEmpty ? "" : shortVersion)
+            + (buildNumber.isEmpty
+                ? "" : shortVersion.isEmpty ? buildNumber : " \(buildNumber)")
+        return L10n.f("What's changed in %@", version)
+    }
+
     var body: some View {
         VStack(spacing: 30) {
             VStack(spacing: 8) {
@@ -24,16 +31,9 @@ struct WhatsNewView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
                 
-                Text(
-                    L10n.f(
-                        "What's changed in %@",
-                        (shortVersion.isEmpty ? "" : "\(shortVersion)")
-                            + (buildNumber.isEmpty
-                                ? "" : shortVersion.isEmpty ? "\(buildNumber)" : " \(buildNumber)")
-                    )
-                )
-                .font(.title2)
-                .fontWeight(.medium)
+                Text(versionHeading)
+                    .font(.title2)
+                    .fontWeight(.medium)
             }
             .padding(.top, 40)
             

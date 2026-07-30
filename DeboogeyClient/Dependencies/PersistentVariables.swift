@@ -20,6 +20,8 @@ public final class PersistentVariables: ObservableObject {
         static let entityTrackerAutoDeleteEnabled = "theoderoy.Deboogey.EntityTracker.autoDeleteEnabled"
         static let entityTrackerAutoDeleteScope = "theoderoy.Deboogey.EntityTracker.autoDeleteScope"
         static let entityTrackerAutoDeleteTrigger = "theoderoy.Deboogey.EntityTracker.autoDeleteTrigger"
+        static let entityTrackerAutoDeleteLoupeActivities = "theoderoy.Deboogey.EntityTracker.autoDeleteLoupeActivities"
+        static let playIndexingDoneSound = "theoderoy.Deboogey.Indexing.playCompletionSound"
         static let showCLTNotices = "showCLTNotices"
         static let showLoupeApplyVerification = "showLoupeApplyVerification"
     }
@@ -36,6 +38,8 @@ public final class PersistentVariables: ObservableObject {
         Keys.entityTrackerAutoDeleteEnabled: true,
         Keys.entityTrackerAutoDeleteScope: "ephemerals",
         Keys.entityTrackerAutoDeleteTrigger: "login",
+        Keys.entityTrackerAutoDeleteLoupeActivities: true,
+        Keys.playIndexingDoneSound: true,
         Keys.showCLTNotices: true,
         Keys.showLoupeApplyVerification: true
     ]
@@ -80,6 +84,14 @@ public final class PersistentVariables: ObservableObject {
         didSet { defaults.set(entityTrackerAutoDeleteTrigger, forKey: Keys.entityTrackerAutoDeleteTrigger) }
     }
 
+    @Published public var entityTrackerAutoDeleteLoupeActivities: Bool {
+        didSet { defaults.set(entityTrackerAutoDeleteLoupeActivities, forKey: Keys.entityTrackerAutoDeleteLoupeActivities) }
+    }
+
+    @Published public var playIndexingDoneSound: Bool {
+        didSet { defaults.set(playIndexingDoneSound, forKey: Keys.playIndexingDoneSound) }
+    }
+
     @Published public var showCLTNotices: Bool {
         didSet { defaults.set(showCLTNotices, forKey: Keys.showCLTNotices) }
     }
@@ -100,6 +112,8 @@ public final class PersistentVariables: ObservableObject {
         self.entityTrackerAutoDeleteEnabled = self.defaults.bool(forKey: Keys.entityTrackerAutoDeleteEnabled)
         self.entityTrackerAutoDeleteScope = self.defaults.string(forKey: Keys.entityTrackerAutoDeleteScope) ?? "ephemerals"
         self.entityTrackerAutoDeleteTrigger = self.defaults.string(forKey: Keys.entityTrackerAutoDeleteTrigger) ?? "login"
+        self.entityTrackerAutoDeleteLoupeActivities = self.defaults.bool(forKey: Keys.entityTrackerAutoDeleteLoupeActivities)
+        self.playIndexingDoneSound = self.defaults.bool(forKey: Keys.playIndexingDoneSound)
         self.showCLTNotices = self.defaults.bool(forKey: Keys.showCLTNotices)
         self.showLoupeApplyVerification = self.defaults.bool(forKey: Keys.showLoupeApplyVerification)
     }

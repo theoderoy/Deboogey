@@ -28,6 +28,9 @@ struct AboutView: View {
                 .font(.title.bold())
 
             VStack(spacing: 4) {
+#if DEBOOGEY_MCE
+                Text(DebugVariables.VersionType.marketplaceCandidateEdition.localizedName)
+#endif
                 Text("\(clientVersion) \(clientBuild)")
                 Spacer(minLength: 4)
                 Link(L10n.t("© Théo De Roy"), destination: URL(string: "https://github.com/theoderoy")!)

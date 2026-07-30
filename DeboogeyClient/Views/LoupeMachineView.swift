@@ -295,6 +295,12 @@ struct LoupeMachineView: View {
         } else { draftStore.update(newValue, for: flag.id, originalValue: flag.value) }
     }
 
+#if DEBOOGEY_MCE
+    private func applyCurrentlyViewed() {}
+    private func applyAllPending() {
+        saveDocument(forceSaveAs: documentURL == nil)
+    }
+#else
     private func applyCurrentlyViewed() {
         guard let selectedFlagID, let value = draftStore.value(for: selectedFlagID) else { return }
         apply([selectedFlagID: value])
@@ -343,6 +349,7 @@ struct LoupeMachineView: View {
         alert.addButton(withTitle: L10n.t("OK"))
         alert.runModal()
     }
+#endif
 
     private func handleDocumentRequest() {
         guard let url = request.documentURL else {
@@ -360,18 +367,16 @@ struct LoupeMachineView: View {
             documentURL = url
             savedDocumentData = try document.encoded()
             importError = nil
-            guard let sourcePath = document.sourceApplication else {
+            guard let sourceURL = sourceApplicationURL(in: document, relativeTo: url) else {
                 load(document)
                 return
             }
-
-            let sourceURL = URL(fileURLWithPath: sourcePath)
             guard FileManager.default.fileExists(atPath: sourceURL.path) else {
                 load(document)
                 return
             }
 
-            load(document)
+            load(document, sourceApplicationURL: sourceURL)
             isInspecting = true
             inspection?.cancel()
             let currentInspection = DeboogeyLoupeInspection()
@@ -389,9 +394,10 @@ struct LoupeMachineView: View {
                     isInspecting = false
                     switch result {
                     case .success(let upstreamFlags):
+                        recordCompletedIndex(for: sourceURL)
                         reconcileIfNeeded(document: document, upstreamFlags: upstreamFlags)
                     case .failure(let error):
-                        load(document)
+                        load(document, sourceApplicationURL: sourceURL)
                         documentError = error.localizedDescription
                     }
                 }
@@ -438,7 +444,8 @@ struct LoupeMachineView: View {
     private func load(
         _ document: LoupeMachineDocument,
         using loadedFlags: [LoupeFlag]? = nil,
-        draftedValues: [String: String]? = nil
+        draftedValues: [String: String]? = nil,
+        sourceApplicationURL: URL? = nil
     ) {
         flagStore.replace(with: loadedFlags ?? document.flags.map {
             LoupeFlag(
@@ -455,7 +462,9 @@ struct LoupeMachineView: View {
         draftStore.replace(with: drafts)
         hasFlags = !flagStore.isEmpty
         selectedFlagID = flagStore.names.first
-        selectedProgramURL = document.sourceApplication.map(URL.init(fileURLWithPath:))
+        selectedProgramURL = sourceApplicationURL
+            ?? selectedProgramURL
+            ?? document.sourceApplication.map(URL.init(fileURLWithPath:))
     }
 
     private func saveDraftForClosing(completion: @escaping (Bool) -> Void) {
@@ -491,10 +500,17 @@ struct LoupeMachineView: View {
 
     private func writeDocument(to url: URL, completion: @escaping (Bool) -> Void) {
         do {
-            let data = try currentDocument.encoded()
+            let activity: TrackedEntity.LoupeActivity = FileManager.default.fileExists(atPath: url.path)
+                ? .documentModified
+                : .documentCreated
+            let data = try currentDocument(relativeTo: url).encoded()
             try data.write(to: url, options: .atomic)
             documentURL = url
             savedDocumentData = data
+            EntityTracker.shared.record(
+                source: .loupeMachine,
+                arguments: [activity.rawValue, url.lastPathComponent]
+            )
             completion(true)
         } catch {
             documentError = error.localizedDescription
@@ -503,11 +519,49 @@ struct LoupeMachineView: View {
     }
 
     private var currentDocument: LoupeMachineDocument {
+        currentDocument(relativeTo: documentURL)
+    }
+
+    private func currentDocument(relativeTo documentURL: URL?) -> LoupeMachineDocument {
         LoupeMachineDocument(
             sourceApplication: selectedProgramURL?.path,
+            sourceApplicationBookmark: sourceApplicationBookmark(relativeTo: documentURL),
             flags: flagStore.flags,
             draftedValues: draftStore.allValues
         )
+    }
+
+    private func sourceApplicationBookmark(relativeTo documentURL: URL?) -> Data? {
+#if DEBOOGEY_MCE
+        guard let selectedProgramURL, let documentURL else { return nil }
+        return try? selectedProgramURL.bookmarkData(
+            options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
+            includingResourceValuesForKeys: nil,
+            relativeTo: documentURL
+        )
+#else
+        return nil
+#endif
+    }
+
+    private func sourceApplicationURL(
+        in document: LoupeMachineDocument,
+        relativeTo documentURL: URL
+    ) -> URL? {
+#if DEBOOGEY_MCE
+        if let bookmark = document.sourceApplicationBookmark {
+            var stale = false
+            if let url = try? URL(
+                resolvingBookmarkData: bookmark,
+                options: [.withSecurityScope, .withoutUI],
+                relativeTo: documentURL,
+                bookmarkDataIsStale: &stale
+            ), !stale {
+                return url
+            }
+        }
+#endif
+        return document.sourceApplication.map(URL.init(fileURLWithPath:))
     }
 
     private var hasUnsavedDocumentChanges: Bool {
@@ -659,6 +713,7 @@ struct LoupeMachineView: View {
                 isInspecting = false
                 switch result {
                 case .success(let inspectedFlags):
+                    recordCompletedIndex(for: url)
                     flagStore.replace(with: inspectedFlags)
                     hasFlags = !flagStore.isEmpty
                     if selectedFlagID == nil { selectedFlagID = inspectedFlags.first?.id }
@@ -674,6 +729,24 @@ struct LoupeMachineView: View {
                 }
             }
         }
+    }
+
+    private func recordCompletedIndex(for applicationURL: URL) {
+        let bundle = Bundle(url: applicationURL)
+        let applicationName = (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+            ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
+            ?? applicationURL.deletingPathExtension().lastPathComponent
+        let identifier = bundle?.bundleIdentifier ?? ""
+        EntityTracker.shared.record(
+            source: .loupeMachine,
+            arguments: [
+                TrackedEntity.LoupeActivity.applicationIndexed.rawValue,
+                applicationName,
+                identifier
+            ]
+        )
+        IndexCompletionFeedback.playSoundIfEnabled()
+        IndexCompletionFeedback.notifyIndexingFinished(for: applicationName)
     }
 }
 
@@ -774,6 +847,18 @@ private enum LoupeFlagCategory: Int, CaseIterable, Identifiable {
 
     var id: Int { rawValue }
 
+    static var visibleCases: [Self] {
+#if DEBOOGEY_MCE
+        [.featureFlags, .disassembled]
+#else
+        allCases
+#endif
+    }
+
+    static var initialSelection: Self {
+        visibleCases.first ?? .defaults
+    }
+
     var title: String {
         switch self {
         case .defaults: return L10n.t("Defaults")
@@ -814,7 +899,7 @@ private struct LoupeCategoryPicker: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         let container = NSView()
         let control = NSSegmentedControl(
-            labels: Array(repeating: "", count: LoupeFlagCategory.allCases.count),
+            labels: Array(repeating: "", count: LoupeFlagCategory.visibleCases.count),
             trackingMode: .selectOne,
             target: context.coordinator,
             action: #selector(Coordinator.selectCategory(_:))
@@ -823,15 +908,15 @@ private struct LoupeCategoryPicker: NSViewRepresentable {
         control.translatesAutoresizingMaskIntoConstraints = false
         control.setAccessibilityLabel(L10n.t("Flag category"))
 
-        for option in LoupeFlagCategory.allCases {
+        for (segment, option) in LoupeFlagCategory.visibleCases.enumerated() {
             control.setImage(
                 NSImage(
                     systemSymbolName: option.systemImage,
                     accessibilityDescription: option.title
                 ),
-                forSegment: option.rawValue
+                forSegment: segment
             )
-            control.setToolTip(option.title, forSegment: option.rawValue)
+            control.setToolTip(option.title, forSegment: segment)
         }
 
         container.addSubview(control)
@@ -847,7 +932,8 @@ private struct LoupeCategoryPicker: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {
         context.coordinator.parent = self
-        context.coordinator.control?.selectedSegment = selection.rawValue
+        context.coordinator.control?.selectedSegment = LoupeFlagCategory.visibleCases.firstIndex(of: selection)
+            ?? 0
     }
 
     final class Coordinator: NSObject {
@@ -857,7 +943,8 @@ private struct LoupeCategoryPicker: NSViewRepresentable {
         init(_ parent: LoupeCategoryPicker) { self.parent = parent }
 
         @objc func selectCategory(_ sender: NSSegmentedControl) {
-            guard let category = LoupeFlagCategory(rawValue: sender.selectedSegment) else { return }
+            guard LoupeFlagCategory.visibleCases.indices.contains(sender.selectedSegment) else { return }
+            let category = LoupeFlagCategory.visibleCases[sender.selectedSegment]
             parent.selection = category
         }
     }
@@ -867,7 +954,7 @@ private struct LoupeFlagSidebar: View {
     @ObservedObject var store: LoupeFlagStore
     @ObservedObject var drafts: LoupeDraftStore
     @Binding var selection: String?
-    @State private var category = LoupeFlagCategory.defaults
+    @State private var category = LoupeFlagCategory.initialSelection
 
     private var names: [String] { store.names.filter(category.contains) }
 
@@ -880,7 +967,7 @@ private struct LoupeFlagSidebar: View {
 
             Divider()
 
-            ForEach(LoupeFlagCategory.allCases) { option in
+            ForEach(LoupeFlagCategory.visibleCases) { option in
                 if category == option {
                     flagList(for: option)
                 }
@@ -1091,6 +1178,18 @@ private struct LoupeValueEditor: View {
         Divider()
 
         HStack {
+#if DEBOOGEY_MCE
+            Text(L10n.t("Save pending edits as a portable Loupe Machine change set."))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button(L10n.t("Save Change Set")) {
+                flushDraft()
+                applyAll()
+            }
+                .buttonStyle(.borderedProminent)
+                .disabled(!hasPendingValues && value == flag.value)
+#else
             Spacer()
             Button(L10n.t("Apply Currently Viewed")) {
                 flushDraft()
@@ -1103,6 +1202,7 @@ private struct LoupeValueEditor: View {
             }
                 .buttonStyle(.borderedProminent)
                 .disabled(!hasPendingValues && value == flag.value)
+#endif
         }
     }
 
@@ -1155,6 +1255,7 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
 
     static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
         (nsView as? WindowAttachmentView)?.didMoveToWindowHandler = nil
+        coordinator.removeQuitEventMonitor()
         coordinator.removeApplicationAccessory()
         coordinator.removeBetaAccessory()
     }
@@ -1179,6 +1280,7 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
         var didClose: (() -> Void)?
         private var closeApproved = false
         private var isPrompting = false
+        private var quitEventMonitor: Any?
         private var applicationAccessory: NSTitlebarAccessoryViewController?
         private var betaAccessory: NSTitlebarAccessoryViewController?
         private var displayedApplicationURL: URL?
@@ -1189,6 +1291,7 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
             self.window = window
             previousDelegate = window.delegate
             window.delegate = self
+            installQuitEventMonitor()
             LoupeMachineCommandRouter.shared.register(commandActions, for: window)
             updateDocumentPresentation(url: documentURL, isEdited: hasUnappliedChanges)
             updateApplicationPresentation(url: applicationURL)
@@ -1341,13 +1444,32 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
             self.betaAccessory = nil
         }
 
-        func windowShouldClose(_ sender: NSWindow) -> Bool {
-            if closeApproved { return true }
-            guard hasUnappliedChanges else {
-                closeApproved = true
-                return true
+        private func installQuitEventMonitor() {
+            guard quitEventMonitor == nil else { return }
+            quitEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
+                [weak self] event in
+                guard let self,
+                      self.hasUnappliedChanges,
+                      self.window?.isKeyWindow == true,
+                      event.charactersIgnoringModifiers?.lowercased() == "q",
+                      event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command
+                else { return event }
+
+                self.promptToSave(in: self.window) {
+                    NSApp.terminate(nil)
+                }
+                return nil
             }
-            guard !isPrompting else { return false }
+        }
+
+        fileprivate func removeQuitEventMonitor() {
+            guard let quitEventMonitor else { return }
+            NSEvent.removeMonitor(quitEventMonitor)
+            self.quitEventMonitor = nil
+        }
+
+        private func promptToSave(in window: NSWindow?, onDiscardOrSave: @escaping () -> Void) {
+            guard let window, !isPrompting else { return }
             isPrompting = true
 
             let alert = NSAlert()
@@ -1356,29 +1478,39 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
             alert.addButton(withTitle: L10n.t("Save"))
             alert.addButton(withTitle: L10n.t("Don’t Save"))
             alert.addButton(withTitle: L10n.t("Cancel"))
-            alert.beginSheetModal(for: sender) { [weak self, weak sender] response in
-                guard let self, let sender else { return }
+            alert.beginSheetModal(for: window) { [weak self] response in
+                guard let self else { return }
                 self.isPrompting = false
                 switch response {
                 case .alertFirstButtonReturn:
                     self.saveDraft? { saved in
-                        if saved {
-                            self.closeApproved = true
-                            sender.close()
-                        }
+                        if saved { onDiscardOrSave() }
                     }
                 case .alertSecondButtonReturn:
-                    self.closeApproved = true
-                    sender.close()
+                    onDiscardOrSave()
                 default:
                     break
                 }
+            }
+        }
+
+        func windowShouldClose(_ sender: NSWindow) -> Bool {
+            if closeApproved { return true }
+            guard hasUnappliedChanges else {
+                closeApproved = true
+                return true
+            }
+            promptToSave(in: sender) { [weak self, weak sender] in
+                guard let self, let sender else { return }
+                self.closeApproved = true
+                sender.close()
             }
             return false
         }
 
         func windowWillClose(_ notification: Notification) {
             if let window { LoupeMachineCommandRouter.shared.unregister(window) }
+            removeQuitEventMonitor()
             didClose?()
             closeApproved = false
             previousDelegate?.windowWillClose?(notification)

@@ -10,6 +10,14 @@ import SwiftUI
 struct LoupeMachineEducationView: View {
     let onDismiss: () -> Void
 
+    private var explanation: String {
+#if DEBOOGEY_MCE
+        L10n.t("Loupe Machine lets you select an application, discover binary preference flags, inspect and edit them, and prepare a change set to apply elsewhere.")
+#else
+        L10n.t("Loupe Machine lets you select an application, discover its system-modifiable flags, and inspect or edit them.")
+#endif
+    }
+
     var body: some View {
         VStack(spacing: 30) {
             VStack(spacing: 8) {
@@ -31,7 +39,7 @@ struct LoupeMachineEducationView: View {
                         .background(.secondary.opacity(0.15), in: Capsule())
                 }
 
-                Text(L10n.t("Loupe Machine lets you select an application, discover its system-modifiable flags, and inspect or edit them."))
+                Text(explanation)
                     .padding(.horizontal, 40)
                     .padding(.top, 20)
             }

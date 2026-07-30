@@ -119,10 +119,12 @@ private struct LegacyWindowLauncherCommands: Commands {
                 DeboogeyWindowController.open(.cocoaDebugMenu, sipSatisfied: sipSatisfied)
             }
 
-            Button(L10n.t("SkyLight Diagnostics")) {
-                DeboogeyWindowController.open(.skyLightDiagnostics, sipSatisfied: sipSatisfied)
+            if !DebugVariables.isMarketplaceCandidateEditionBuild {
+                Button(L10n.t("SkyLight Diagnostics")) {
+                    DeboogeyWindowController.open(.skyLightDiagnostics, sipSatisfied: sipSatisfied)
+                }
+                .disabled(sipSatisfied)
             }
-            .disabled(sipSatisfied)
         }
     }
 }
@@ -171,8 +173,12 @@ private struct SceneSwitcher: Scene {
         if #available(macOS 13.0, *) {
             DeboogeyLoupeScene()
             DeboogeyCDMLauncherScene()
-            DeboogeySDLauncherScene(sipSatisfied: sipSatisfied)
             EntityTrackerScene()
+        }
+
+        if #available(macOS 13.0, *),
+           !DebugVariables.isMarketplaceCandidateEditionBuild {
+            DeboogeySDLauncherScene(sipSatisfied: sipSatisfied)
         }
     }
 }
@@ -273,10 +279,12 @@ private struct WindowLauncherCommands: Commands {
                 openWindow(id: "deboogey-cdm-launcher")
             }
 
-            Button(L10n.t("SkyLight Diagnostics"), systemImage: "macwindow") {
-                openWindow(id: "deboogey-sd-launcher")
+            if !DebugVariables.isMarketplaceCandidateEditionBuild {
+                Button(L10n.t("SkyLight Diagnostics"), systemImage: "macwindow") {
+                    openWindow(id: "deboogey-sd-launcher")
+                }
+                .disabled(sipSatisfied)
             }
-            .disabled(sipSatisfied)
         }
     }
 }
@@ -342,34 +350,7 @@ struct Root: App {
         print("csrutil: \(isSIPSatisfied)")
 
         PersistentVariables.registerDefaults()
-        if UserDefaults.standard.bool(forKey: "theoderoy.Deboogey.EntityTracker.autoDeleteEnabled") {
-            let scope = UserDefaults.standard.string(forKey: "theoderoy.Deboogey.EntityTracker.autoDeleteScope") ?? "ephemerals"
-            let trigger = UserDefaults.standard.string(forKey: "theoderoy.Deboogey.EntityTracker.autoDeleteTrigger") ?? "login"
-
-            let shouldDelete: Bool
-            if trigger == "launch" {
-                shouldDelete = true
-            } else {
-                let sessionKey = "theoderoy.Deboogey.EntityTracker.lastKnownSessionID"
-                let currentSession = loginSessionID()
-                let storedSession = UserDefaults.standard.string(forKey: sessionKey)
-                
-                if currentSession != storedSession {
-                    UserDefaults.standard.set(currentSession, forKey: sessionKey)
-                    shouldDelete = true
-                } else {
-                    shouldDelete = false
-                }
-            }
-
-            if shouldDelete {
-                switch scope {
-                case "ephemerals": EntityTracker.shared.removeEphemerals()
-                case "all":        EntityTracker.shared.removeAll()
-                default: break
-                }
-            }
-        }
+        EntityTracker.shared.performConfiguredAutoRemoval()
     }
 
     var body: some Scene {
@@ -380,7 +361,9 @@ struct Root: App {
         }
         .commands {
             AboutCommands()
-            UpgradeCommands()
+            if !DebugVariables.isMarketplaceCandidateEditionBuild {
+                UpgradeCommands()
+            }
             if #available(macOS 13.0, *) {
                 WindowLauncherCommands(sipSatisfied: sipSatisfied)
             } else {
@@ -436,22 +419,6 @@ extension EnvironmentValues {
     }
 }
 
-private func loginSessionID() -> String {
-    var mib = [CTL_KERN, KERN_BOOTTIME]
-    var bootTime = timeval()
-    var size = MemoryLayout<timeval>.size
-    
-    let bootTimestamp: Int
-    if sysctl(&mib, 2, &bootTime, &size, nil, 0) == 0 {
-        bootTimestamp = bootTime.tv_sec
-    } else {
-        bootTimestamp = Int(Date().timeIntervalSince1970)
-    }
-
-    let uid = getuid()
-    let processSession = getsid(0)
-    return "\(bootTimestamp)-\(uid)-\(processSession)"
-}
 
 private enum csrutilChecker {
     static func refreshSIPStatus() {

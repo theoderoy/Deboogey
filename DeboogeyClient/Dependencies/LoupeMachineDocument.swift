@@ -27,12 +27,19 @@ struct LoupeMachineDocument: Codable {
 
     let formatVersion: Int
     let sourceApplication: String?
+    let sourceApplicationBookmark: Data?
     let flags: [Flag]
     let draftedValues: [String: String]
 
-    init(sourceApplication: String?, flags: [LoupeFlag], draftedValues: [String: String]) {
+    init(
+        sourceApplication: String?,
+        sourceApplicationBookmark: Data? = nil,
+        flags: [LoupeFlag],
+        draftedValues: [String: String]
+    ) {
         formatVersion = Self.currentFormatVersion
         self.sourceApplication = sourceApplication
+        self.sourceApplicationBookmark = sourceApplicationBookmark
         self.flags = flags.map {
             Flag(
                 name: $0.name,
