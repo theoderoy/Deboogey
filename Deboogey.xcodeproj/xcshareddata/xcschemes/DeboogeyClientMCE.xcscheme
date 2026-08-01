@@ -17,6 +17,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "F0ACE0093021B00000ACE001"
                BuildableName = "Deboogey.app"
+               BlueprintName = "DeboogeyClientMCE"
                ReferencedContainer = "container:Deboogey.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -48,6 +49,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "F0ACE0093021B00000ACE001"
             BuildableName = "Deboogey.app"
+            BlueprintName = "DeboogeyClientMCE"
             ReferencedContainer = "container:Deboogey.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -64,6 +66,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "F0ACE0093021B00000ACE001"
             BuildableName = "Deboogey.app"
+            BlueprintName = "DeboogeyClientMCE"
             ReferencedContainer = "container:Deboogey.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
