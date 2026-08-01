@@ -48,15 +48,15 @@ struct WhatsNewView: View {
                 FeatureRow(
                     icon: "loupe",
                     color: .accentColor,
-                    title: "PlaceholderText1",
-                    description: "PlaceholderText2"
+                    title: "Loupe Machine",
+                    description: "Import an application of your choice, inspect or edit it's system-modifiable flags in a new versatile editor."
                 )
                 
                 FeatureRow(
                     icon: "info.circle.fill",
                     color: .blue,
-                    title: "PlaceholderText1",
-                    description: "PlaceholderText2"
+                    title: "Improvements",
+                    description: "Further optimised and enhanced most of the program's backend, and introduced a better About view."
                 )
             }
             .padding(.horizontal, 40)
