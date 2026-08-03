@@ -1215,10 +1215,6 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
     private static let applicationAccessoryIdentifier = NSUserInterfaceItemIdentifier(
         "theoderoy.Deboogey.LoupeMachine.application-accessory"
     )
-    private static let betaAccessoryIdentifier = NSUserInterfaceItemIdentifier(
-        "theoderoy.Deboogey.LoupeMachine.beta-accessory"
-    )
-
     let hasUnappliedChanges: Bool
     let documentURL: URL?
     let applicationURL: URL?
@@ -1257,7 +1253,6 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
         (nsView as? WindowAttachmentView)?.didMoveToWindowHandler = nil
         coordinator.removeQuitEventMonitor()
         coordinator.removeApplicationAccessory()
-        coordinator.removeBetaAccessory()
     }
 
     private final class WindowAttachmentView: NSView {
@@ -1282,7 +1277,6 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
         private var isPrompting = false
         private var quitEventMonitor: Any?
         private var applicationAccessory: NSTitlebarAccessoryViewController?
-        private var betaAccessory: NSTitlebarAccessoryViewController?
         private var displayedApplicationURL: URL?
         private var isApplicationPresentationCurrent = false
 
@@ -1305,59 +1299,6 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
                 L10n.f("%@ — Loupe Machine", $0.lastPathComponent)
             } ?? L10n.t("Untitled — Loupe Machine")
             window.isDocumentEdited = isEdited
-            updateBetaPresentation()
-        }
-
-        func updateBetaPresentation() {
-            guard let window else { return }
-
-            if let betaAccessory,
-               window.titlebarAccessoryViewControllers.contains(where: { $0 === betaAccessory }) {
-                return
-            }
-
-            removeBetaAccessory()
-            for index in window.titlebarAccessoryViewControllers.indices.reversed()
-            where window.titlebarAccessoryViewControllers[index].view.identifier
-                == LoupeWindowCloseCoordinator.betaAccessoryIdentifier {
-                window.removeTitlebarAccessoryViewController(at: index)
-            }
-
-            let label = NSTextField(labelWithString: L10n.t("BETA"))
-            label.font = .systemFont(ofSize: 10, weight: .semibold)
-            label.textColor = .secondaryLabelColor
-            label.alignment = .center
-
-            let badge = NSBox()
-            badge.boxType = .custom
-            badge.isTransparent = false
-            badge.fillColor = .quaternaryLabelColor
-            badge.cornerRadius = 8
-            badge.addSubview(label)
-            label.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([
-                badge.widthAnchor.constraint(equalToConstant: 38),
-                badge.heightAnchor.constraint(equalToConstant: 18),
-                label.leadingAnchor.constraint(equalTo: badge.leadingAnchor, constant: 5),
-                label.trailingAnchor.constraint(equalTo: badge.trailingAnchor, constant: -5),
-                label.centerYAnchor.constraint(equalTo: badge.centerYAnchor)
-            ])
-
-            let container = NSView(frame: NSRect(origin: .zero, size: NSSize(width: 46, height: 38)))
-            container.identifier = LoupeWindowCloseCoordinator.betaAccessoryIdentifier
-            container.addSubview(badge)
-            badge.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([
-                badge.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-                badge.centerYAnchor.constraint(equalTo: container.centerYAnchor)
-            ])
-
-            let accessory = NSTitlebarAccessoryViewController()
-            accessory.layoutAttribute = .left
-            accessory.view = container
-            accessory.view.frame.size = container.frame.size
-            window.addTitlebarAccessoryViewController(accessory)
-            betaAccessory = accessory
         }
 
         func updateApplicationPresentation(url: URL?) {
@@ -1434,14 +1375,6 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
                 window.removeTitlebarAccessoryViewController(at: index)
             }
             self.applicationAccessory = nil
-        }
-
-        func removeBetaAccessory() {
-            guard let window, let betaAccessory else { return }
-            if let index = window.titlebarAccessoryViewControllers.firstIndex(of: betaAccessory) {
-                window.removeTitlebarAccessoryViewController(at: index)
-            }
-            self.betaAccessory = nil
         }
 
         private func installQuitEventMonitor() {
