@@ -794,7 +794,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -809,7 +809,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = Internal;
+				MARKETING_VERSION = Release;
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.DeboogeyClient;
 				PRODUCT_NAME = DeboogeyClient;
 				REGISTER_APP_GROUPS = YES;
@@ -840,7 +840,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 7Z88K9GUU8;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -855,7 +855,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = Internal;
+				MARKETING_VERSION = Release;
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey;
 				PRODUCT_MODULE_NAME = DeboogeyClient;
 				PRODUCT_NAME = Deboogey;
@@ -1006,6 +1006,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBOOGEY_EDITION = "Marketplace Candidate Edition";
 				DEVELOPMENT_TEAM = 7Z88K9GUU8;
 				ENABLE_APP_SANDBOX = YES;
@@ -1020,6 +1021,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MARKETING_VERSION = 2026.8.1;
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey.MCE;
 				PRODUCT_MODULE_NAME = DeboogeyClientMCE;
 				PRODUCT_NAME = Deboogey;
@@ -1053,6 +1055,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBOOGEY_EDITION = "Marketplace Candidate Edition";
 				DEVELOPMENT_TEAM = 7Z88K9GUU8;
 				ENABLE_APP_SANDBOX = YES;
@@ -1067,6 +1070,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MARKETING_VERSION = 2026.8.1;
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey.MCE;
 				PRODUCT_MODULE_NAME = DeboogeyClientMCE;
 				PRODUCT_NAME = Deboogey;
