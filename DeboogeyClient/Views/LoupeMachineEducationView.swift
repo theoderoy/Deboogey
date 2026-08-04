@@ -26,18 +26,9 @@ struct LoupeMachineEducationView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 128, height: 128)
 
-                HStack(spacing: 6) {
-                    Text(L10n.t("Loupe Machine"))
-                        .font(.title2)
-                        .fontWeight(.medium)
-
-                    Text(L10n.t("BETA"))
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(.secondary.opacity(0.15), in: Capsule())
-                }
+                Text(L10n.t("Loupe Machine"))
+                    .font(.title2)
+                    .fontWeight(.medium)
 
                 Text(explanation)
                     .padding(.horizontal, 40)
