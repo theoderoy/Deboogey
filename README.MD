@@ -1,14 +1,16 @@
 <div align="center">
 
-![Deboogey](Assets/banner.jpeg)
+<img src="Assets/icon.png" alt="Deboogey icon" width="128">
 
 # Deboogey
 
-**A hardened debugging inspector for macOS.**
+**Dig into what should be yours.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 </div>
+
+![Deboogey](Assets/banner.jpeg)
 
 ## Overview
 
