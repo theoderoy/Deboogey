@@ -6,6 +6,9 @@
 //
 
 import Foundation
+#if !DEBOOGEY_MCE
+import AppKit
+#endif
 
 enum ToggleAction: String {
     case enable
@@ -96,6 +99,13 @@ guard let domain = parseDomain(domainArg) else {
     exit(EXIT_FAILURE)
 }
 
+#if DEBOOGEY_MCE
+guard domain == "theoderoy.Deboogey.MCE" else {
+    fputs("This helper can only update the Deboogey client.\n", stderr)
+    exit(EXIT_FAILURE)
+}
+#endif
+
 func runDefaultsWriteAndMaybeKill(action: ToggleAction, domain: String, autoKill: Bool) {
     do {
         let result = try DefaultsToggler.writeToggle(action: action, domain: domain)
@@ -107,15 +117,17 @@ func runDefaultsWriteAndMaybeKill(action: ToggleAction, domain: String, autoKill
                 fputs("Notice: Auto-Quit is ignored for the global domain. You should restart your machine to see all changes.\n", stderr)
                 exit(Int32(result.status))
             } else {
-                let script = "tell application id \"\(domain)\" to quit"
-                let osaResult = runAppleScript(script)
-                switch osaResult {
+#if DEBOOGEY_MCE
+                exit(Int32(result.status))
+#else
+                switch requestGracefulTermination(bundleIdentifier: domain) {
                 case .success:
                     exit(Int32(result.status))
                 case .failure(let message):
                     fputs("Auto-Quit failed or was cancelled: \(message)\n", stderr)
                     exit(EXIT_FAILURE)
                 }
+#endif
             }
         } else {
             exit(Int32(result.status))
@@ -126,31 +138,35 @@ func runDefaultsWriteAndMaybeKill(action: ToggleAction, domain: String, autoKill
     }
 }
 
-enum AppleScriptResult { case success; case failure(String) }
+#if !DEBOOGEY_MCE
+enum TerminationResult { case success; case failure(String) }
 
-func runAppleScript(_ script: String) -> AppleScriptResult {
-    let process = Process()
-    process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-    process.arguments = ["-e", script]
+func requestGracefulTermination(bundleIdentifier: String) -> TerminationResult {
+    let applications = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier)
+        .filter { !$0.isTerminated }
+    guard !applications.isEmpty else { return .success }
 
-    let errPipe = Pipe()
-    process.standardOutput = FileHandle.nullDevice
-    process.standardError = errPipe
-    process.standardInput = FileHandle.nullDevice
-
-    do {
-        try process.run()
-        process.waitUntilExit()
-        let status = process.terminationStatus
-        if status == 0 {
-            return .success
-        } else {
-            let stderrStr = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            return .failure(stderrStr.trimmingCharacters(in: .whitespacesAndNewlines))
-        }
-    } catch {
-        return .failure("osascript failed to run: \(error)")
+    for application in applications where !application.terminate() {
+        return .failure("The application rejected the quit request.")
     }
+
+    let deadline = Date().addingTimeInterval(10)
+    while Date() < deadline {
+        if applications.allSatisfy(\.isTerminated) { return .success }
+        RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.05))
+    }
+
+    for application in applications where !application.isTerminated {
+        _ = application.terminate()
+    }
+    let retryDeadline = Date().addingTimeInterval(3)
+    while Date() < retryDeadline {
+        if applications.allSatisfy(\.isTerminated) { return .success }
+        RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.05))
+    }
+
+    return .failure("The application did not finish quitting.")
 }
+#endif
 
 runDefaultsWriteAndMaybeKill(action: action, domain: domain, autoKill: autoKillRequested)

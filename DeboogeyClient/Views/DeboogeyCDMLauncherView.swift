@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Darwin
 
 struct DeboogeyCDMLauncherView: View {
     enum Action: String, CaseIterable, Identifiable {
@@ -29,17 +30,41 @@ struct DeboogeyCDMLauncherView: View {
     }
 
     @State private var action: Action = .enable
+#if DEBOOGEY_MCE
+    @State private var domain: Domain = .deboogey
+#else
     @State private var domain: Domain = .global
+#endif
     @State private var customBundle = ""
+#if DEBOOGEY_MCE
+    @State private var autoKill = true
+#else
     @State private var autoKill = false
+#endif
     @State private var isRunning = false
     @State private var errorMessage: String? = nil
-    @State private var alertMessage: String? = nil
+    @State private var showExecutionConfirmation = false
 
     var bundleID: String? = Bundle.main.bundleIdentifier
     var onRun: (_ arguments: [String]) -> Void
 
     @Environment(\.presentationMode) private var presentationMode
+
+    private var introduction: String {
+#if DEBOOGEY_MCE
+        "Inspect and adjust Cocoa debugging parameters."
+#else
+        "Inspect the sandbox of individual programs and adjust parameters."
+#endif
+    }
+
+    private var viewHeight: CGFloat {
+#if DEBOOGEY_MCE
+        480
+#else
+        650
+#endif
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -66,7 +91,7 @@ struct DeboogeyCDMLauncherView: View {
                     .cornerRadius(12)
                     .padding(.horizontal)
 
-                    Text(L10n.t("Inspect the sandbox of individual programs and adjust parameters."))
+                    Text(L10n.t(introduction))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -87,6 +112,7 @@ struct DeboogeyCDMLauncherView: View {
                     .background(Color.secondary.opacity(0.05))
                     .cornerRadius(12)
 
+#if !DEBOOGEY_MCE
                     VStack(alignment: .leading, spacing: 12) {
                         Text(L10n.t("TARGET DOMAIN")).font(.caption.bold()).foregroundColor(.secondary).padding(.leading, 8)
                         
@@ -96,9 +122,6 @@ struct DeboogeyCDMLauncherView: View {
                             Text(Domain.custom.title).tag(Domain.custom)
                         }
                         .labelsHidden()
-                        .onChange(of: domain) { newValue in
-                            if newValue == .deboogey { autoKill = false }
-                        }
 
                         if domain.isCustom {
                             TextField("com.example.app", text: $customBundle)
@@ -110,26 +133,26 @@ struct DeboogeyCDMLauncherView: View {
 
                         Divider().opacity(0.5)
 
-                        if domain != .deboogey {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(domain == .global ? L10n.t("Auto-Restart") : L10n.t("Auto-Quit")).font(.body)
-                                    Text(domain == .global ? L10n.t("Restarts your Mac immediately") : L10n.t("Quits the app immediately")).font(.caption).foregroundColor(.secondary)
-                                }
-                                Spacer()
-                                Toggle("", isOn: $autoKill).toggleStyle(.switch).labelsHidden()
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(domain == .global ? L10n.t("Auto-Restart") : L10n.t("Auto-Quit")).font(.body)
+                                Text(domain == .global ? L10n.t("Restarts your Mac immediately") : L10n.t("Quits the app gracefully after applying the change")).font(.caption).foregroundColor(.secondary)
                             }
+                            Spacer()
+                            Toggle("", isOn: $autoKill).toggleStyle(.switch).labelsHidden()
                         }
                     }
                     .padding(12)
                     .background(Color.secondary.opacity(0.05))
                     .cornerRadius(12)
+#endif
 
                     if let errorMessage {
                         Text(errorMessage).foregroundColor(.red).font(.caption).padding(8)
                     }
 
-                    if domain == .deboogey {
+#if !DEBOOGEY_MCE
+                    if domain == .deboogey && !autoKill {
                         Text(L10n.t("Quit Deboogey manually to see changes."))
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -140,6 +163,7 @@ struct DeboogeyCDMLauncherView: View {
                             .foregroundColor(.secondary)
                             .padding(.top, 4)
                     }
+#endif
                 }
                 .padding(.horizontal)
             }
@@ -151,19 +175,41 @@ struct DeboogeyCDMLauncherView: View {
             Button(L10n.t("Cancel")) { presentationMode.wrappedValue.dismiss() }
                 .disabled(isRunning)
             Spacer()
-            Button(L10n.t("Run")) { runHelper() }
+            Button(L10n.t("Run")) { requestRun() }
                 .keyboardShortcut(.defaultAction)
                 .disabled(isRunning || (domain == .custom && customBundle.isEmpty))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         }
-        .frame(width: 520, height: 650)
+        .frame(width: 520, height: viewHeight)
         .navigationTitle(L10n.t("Cocoa Debug Menu"))
-        .alert(item: Binding<IdentifiableString?>(
-            get: { alertMessage.map { IdentifiableString(value: $0) } },
-            set: { _ in alertMessage = nil }
-        )) { message in Alert(title: Text(message.value)) }
+        .alert(isPresented: $showExecutionConfirmation) {
+            Alert(
+                title: Text(L10n.t("Cocoa Debug Menu")),
+                message: Text(L10n.t(executionConfirmationMessage)),
+                primaryButton: .default(Text(L10n.t("OK"))) {
+                    DispatchQueue.main.async {
+                        runHelper()
+                    }
+                },
+                secondaryButton: .cancel()
+            )
+        }
+    }
+
+    private var executionConfirmationMessage: String {
+        action == .enable
+            ? "This will quit the application. Relaunch it and look in the menu bar to see the new entry at your disposal."
+            : "This will quit the application. The menu bar entry will be removed."
+    }
+
+    private func requestRun() {
+#if DEBOOGEY_MCE
+        showExecutionConfirmation = true
+#else
+        runHelper()
+#endif
     }
 
     private func runHelper() {
@@ -171,14 +217,21 @@ struct DeboogeyCDMLauncherView: View {
         isRunning = true
         let actionArg = action.helperArgument
         let domainArg: String = {
+#if DEBOOGEY_MCE
+            return bundleID ?? ""
+#else
             switch domain {
             case .global: return "global"
             case .deboogey: return bundleID ?? ""
             case .custom: return customBundle.trimmingCharacters(in: .whitespacesAndNewlines)
             }
+#endif
         }()
+        let shouldTerminateClient = autoKill && (bundleID.map { domainArg == $0 } ?? false)
         var arguments = [actionArg, domainArg]
-        if autoKill && domainArg != "global" { arguments.append("--autokill") }
+        if autoKill && domainArg != "global" && !shouldTerminateClient {
+            arguments.append("--autokill")
+        }
 
         Task.detached {
             do {
@@ -186,7 +239,12 @@ struct DeboogeyCDMLauncherView: View {
                 await MainActor.run {
                     onRun(arguments)
                     isRunning = false
-                    presentationMode.wrappedValue.dismiss()
+                    if shouldTerminateClient {
+                        terminateClientReliably()
+                    } else {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+#if !DEBOOGEY_MCE
                     if domainArg == "global" && autoKill {
                         Task.detached {
                             let process = Process()
@@ -195,6 +253,7 @@ struct DeboogeyCDMLauncherView: View {
                             try? process.run()
                         }
                     }
+#endif
                 }
             } catch {
                 await MainActor.run {
@@ -202,6 +261,16 @@ struct DeboogeyCDMLauncherView: View {
                     isRunning = false
                 }
             }
+        }
+    }
+
+    @MainActor
+    private func terminateClientReliably() {
+        UserDefaults.standard.synchronize()
+        NSApp.terminate(nil)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            exit(EXIT_SUCCESS)
         }
     }
 }

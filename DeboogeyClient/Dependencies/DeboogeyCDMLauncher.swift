@@ -21,9 +21,9 @@ enum DeboogeyCDMLauncherError: LocalizedError {
         case .invalidArguments(let userFacing, _):
             return userFacing
         case .toolNotFound:
-            return L10n.t("DeboogeyCDMHelper not found at Contents/Resources within the app bundle.")
+            return L10n.t("DeboogeyCDMHelper was not found in the app bundle.")
         case .toolOutsideResources(let path):
-            return L10n.f("Resolved tool path is not inside Contents/Resources. (path: %@)", path)
+            return L10n.f("Resolved tool path is not inside the expected app-bundle directory. (path: %@)", path)
         case .toolNotExecutable(let path):
             return L10n.f("DeboogeyCDMHelper exists but is not executable. (path: %@)", path)
         case .processStartFailed:
@@ -35,7 +35,7 @@ enum DeboogeyCDMLauncherError: LocalizedError {
 }
 
 struct DeboogeyCDMLauncher {
-    static func runDeboogeyCDMHelper(arguments: [String]) throws -> String {
+    nonisolated static func runDeboogeyCDMHelper(arguments: [String]) throws -> String {
         guard arguments.count == 2 || arguments.count == 3 else {
             throw DeboogeyCDMLauncherError.invalidArguments(userFacing: L10n.t("Invalid arguments. Expected: enable|disable <bundle-id|global> [--autokill]"), details: ["arguments": arguments])
         }
@@ -45,18 +45,26 @@ struct DeboogeyCDMLauncher {
             throw DeboogeyCDMLauncherError.invalidArguments(userFacing: L10n.t("Invalid arguments. First argument must be 'enable' or 'disable'"), details: ["arguments": arguments])
         }
 
-        let domain = arguments[1]
-
         if arguments.count == 3 {
             guard arguments[2] == "--autokill" else {
                 throw DeboogeyCDMLauncherError.invalidArguments(userFacing: L10n.f("Invalid arguments. Unknown flag: %@", arguments[2]), details: ["arguments": arguments])
             }
         }
         
-        guard let toolPath = Bundle.main.path(forResource: "DeboogeyCDMHelper", ofType: nil) else {
+        #if DEBOOGEY_MCE
+        let toolPath = Bundle.main.url(forAuxiliaryExecutable: "DeboogeyCDMHelperMCE")?.path
+        #else
+        let toolPath = Bundle.main.path(forResource: "DeboogeyCDMHelper", ofType: nil)
+        #endif
+        guard let toolPath else {
             throw DeboogeyCDMLauncherError.toolNotFound
         }
-        if !toolPath.contains("/Contents/Resources/") {
+        #if DEBOOGEY_MCE
+        let expectedDirectory = "/Contents/MacOS/"
+        #else
+        let expectedDirectory = "/Contents/Resources/"
+        #endif
+        if !toolPath.contains(expectedDirectory) {
             throw DeboogeyCDMLauncherError.toolOutsideResources(path: toolPath)
         }
         if !FileManager.default.isExecutableFile(atPath: toolPath) {
@@ -72,45 +80,19 @@ struct DeboogeyCDMLauncher {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
 
-        var collectedStdout = Data()
-        var collectedStderr = Data()
-
-        stdoutPipe.fileHandleForReading.readabilityHandler = { handle in
-            let data = handle.availableData
-            if !data.isEmpty {
-                collectedStdout.append(data)
-                if let chunk = String(data: data, encoding: .utf8), !chunk.isEmpty {
-                    print(chunk, terminator: "")
-                }
-            }
-        }
-        stderrPipe.fileHandleForReading.readabilityHandler = { handle in
-            let data = handle.availableData
-            if !data.isEmpty {
-                collectedStderr.append(data)
-                FileHandle.standardError.write(data)
-            }
-        }
-
         do {
             try process.run()
         } catch {
-            stdoutPipe.fileHandleForReading.readabilityHandler = nil
-            stderrPipe.fileHandleForReading.readabilityHandler = nil
             throw DeboogeyCDMLauncherError.processStartFailed(details: ["error": String(describing: error)])
         }
         process.waitUntilExit()
 
-        stdoutPipe.fileHandleForReading.readabilityHandler = nil
-        stderrPipe.fileHandleForReading.readabilityHandler = nil
-
-        let remainingOut = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        if !remainingOut.isEmpty { collectedStdout.append(remainingOut) }
-        let remainingErr = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-        if !remainingErr.isEmpty { collectedStderr.append(remainingErr) }
-
-        let stdout = String(data: collectedStdout, encoding: .utf8) ?? ""
-        let stderr = String(data: collectedStderr, encoding: .utf8) ?? ""
+        let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
+        let stderr = String(data: stderrData, encoding: .utf8) ?? ""
+        if !stdout.isEmpty { print(stdout, terminator: "") }
+        if !stderrData.isEmpty { FileHandle.standardError.write(stderrData) }
 
         if process.terminationStatus != 0 {
             let status = Int(process.terminationStatus)
