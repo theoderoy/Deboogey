@@ -199,10 +199,8 @@ struct RootView: View {
             .frame(width: 560, height: 480)
         }
         .sheet(isPresented: $showingDeboogeyCDMLauncher) {
-            NavigationView {
-                DeboogeyCDMLauncherView { arguments in
-                    EntityTracker.shared.record(source: .deboogeyCDM, arguments: arguments)
-                }
+            DeboogeyCDMLauncherView { arguments in
+                EntityTracker.shared.record(source: .deboogeyCDM, arguments: arguments)
             }
             .frame(width: 520, height: 480)
         }
