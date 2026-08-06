@@ -52,7 +52,7 @@ struct EntityTrackerView: View {
     private var visibleEntities: [TrackedEntity] {
         tracker.entities.filter {
 #if DEBOOGEY_MCE
-            $0.source == .loupeMachine
+            $0.source == .loupeMachine || $0.source == .deboogeyCDM
 #else
             true
 #endif
@@ -127,7 +127,7 @@ struct EntityTrackerView: View {
             Text(
                 L10n.t(
                     DebugVariables.isMarketplaceCandidateEditionBuild
-                        ? "Modifications made via Loupe Machine will appear here."
+                        ? "Modifications made via Cocoa Debug Menu and Loupe Machine will appear here."
                         : "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, and Loupe Machine will appear here."
                 )
             )
@@ -264,6 +264,14 @@ private struct EntityRow: View {
         entity.deboogeyCDMAction == "enable" ? L10n.t("Revert Modification") : L10n.t("Swap Modification")
     }
 
+    private var canRevert: Bool {
+#if DEBOOGEY_MCE
+        false
+#else
+        entity.revertArguments != nil && !isSuperseded
+#endif
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             AppIconImage(entity: entity, iconScale: iconScale)
@@ -314,7 +322,7 @@ private struct EntityRow: View {
                     .frame(width: 60)
             } else {
                 HStack(spacing: 8) {
-                    if entity.revertArguments != nil && !isSuperseded {
+                    if canRevert {
                         Button(revertLabel) { onRevert() }
                             .buttonStyle(.bordered)
                             .controlSize(.small)
@@ -336,7 +344,7 @@ private struct EntityRow: View {
         }
         .padding(.vertical, 4)
         .contextMenu {
-            if entity.revertArguments != nil && !isSuperseded {
+            if canRevert {
                 Button(revertModificationLabel) { onRevert() }
             }
             Button(L10n.t("Remove from Log")) { onRemoveFromLog() }

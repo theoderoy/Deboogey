@@ -119,7 +119,12 @@ private extension View {
 
 struct RootView: View {
 #if DEBOOGEY_MCE
+    @StateObject private var vars = PersistentVariables()
+
+    @State private var showingDeboogeyCDMLauncher = false
     @State private var showingEntityTracker = false
+    @State private var showingWhatsNew = false
+    @State private var didPrepareStartupFlow = false
 
     var body: some View {
         VStack {
@@ -140,6 +145,14 @@ struct RootView: View {
                         DeboogeyLoupeWindowLauncher()
                     } else {
                         DeboogeyLoupeLegacyWindowLauncher()
+                    }
+
+                    LauncherButton(
+                        title: "Cocoa Debug Menu",
+                        icon: "wrench.and.screwdriver",
+                        color: .accentColor
+                    ) {
+                        showingDeboogeyCDMLauncher = true
                     }
 
                     Divider()
@@ -184,6 +197,25 @@ struct RootView: View {
                 EntityTrackerView()
             }
             .frame(width: 560, height: 480)
+        }
+        .sheet(isPresented: $showingDeboogeyCDMLauncher) {
+            NavigationView {
+                DeboogeyCDMLauncherView { arguments in
+                    EntityTracker.shared.record(source: .deboogeyCDM, arguments: arguments)
+                }
+            }
+            .frame(width: 520, height: 480)
+        }
+        .sheet(isPresented: $showingWhatsNew) {
+            WhatsNewView {
+                showingWhatsNew = false
+                vars.hasShownWhatsNew = true
+            }
+        }
+        .onAppear {
+            guard !didPrepareStartupFlow else { return }
+            didPrepareStartupFlow = true
+            showingWhatsNew = DebugVariables.alwaysShowWhatsNewView || !vars.hasShownWhatsNew
         }
         .minimumWindowContentSize(AppWindowSizing.root)
         .background(

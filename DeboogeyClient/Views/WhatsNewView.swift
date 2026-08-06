@@ -10,6 +10,30 @@ import SwiftUI
 struct WhatsNewView: View {
     let onDismiss: () -> Void
 
+    private let entries: [WhatsNewEntry] = [
+        WhatsNewEntry(
+            scope: .MCEOnly,
+            icon: "wrench.and.screwdriver",
+            color: .accentColor,
+            title: "Cocoa Debug Menu",
+            description: "Play around with the sandbox parameters of Deboogey using Apple's own built-in tool."
+        ),
+        WhatsNewEntry(
+            scope: .unified,
+            icon: "loupe",
+            color: .blue,
+            title: "Updates to Loupe Machine",
+            description: "You are now equipped with a search bar to look up any flags, along with a new 'All' category."
+        ),
+        WhatsNewEntry(
+            scope: .unified,
+            icon: "ladybug",
+            color: .red,
+            title: "Bug Fixes",
+            description: "Fixed an issue where the 'Window' menu bar entry would have inaccurate items in some versions of Deboogey."
+        )
+    ]
+
     private var versionHeading: String {
         let version = (shortVersion.isEmpty ? "" : shortVersion)
             + (buildNumber.isEmpty
@@ -38,26 +62,9 @@ struct WhatsNewView: View {
             .padding(.top, 40)
             
             VStack(alignment: .leading, spacing: 25) {
-                FeatureRow(
-                    icon: "exclamationmark.triangle.fill",
-                    color: .yellow,
-                    title: "Notarisation",
-                    description: "Starting from Release 4, Deboogey versions in the ''Release'' upgrade branch will now be officially signed by Apple. You can upgrade from the previously installed version or install Release 4 (or later) fresh without having to notarise the program manually."
-                )
-                
-                FeatureRow(
-                    icon: "loupe",
-                    color: .accentColor,
-                    title: "Loupe Machine",
-                    description: "Import an application of your choice, inspect or edit it's system-modifiable flags in a new versatile editor."
-                )
-                
-                FeatureRow(
-                    icon: "info.circle.fill",
-                    color: .blue,
-                    title: "Improvements",
-                    description: "Further optimised and enhanced most of the program's backend, and introduced a better About view."
-                )
+                ForEach(entries.filter(\.scope.isVisible)) { entry in
+                    FeatureRow(entry: entry)
+                }
             }
             .padding(.horizontal, 40)
             
@@ -67,6 +74,33 @@ struct WhatsNewView: View {
         }
         .frame(width: 500)
     }
+}
+
+private enum WhatsNewEntryScope {
+    case unified
+    case regularOnly
+    case MCEOnly
+
+    var isVisible: Bool {
+        switch self {
+        case .unified:
+            true
+        case .regularOnly:
+            !DebugVariables.isMarketplaceCandidateEditionBuild
+        case .MCEOnly:
+            DebugVariables.isMarketplaceCandidateEditionBuild
+        }
+    }
+}
+
+private struct WhatsNewEntry: Identifiable {
+    let scope: WhatsNewEntryScope
+    let icon: String
+    let color: Color
+    let title: String
+    let description: String
+
+    var id: String { title }
 }
 
 private struct ContinueButton: View {
@@ -106,23 +140,20 @@ private extension View {
 }
 
 private struct FeatureRow: View {
-    let icon: String
-    let color: Color
-    let title: String
-    let description: String
+    let entry: WhatsNewEntry
     
     var body: some View {
         HStack(alignment: .top, spacing: 15) {
-            Image(systemName: icon)
+            Image(systemName: entry.icon)
                 .font(.system(size: 30))
-                .foregroundColor(color)
+                .foregroundColor(entry.color)
                 .frame(width: 40)
             
             VStack(alignment: .leading, spacing: 5) {
-                Text(L10n.t(title))
+                Text(L10n.t(entry.title))
                     .font(.headline)
                 
-                Text(L10n.t(description))
+                Text(L10n.t(entry.description))
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
