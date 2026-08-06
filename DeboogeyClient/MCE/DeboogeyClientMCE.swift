@@ -65,7 +65,7 @@ private final class MCEWindowController: NSWindowController, NSWindowDelegate {
             window = NSWindow(contentViewController: NSHostingController(rootView: content))
             window.title = L10n.t("Cocoa Debug Menu")
             window.styleMask = [.titled, .closable, .miniaturizable]
-            window.setContentSize(NSSize(width: 520, height: 650))
+            window.setContentSize(NSSize(width: 520, height: 480))
         }
 
         window.isReleasedWhenClosed = false
@@ -245,7 +245,7 @@ private struct MCECDMLauncherScene: Scene {
             .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
-        .defaultSize(width: 520, height: 650)
+        .defaultSize(width: 520, height: 480)
         .windowResizability(.contentSize)
     }
 }
@@ -322,12 +322,8 @@ struct DeboogeyClientMCE: App {
         }
         .commands {
             MCEAboutCommands()
-            if #available(macOS 13.0, *) {
-                MCEWindowLauncherCommands()
-            } else {
-                MCELegacyCommands()
-                MCELegacyWindowLauncherCommands()
-            }
+            MCELegacyCommands()
+            MCELegacyWindowLauncherCommands()
         }
 
         Settings {
