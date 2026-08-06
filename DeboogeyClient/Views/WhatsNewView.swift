@@ -12,25 +12,25 @@ struct WhatsNewView: View {
 
     private let entries: [WhatsNewEntry] = [
         WhatsNewEntry(
-            scope: .regularOnly,
-            icon: "exclamationmark.triangle.fill",
-            color: .yellow,
-            title: "Notarisation",
-            description: "Starting from Release 4, Deboogey versions in the ''Release'' upgrade branch will now be officially signed by Apple. You can upgrade from the previously installed version or install Release 4 (or later) fresh without having to notarise the program manually."
+            scope: .MCEOnly,
+            icon: "wrench.and.screwdriver",
+            color: .accentColor,
+            title: "Cocoa Debug Menu",
+            description: "Play around with the sandbox parameters of Deboogey using Apple's own built-in tool."
         ),
         WhatsNewEntry(
             scope: .unified,
             icon: "loupe",
-            color: .accentColor,
-            title: "Loupe Machine",
-            description: "Import an application of your choice, inspect or edit it's system-modifiable flags in a new versatile editor."
+            color: .blue,
+            title: "Updates to Loupe Machine",
+            description: "You are now equipped with a search bar to look up any flags, along with a new 'All' category."
         ),
         WhatsNewEntry(
             scope: .unified,
-            icon: "info.circle.fill",
-            color: .blue,
-            title: "Improvements",
-            description: "Further optimised and enhanced most of the program's backend, and introduced a better About view."
+            icon: "ladybug",
+            color: .red,
+            title: "Bug Fixes",
+            description: "Fixed an issue where the 'Window' menu bar entry would have inaccurate items in some versions of Deboogey."
         )
     ]
 

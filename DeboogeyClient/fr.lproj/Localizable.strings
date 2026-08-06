@@ -26,6 +26,7 @@
 "Auto-Restart" = "Redémarrage automatique";
 "Auxiliary upgrades have been enabled." = "Les mises à niveau auxiliaires ont été activées.";
 "Both" = "Les deux";
+"Bug Fixes" = "Correctifs";
 "Cancel" = "Annuler";
 "Changes Applied" = "Modifications appliquées";
 "Changes Could Not Be Applied" = "Les modifications n’ont pas pu être appliquées";
@@ -49,7 +50,6 @@
 "Date (Oldest First)" = "Date (plus anciennes d’abord)";
 "Deboogey" = "Deboogey";
 "DeboogeyCDMHelper exists but is not executable. (path: %@)" = "DeboogeyCDMHelper existe, mais n’est pas exécutable. (chemin : %@)";
-"DeboogeyCDMHelper not found at Contents/Resources within the app bundle." = "DeboogeyCDMHelper est introuvable dans Contents/Resources du paquet de l’app.";
 "DeboogeyCDMHelper was not found in the app bundle." = "DeboogeyCDMHelper est introuvable dans le paquet de l’app.";
 "DeboogeyLoupe could not inspect the application." = "DeboogeyLoupe n’a pas pu inspecter l’application.";
 "DeboogeyLoupe is not executable." = "DeboogeyLoupe n’est pas exécutable.";
@@ -85,10 +85,10 @@
 "Failed to start helper." = "Impossible de démarrer l’assistant.";
 "Feature Flags" = "Fonctionnalités";
 "File and indexing entries" = "Entrées de fichiers et d’indexation";
+"Fixed an issue where the 'Window' menu bar entry would have inaccurate items in some versions of Deboogey." = "Correction d’un problème à cause duquel le menu « Fenêtre » affichait des éléments inexacts dans certaines versions de Deboogey.";
 "Flag category" = "Catégorie d’indicateurs";
 "Flags" = "Drapeaux";
 "Foreground" = "Premier plan";
-"Further optimised and enhanced most of the program's backend, and introduced a better About view." = "Optimisation et amélioration supplémentaires de la majeure partie du fonctionnement interne de l’app, avec une meilleure fenêtre À propos.";
 "General" = "Général";
 "Global" = "Global";
 "Global Defaults" = "Valeurs globales";
@@ -100,11 +100,9 @@
 "Hide Automatic Notices" = "Masquer les avis automatiques";
 "Icon" = "Icône";
 "Import" = "Importer";
-"Import an application of your choice, inspect or edit it's system-modifiable flags in a new versatile editor." = "Importez l’application de votre choix et inspectez ou modifiez ses indicateurs système dans un nouvel éditeur polyvalent.";
 "Import macOS Application" = "Importer une application macOS";
 "Imported application: %@" = "Application importée : %@";
 "Import…" = "Importer…";
-"Improvements" = "Améliorations";
 "Indexing" = "Indexation";
 "Indexing Finished" = "Indexation terminée";
 "Insight" = "Éclairage";
@@ -135,7 +133,6 @@
 "Mask: %@" = "Masque : %@";
 "Modifications made via Cocoa Debug Menu and Loupe Machine will appear here." = "Les modifications effectuées via le menu de débogage Cocoa et Loupe Machine apparaîtront ici.";
 "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, and Loupe Machine will appear here." = "Les modifications effectuées via le menu de débogage Cocoa, les diagnostics SkyLight et Loupe Machine apparaîtront ici.";
-"Modifications made via Loupe Machine will appear here." = "Les modifications effectuées via Loupe Machine apparaîtront ici.";
 "Modified" = "Modifié";
 "Mouse" = "Souris";
 "Network Connection" = "Connexion réseau";
@@ -146,7 +143,6 @@
 "No modifications recorded yet." = "Aucune modification enregistrée pour le moment.";
 "No network connection" = "Aucune connexion réseau";
 "No upgrade is present at this time." = "Aucune mise à niveau n’est disponible pour le moment.";
-"Notarisation" = "Notarisation";
 "Notices" = "Avis";
 "OK" = "OK";
 "On Deboogey Launch" = "Au lancement de Deboogey";
@@ -162,6 +158,7 @@
 "PlaceholderText2" = "Chaînes, texte, variables, espaces réservés, etc.";
 "Play a sound after an application is completely indexed." = "Émet un son lorsqu’une application a été entièrement indexée.";
 "Play a sound when indexing finishes" = "Émettre un son à la fin de l’indexation";
+"Play around with the sandbox parameters of Deboogey using Apple's own built-in tool." = "Expérimentez avec les paramètres du bac à sable de Deboogey à l’aide de l’outil intégré d’Apple.";
 "Preferences" = "Préférences";
 "Preparing upgrade" = "Préparation de la mise à niveau";
 "PRESET" = "PRÉRÉGLAGE";
@@ -169,7 +166,6 @@
 "Quit Deboogey manually to see changes." = "Quittez Deboogey manuellement pour voir les changements.";
 "Quit the app manually to see changes." = "Quittez l’app manuellement pour voir les changements.";
 "Quits the app gracefully after applying the change" = "Quitte l’app proprement après l’application de la modification";
-"Quits the app immediately" = "Quitte l’app immédiatement";
 "Release" = "Release";
 "Release %@" = "Release %@";
 "Remove %d Selected from Log" = "Supprimer %d sélection du journal";
@@ -196,6 +192,7 @@
 "Save pending edits as a portable Loupe Machine change set." = "Enregistrez les modifications en attente dans un ensemble de modifications Loupe Machine portable.";
 "Scale Size" = "Taille de l’échelle";
 "Scope" = "Portée";
+"Search Flags" = "Rechercher des indicateurs";
 "Select a flag to inspect its value." = "Sélectionnez un drapeau pour consulter sa valeur.";
 "Select a panel" = "Sélectionnez un panneau";
 "Settings" = "Réglages";
@@ -211,7 +208,6 @@
 "Sourced Article" = "Article source";
 "Sources" = "Sources";
 "Special Thanks" = "Remerciements particuliers";
-"Starting from Release 4, Deboogey versions in the ''Release'' upgrade branch will now be officially signed by Apple. You can upgrade from the previously installed version or install Release 4 (or later) fresh without having to notarise the program manually." = "À partir de la Release 4, les versions de Deboogey de la branche de mise à niveau « Release » seront officiellement signées par Apple. Vous pourrez effectuer la mise à niveau depuis la version précédemment installée ou installer une Release 4 (ou ultérieure) sans avoir à notariser manuellement l’app.";
 "Superseded" = "Remplacé";
 "Swap" = "Inverser";
 "Swap Modification" = "Inverser la modification";
@@ -235,6 +231,7 @@
 "Unknown AppleScript error" = "Erreur AppleScript inconnue";
 "Untitled — Loupe Machine" = "Sans titre — Loupe Machine";
 "Untitled.loum" = "Sans titre.loum";
+"Updates to Loupe Machine" = "Mises à jour de Loupe Machine";
 "Upgrade" = "Mettre à niveau";
 "Upgrade available" = "Mise à niveau disponible";
 "Upgrade Channel" = "Canal de mise à niveau";
@@ -244,6 +241,7 @@
 "Verify Loupe Machine Changes" = "Vérifier les modifications de Loupe Machine";
 "Version" = "Version";
 "What's changed in %@" = "Nouveautés de %@";
+"You are now equipped with a search bar to look up any flags, along with a new 'All' category." = "Vous disposez désormais d’une barre de recherche pour trouver n’importe quel indicateur, ainsi que d’une nouvelle catégorie « Tout ».";
 "You might need to manually code-sign after upgrading." = "Vous devrez peut-être signer le code manuellement après la mise à niveau.";
 "Your unapplied drafted value changes will be lost if you don’t save them." = "Les brouillons de valeurs non appliqués seront perdus si vous ne les enregistrez pas.";
 "© Théo De Roy" = "© Théo De Roy";

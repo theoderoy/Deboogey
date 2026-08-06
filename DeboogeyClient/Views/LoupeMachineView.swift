@@ -839,6 +839,7 @@ private struct LiquidWavefront: Shape {
 }
 
 private enum LoupeFlagCategory: Int, CaseIterable, Identifiable {
+    case all
     case defaults
     case globalDefaults
     case featureFlags
@@ -849,7 +850,7 @@ private enum LoupeFlagCategory: Int, CaseIterable, Identifiable {
 
     static var visibleCases: [Self] {
 #if DEBOOGEY_MCE
-        [.featureFlags, .disassembled]
+        [.all, .featureFlags, .disassembled]
 #else
         allCases
 #endif
@@ -861,6 +862,7 @@ private enum LoupeFlagCategory: Int, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .all: return L10n.t("All")
         case .defaults: return L10n.t("Defaults")
         case .globalDefaults: return L10n.t("Global Defaults")
         case .featureFlags: return L10n.t("Feature Flags")
@@ -871,6 +873,7 @@ private enum LoupeFlagCategory: Int, CaseIterable, Identifiable {
 
     var systemImage: String {
         switch self {
+        case .all: return "square.grid.2x2"
         case .defaults: return "slider.horizontal.3"
         case .globalDefaults: return "globe"
         case .featureFlags: return "flag.2.crossed"
@@ -881,12 +884,14 @@ private enum LoupeFlagCategory: Int, CaseIterable, Identifiable {
 
     func contains(_ name: String) -> Bool {
         switch self {
+        case .all: return true
         case .defaults: return name.hasPrefix("defaults.")
         case .globalDefaults: return name.hasPrefix("globalDefaults.")
         case .featureFlags: return name.hasPrefix("systemFeatureFlags.")
         case .disassembled: return name.hasPrefix("binaryFlags.")
         case .other:
-            return !Self.allCases.dropLast().contains { $0.contains(name) }
+            return ![Self.defaults, .globalDefaults, .featureFlags, .disassembled]
+                .contains { $0.contains(name) }
         }
     }
 }
@@ -950,20 +955,61 @@ private struct LoupeCategoryPicker: NSViewRepresentable {
     }
 }
 
+private struct LoupeFlagSearchField: NSViewRepresentable {
+    @Binding var text: String
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> NSSearchField {
+        let searchField = NSSearchField()
+        searchField.placeholderString = L10n.t("Search Flags")
+        searchField.sendsSearchStringImmediately = true
+        searchField.sendsWholeSearchString = false
+        searchField.delegate = context.coordinator
+        searchField.setAccessibilityLabel(L10n.t("Search Flags"))
+        return searchField
+    }
+
+    func updateNSView(_ searchField: NSSearchField, context: Context) {
+        context.coordinator.parent = self
+        if searchField.stringValue != text {
+            searchField.stringValue = text
+        }
+    }
+
+    final class Coordinator: NSObject, NSSearchFieldDelegate {
+        var parent: LoupeFlagSearchField
+
+        init(_ parent: LoupeFlagSearchField) { self.parent = parent }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let searchField = notification.object as? NSSearchField else { return }
+            parent.text = searchField.stringValue
+        }
+    }
+}
+
 private struct LoupeFlagSidebar: View {
     @ObservedObject var store: LoupeFlagStore
     @ObservedObject var drafts: LoupeDraftStore
     @Binding var selection: String?
     @State private var category = LoupeFlagCategory.initialSelection
+    @State private var searchText = ""
 
-    private var names: [String] { store.names.filter(category.contains) }
+    private var names: [String] { names(for: category) }
 
     var body: some View {
         VStack(spacing: 0) {
+            LoupeFlagSearchField(text: $searchText)
+                .frame(height: 28)
+                .padding(.horizontal, 8)
+                .padding(.top, 8)
+                .padding(.bottom, 6)
+
             LoupeCategoryPicker(selection: $category)
                 .frame(maxWidth: .infinity)
-            .frame(height: 38)
-            .padding(.horizontal, 8)
+                .frame(height: 38)
+                .padding(.horizontal, 8)
 
             Divider()
 
@@ -976,18 +1022,30 @@ private struct LoupeFlagSidebar: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear(perform: selectVisibleFlagIfNeeded)
         .onChange(of: category) { _ in selectVisibleFlagIfNeeded() }
+        .onChange(of: searchText) { _ in selectVisibleFlagIfNeeded() }
         .onChange(of: store.revision) { _ in selectVisibleFlagIfNeeded() }
     }
 
     @ViewBuilder
     private func flagList(for option: LoupeFlagCategory) -> some View {
-        let optionNames = store.names.filter(option.contains)
+        let optionNames = names(for: option)
         LoupeFlagTable(
             names: optionNames,
-            namesRevision: store.revision &* LoupeFlagCategory.allCases.count + option.rawValue,
+            version: LoupeFlagListVersion(
+                storeRevision: store.revision,
+                category: option,
+                searchText: searchText
+            ),
             dirtyIDs: drafts.dirtyIDs,
             selection: $selection
         )
+    }
+
+    private func names(for option: LoupeFlagCategory) -> [String] {
+        store.names.filter { name in
+            option.contains(name)
+                && (searchText.isEmpty || name.localizedCaseInsensitiveContains(searchText))
+        }
     }
 
     private func selectVisibleFlagIfNeeded() {
@@ -996,9 +1054,15 @@ private struct LoupeFlagSidebar: View {
     }
 }
 
+private struct LoupeFlagListVersion: Equatable {
+    let storeRevision: Int
+    let category: LoupeFlagCategory
+    let searchText: String
+}
+
 private struct LoupeFlagTable: NSViewRepresentable {
     let names: [String]
-    let namesRevision: Int
+    let version: LoupeFlagListVersion
     let dirtyIDs: Set<String>
     @Binding var selection: String?
 
@@ -1023,7 +1087,7 @@ private struct LoupeFlagTable: NSViewRepresentable {
         context.coordinator.indexByName = Dictionary(
             uniqueKeysWithValues: names.enumerated().map { ($0.element, $0.offset) }
         )
-        context.coordinator.namesRevision = namesRevision
+        context.coordinator.version = version
         context.coordinator.dirtyIDs = dirtyIDs
 
         let scrollView = NSScrollView()
@@ -1039,10 +1103,10 @@ private struct LoupeFlagTable: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         let coordinator = context.coordinator
         coordinator.parent = self
-        if coordinator.namesRevision != namesRevision {
+        if coordinator.version != version {
             coordinator.names = names
             coordinator.indexByName = Dictionary(uniqueKeysWithValues: names.enumerated().map { ($0.element, $0.offset) })
-            coordinator.namesRevision = namesRevision
+            coordinator.version = version
             coordinator.dirtyIDs = dirtyIDs
             coordinator.tableView?.reloadData()
         } else if coordinator.dirtyIDs != dirtyIDs {
@@ -1057,7 +1121,7 @@ private struct LoupeFlagTable: NSViewRepresentable {
         weak var tableView: NSTableView?
         var names: [String] = []
         var indexByName: [String: Int] = [:]
-        var namesRevision = -1
+        var version: LoupeFlagListVersion?
         var dirtyIDs: Set<String> = []
         private var isUpdatingSelection = false
 

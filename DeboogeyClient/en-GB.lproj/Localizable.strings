@@ -26,6 +26,7 @@
 "Auto-Restart" = "Auto-Restart";
 "Auxiliary upgrades have been enabled." = "Auxiliary upgrades have been enabled.";
 "Both" = "Both";
+"Bug Fixes" = "Bug Fixes";
 "Cancel" = "Cancel";
 "Changes Applied" = "Changes Applied";
 "Changes Could Not Be Applied" = "Changes Could Not Be Applied";
@@ -49,7 +50,6 @@
 "Date (Oldest First)" = "Date (Oldest First)";
 "Deboogey" = "Deboogey";
 "DeboogeyCDMHelper exists but is not executable. (path: %@)" = "DeboogeyCDMHelper exists but is not executable. (path: %@)";
-"DeboogeyCDMHelper not found at Contents/Resources within the app bundle." = "DeboogeyCDMHelper not found at Contents/Resources within the app bundle.";
 "DeboogeyCDMHelper was not found in the app bundle." = "DeboogeyCDMHelper was not found in the app bundle.";
 "DeboogeyLoupe could not inspect the application." = "DeboogeyLoupe could not inspect the application.";
 "DeboogeyLoupe is not executable." = "DeboogeyLoupe is not executable.";
@@ -85,10 +85,10 @@
 "Failed to start helper." = "Failed to start helper.";
 "Feature Flags" = "Feature Flags";
 "File and indexing entries" = "File and indexing entries";
+"Fixed an issue where the 'Window' menu bar entry would have inaccurate items in some versions of Deboogey." = "Fixed an issue where the 'Window' menu bar entry would have inaccurate items in some versions of Deboogey.";
 "Flag category" = "Flag category";
 "Flags" = "Flags";
 "Foreground" = "Foreground";
-"Further optimised and enhanced most of the program's backend, and introduced a better About view." = "Further optimised and enhanced most of the program's backend, and introduced a better About view.";
 "General" = "General";
 "Global" = "Global";
 "Global Defaults" = "Global Defaults";
@@ -100,11 +100,9 @@
 "Hide Automatic Notices" = "Hide Automatic Notices";
 "Icon" = "Icon";
 "Import" = "Import";
-"Import an application of your choice, inspect or edit it's system-modifiable flags in a new versatile editor." = "Import an application of your choice, inspect or edit it's system-modifiable flags in a new versatile editor.";
 "Import macOS Application" = "Import macOS Application";
 "Imported application: %@" = "Imported application: %@";
 "Import…" = "Import…";
-"Improvements" = "Improvements";
 "Indexing" = "Indexing";
 "Indexing Finished" = "Indexing Finished";
 "Insight" = "Insight";
@@ -135,7 +133,6 @@
 "Mask: %@" = "Mask: %@";
 "Modifications made via Cocoa Debug Menu and Loupe Machine will appear here." = "Modifications made via Cocoa Debug Menu and Loupe Machine will appear here.";
 "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, and Loupe Machine will appear here." = "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, and Loupe Machine will appear here.";
-"Modifications made via Loupe Machine will appear here." = "Modifications made via Loupe Machine will appear here.";
 "Modified" = "Modified";
 "Mouse" = "Mouse";
 "Network Connection" = "Network Connection";
@@ -146,7 +143,6 @@
 "No modifications recorded yet." = "No modifications recorded yet.";
 "No network connection" = "No network connection";
 "No upgrade is present at this time." = "No upgrade is present at this time.";
-"Notarisation" = "Notarisation";
 "Notices" = "Notices";
 "OK" = "OK";
 "On Deboogey Launch" = "On Deboogey Launch";
@@ -162,6 +158,7 @@
 "PlaceholderText2" = "Strings, text, variables, placeholders and the sort.";
 "Play a sound after an application is completely indexed." = "Play a sound after an application is completely indexed.";
 "Play a sound when indexing finishes" = "Play a sound when indexing finishes";
+"Play around with the sandbox parameters of Deboogey using Apple's own built-in tool." = "Play around with the sandbox parameters of Deboogey using Apple's own built-in tool.";
 "Preferences" = "Preferences";
 "Preparing upgrade" = "Preparing upgrade";
 "PRESET" = "PRESET";
@@ -169,7 +166,6 @@
 "Quit Deboogey manually to see changes." = "Quit Deboogey manually to see changes.";
 "Quit the app manually to see changes." = "Quit the app manually to see changes.";
 "Quits the app gracefully after applying the change" = "Quits the app gracefully after applying the change";
-"Quits the app immediately" = "Quits the app immediately";
 "Release" = "Release";
 "Release %@" = "Release %@";
 "Remove %d Selected from Log" = "Remove %d Selected from Log";
@@ -196,6 +192,7 @@
 "Save pending edits as a portable Loupe Machine change set." = "Save pending edits as a portable Loupe Machine change set.";
 "Scale Size" = "Scale Size";
 "Scope" = "Scope";
+"Search Flags" = "Search Flags";
 "Select a flag to inspect its value." = "Select a flag to inspect its value.";
 "Select a panel" = "Select a panel";
 "Settings" = "Settings";
@@ -211,7 +208,6 @@
 "Sourced Article" = "Sourced Article";
 "Sources" = "Sources";
 "Special Thanks" = "Special Thanks";
-"Starting from Release 4, Deboogey versions in the ''Release'' upgrade branch will now be officially signed by Apple. You can upgrade from the previously installed version or install Release 4 (or later) fresh without having to notarise the program manually." = "Starting from Release 4, Deboogey versions in the ''Release'' upgrade branch will now be officially signed by Apple. You can upgrade from the previously installed version or install Release 4 (or later) fresh without having to notarise the program manually.";
 "Superseded" = "Superseded";
 "Swap" = "Swap";
 "Swap Modification" = "Swap Modification";
@@ -235,6 +231,7 @@
 "Unknown AppleScript error" = "Unknown AppleScript error";
 "Untitled — Loupe Machine" = "Untitled — Loupe Machine";
 "Untitled.loum" = "Untitled.loum";
+"Updates to Loupe Machine" = "Updates to Loupe Machine";
 "Upgrade" = "Upgrade";
 "Upgrade available" = "Upgrade available";
 "Upgrade Channel" = "Upgrade Channel";
@@ -244,6 +241,7 @@
 "Verify Loupe Machine Changes" = "Verify Loupe Machine Changes";
 "Version" = "Version";
 "What's changed in %@" = "What's changed in %@";
+"You are now equipped with a search bar to look up any flags, along with a new 'All' category." = "You are now equipped with a search bar to look up any flags, along with a new 'All' category.";
 "You might need to manually code-sign after upgrading." = "You might need to manually code-sign after upgrading.";
 "Your unapplied drafted value changes will be lost if you don’t save them." = "Your unapplied drafted value changes will be lost if you don’t save them.";
 "© Théo De Roy" = "© Théo De Roy";

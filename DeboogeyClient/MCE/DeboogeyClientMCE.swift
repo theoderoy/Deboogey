@@ -31,6 +31,64 @@ private final class MCEAboutWindowController: NSWindowController {
     }
 }
 
+@MainActor
+private final class MCEWindowController: NSWindowController, NSWindowDelegate {
+    enum Kind: Hashable {
+        case main
+        case cocoaDebugMenu
+    }
+
+    private static var openWindows: [Kind: MCEWindowController] = [:]
+    private let kind: Kind
+
+    private init(kind: Kind) {
+        self.kind = kind
+
+        let window: NSWindow
+        switch kind {
+        case .main:
+            let content = RootView()
+                .environment(\.locale, L10n.locale)
+            window = NSWindow(contentViewController: NSHostingController(rootView: content))
+            window.title = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+                ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
+                ?? "Deboogey"
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+
+        case .cocoaDebugMenu:
+            let content = NavigationView {
+                DeboogeyCDMLauncherView { arguments in
+                    EntityTracker.shared.record(source: .deboogeyCDM, arguments: arguments)
+                }
+            }
+            .environment(\.locale, L10n.locale)
+            window = NSWindow(contentViewController: NSHostingController(rootView: content))
+            window.title = L10n.t("Cocoa Debug Menu")
+            window.styleMask = [.titled, .closable, .miniaturizable]
+            window.setContentSize(NSSize(width: 520, height: 650))
+        }
+
+        window.isReleasedWhenClosed = false
+        window.center()
+        super.init(window: window)
+        window.delegate = self
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    static func open(_ kind: Kind) {
+        let controller = openWindows[kind] ?? MCEWindowController(kind: kind)
+        openWindows[kind] = controller
+        controller.showWindow(nil)
+        controller.window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        Self.openWindows.removeValue(forKey: kind)
+    }
+}
+
 private struct MCEAboutCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
@@ -63,9 +121,22 @@ private struct MCELegacyCommands: Commands {
                 .keyboardShortcut("s", modifiers: [.command, .shift])
                 .disabled(!router.canSave)
         }
+    }
+}
+
+private struct MCELegacyWindowLauncherCommands: Commands {
+    var body: some Commands {
         CommandGroup(after: .windowArrangement) {
+            Button(L10n.t("Deboogey")) {
+                MCEWindowController.open(.main)
+            }
+
             Button(L10n.t("Loupe Machine")) {
                 LoupeMachineNavigation.openLegacy(documentAt: nil)
+            }
+
+            Button(L10n.t("Cocoa Debug Menu")) {
+                MCEWindowController.open(.cocoaDebugMenu)
             }
         }
     }
@@ -97,9 +168,25 @@ private struct MCELoupeCommands: Commands {
                 .keyboardShortcut("s", modifiers: [.command, .shift])
                 .disabled(!router.canSave)
         }
+    }
+}
+
+@available(macOS 13.0, *)
+private struct MCEWindowLauncherCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
         CommandGroup(after: .windowArrangement) {
-            Button(L10n.t("Loupe Machine")) {
+            Button(L10n.t("Deboogey"), systemImage: "macwindow") {
+                MCEWindowController.open(.main)
+            }
+
+            Button(L10n.t("Loupe Machine"), systemImage: "scope") {
                 LoupeMachineNavigation.open(documentAt: nil, using: openWindow)
+            }
+
+            Button(L10n.t("Cocoa Debug Menu"), systemImage: "wrench.and.screwdriver") {
+                openWindow(id: "deboogey-cdm-launcher")
             }
         }
     }
@@ -142,6 +229,23 @@ private struct MCEEntityTrackerScene: Scene {
         }
         .commandsRemoved()
         .defaultSize(width: 560, height: 480)
+        .windowResizability(.contentSize)
+    }
+}
+
+@available(macOS 13.0, *)
+private struct MCECDMLauncherScene: Scene {
+    var body: some Scene {
+        Window(L10n.t("Cocoa Debug Menu"), id: "deboogey-cdm-launcher") {
+            NavigationStack {
+                DeboogeyCDMLauncherView { arguments in
+                    EntityTracker.shared.record(source: .deboogeyCDM, arguments: arguments)
+                }
+            }
+            .environment(\.locale, L10n.locale)
+        }
+        .commandsRemoved()
+        .defaultSize(width: 520, height: 650)
         .windowResizability(.contentSize)
     }
 }
@@ -218,7 +322,12 @@ struct DeboogeyClientMCE: App {
         }
         .commands {
             MCEAboutCommands()
-            MCELegacyCommands()
+            if #available(macOS 13.0, *) {
+                MCEWindowLauncherCommands()
+            } else {
+                MCELegacyCommands()
+                MCELegacyWindowLauncherCommands()
+            }
         }
 
         Settings {
@@ -232,6 +341,7 @@ struct DeboogeyClientMCE: App {
 
         if #available(macOS 13.0, *) {
             MCELoupeScene()
+            MCECDMLauncherScene()
             MCEEntityTrackerScene()
         }
     }
