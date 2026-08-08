@@ -102,33 +102,6 @@ private struct LoupeMachineLegacyCommands: Commands {
     }
 }
 
-private struct LegacyWindowLauncherCommands: Commands {
-    let sipSatisfied: Bool
-
-    var body: some Commands {
-        CommandGroup(after: .windowArrangement) {
-            Button(L10n.t("Deboogey")) {
-                DeboogeyWindowController.open(.main, sipSatisfied: sipSatisfied)
-            }
-
-            Button(L10n.t("Loupe Machine")) {
-                LoupeMachineNavigation.openLegacy(documentAt: nil)
-            }
-
-            Button(L10n.t("Cocoa Debug Menu")) {
-                DeboogeyWindowController.open(.cocoaDebugMenu, sipSatisfied: sipSatisfied)
-            }
-
-            if !DebugVariables.isMarketplaceCandidateEditionBuild {
-                Button(L10n.t("SkyLight Diagnostics")) {
-                    DeboogeyWindowController.open(.skyLightDiagnostics, sipSatisfied: sipSatisfied)
-                }
-                .disabled(sipSatisfied)
-            }
-        }
-    }
-}
-
 private struct LoupeMachineCommandSet: Commands {
     let createDocument: () -> Void
     let openDocument: () -> Void
@@ -261,35 +234,6 @@ private struct DeboogeySDLauncherScene: Scene {
 }
 
 @available(macOS 13.0, *)
-private struct WindowLauncherCommands: Commands {
-    @Environment(\.openWindow) private var openWindow
-    let sipSatisfied: Bool
-
-    var body: some Commands {
-        CommandGroup(after: .windowArrangement) {
-            Button(L10n.t("Deboogey"), systemImage: "macwindow") {
-                DeboogeyWindowController.open(.main, sipSatisfied: sipSatisfied)
-            }
-
-            Button(L10n.t("Loupe Machine"), systemImage: "scope") {
-                LoupeMachineNavigation.open(documentAt: nil, using: openWindow)
-            }
-
-            Button(L10n.t("Cocoa Debug Menu"), systemImage: "wrench.and.screwdriver") {
-                openWindow(id: "deboogey-cdm-launcher")
-            }
-
-            if !DebugVariables.isMarketplaceCandidateEditionBuild {
-                Button(L10n.t("SkyLight Diagnostics"), systemImage: "macwindow") {
-                    openWindow(id: "deboogey-sd-launcher")
-                }
-                .disabled(sipSatisfied)
-            }
-        }
-    }
-}
-
-@available(macOS 13.0, *)
 private struct EntityTrackerScene: Scene {
     var body: some Scene {
         Window(L10n.t("Entity Tracker"), id: "entity-tracker") {
@@ -365,10 +309,33 @@ struct Root: App {
                 UpgradeCommands()
             }
             if #available(macOS 13.0, *) {
-                WindowLauncherCommands(sipSatisfied: sipSatisfied)
+                WindowLauncherCommands(
+                    openMain: {
+                        DeboogeyWindowController.open(.main, sipSatisfied: sipSatisfied)
+                    },
+                    includesCocoaDebugMenu: true,
+                    includesSkyLightDiagnostics: !DebugVariables.isMarketplaceCandidateEditionBuild,
+                    skyLightDiagnosticsDisabled: sipSatisfied
+                )
             } else {
                 LoupeMachineLegacyCommands()
-                LegacyWindowLauncherCommands(sipSatisfied: sipSatisfied)
+                LegacyWindowLauncherCommands(
+                    openMain: {
+                        DeboogeyWindowController.open(.main, sipSatisfied: sipSatisfied)
+                    },
+                    openCocoaDebugMenu: {
+                        DeboogeyWindowController.open(.cocoaDebugMenu, sipSatisfied: sipSatisfied)
+                    },
+                    openSkyLightDiagnostics: DebugVariables.isMarketplaceCandidateEditionBuild
+                        ? nil
+                        : {
+                            DeboogeyWindowController.open(
+                                .skyLightDiagnostics,
+                                sipSatisfied: sipSatisfied
+                            )
+                        },
+                    skyLightDiagnosticsDisabled: sipSatisfied
+                )
             }
         }
 

@@ -35,7 +35,6 @@ private final class MCEAboutWindowController: NSWindowController {
 private final class MCEWindowController: NSWindowController, NSWindowDelegate {
     enum Kind: Hashable {
         case main
-        case cocoaDebugMenu
     }
 
     private static var openWindows: [Kind: MCEWindowController] = [:]
@@ -54,18 +53,6 @@ private final class MCEWindowController: NSWindowController, NSWindowDelegate {
                 ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
                 ?? "Deboogey"
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
-
-        case .cocoaDebugMenu:
-            let content = NavigationView {
-                DeboogeyCDMLauncherView { arguments in
-                    EntityTracker.shared.record(source: .deboogeyCDM, arguments: arguments)
-                }
-            }
-            .environment(\.locale, L10n.locale)
-            window = NSWindow(contentViewController: NSHostingController(rootView: content))
-            window.title = L10n.t("Cocoa Debug Menu")
-            window.styleMask = [.titled, .closable, .miniaturizable]
-            window.setContentSize(NSSize(width: 520, height: 480))
         }
 
         window.isReleasedWhenClosed = false
@@ -124,24 +111,6 @@ private struct MCELegacyCommands: Commands {
     }
 }
 
-private struct MCELegacyWindowLauncherCommands: Commands {
-    var body: some Commands {
-        CommandGroup(after: .windowArrangement) {
-            Button(L10n.t("Deboogey")) {
-                MCEWindowController.open(.main)
-            }
-
-            Button(L10n.t("Loupe Machine")) {
-                LoupeMachineNavigation.openLegacy(documentAt: nil)
-            }
-
-            Button(L10n.t("Cocoa Debug Menu")) {
-                MCEWindowController.open(.cocoaDebugMenu)
-            }
-        }
-    }
-}
-
 @available(macOS 13.0, *)
 private struct MCELoupeCommands: Commands {
     @Environment(\.openWindow) private var openWindow
@@ -167,27 +136,6 @@ private struct MCELoupeCommands: Commands {
             Button(L10n.t("Save As…")) { router.save(saveAs: true) }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
                 .disabled(!router.canSave)
-        }
-    }
-}
-
-@available(macOS 13.0, *)
-private struct MCEWindowLauncherCommands: Commands {
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some Commands {
-        CommandGroup(after: .windowArrangement) {
-            Button(L10n.t("Deboogey"), systemImage: "macwindow") {
-                MCEWindowController.open(.main)
-            }
-
-            Button(L10n.t("Loupe Machine"), systemImage: "scope") {
-                LoupeMachineNavigation.open(documentAt: nil, using: openWindow)
-            }
-
-            Button(L10n.t("Cocoa Debug Menu"), systemImage: "wrench.and.screwdriver") {
-                openWindow(id: "deboogey-cdm-launcher")
-            }
         }
     }
 }
@@ -229,23 +177,6 @@ private struct MCEEntityTrackerScene: Scene {
         }
         .commandsRemoved()
         .defaultSize(width: 560, height: 480)
-        .windowResizability(.contentSize)
-    }
-}
-
-@available(macOS 13.0, *)
-private struct MCECDMLauncherScene: Scene {
-    var body: some Scene {
-        Window(L10n.t("Cocoa Debug Menu"), id: "deboogey-cdm-launcher") {
-            NavigationStack {
-                DeboogeyCDMLauncherView { arguments in
-                    EntityTracker.shared.record(source: .deboogeyCDM, arguments: arguments)
-                }
-            }
-            .environment(\.locale, L10n.locale)
-        }
-        .commandsRemoved()
-        .defaultSize(width: 520, height: 480)
         .windowResizability(.contentSize)
     }
 }
@@ -308,13 +239,7 @@ private struct MCERootContentView: View {
     }
 }
 
-@main
-struct DeboogeyClientMCE: App {
-    init() {
-        PersistentVariables.registerDefaults()
-        EntityTracker.shared.performConfiguredAutoRemoval()
-    }
-
+private struct MCELegacyRootScene: Scene {
     var body: some Scene {
         WindowGroup {
             MCERootContentView()
@@ -323,8 +248,20 @@ struct DeboogeyClientMCE: App {
         .commands {
             MCEAboutCommands()
             MCELegacyCommands()
-            MCELegacyWindowLauncherCommands()
+            LegacyWindowLauncherCommands(openMain: { MCEWindowController.open(.main) })
         }
+    }
+}
+
+@main
+struct DeboogeyClientMCE: App {
+    init() {
+        PersistentVariables.registerDefaults()
+        EntityTracker.shared.performConfiguredAutoRemoval()
+    }
+
+    var body: some Scene {
+        MCELegacyRootScene()
 
         Settings {
             ConfigurationRootView()
@@ -337,7 +274,6 @@ struct DeboogeyClientMCE: App {
 
         if #available(macOS 13.0, *) {
             MCELoupeScene()
-            MCECDMLauncherScene()
             MCEEntityTrackerScene()
         }
     }
