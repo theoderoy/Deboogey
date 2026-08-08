@@ -4,11 +4,11 @@
 
 # Deboogey
 
+<a href="https://apps.apple.com/app/deboogey/id6796843694"><img src="https://upload.wikimedia.org/wikipedia/commons/5/5d/Download_on_the_Mac_App_Store_Badge_US-UK_RGB_blk.svg" alt="Download Deboogey on the App Store" width="180"></a>
+
 **Dig into what should be yours.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
-<a href="https://apps.apple.com/app/deboogey/id6796843694"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQwhMw_ec_tZdWHaiEoq67j2HpeQVMfY7aMkZs3tSkFuA&amp;s=10" alt="Download Deboogey on the App Store" width="180"></a>
 
 </div>
 
