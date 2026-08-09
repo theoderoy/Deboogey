@@ -2,6 +2,8 @@
 "%@ has been baked successfully." = "%@ a été cuit avec succès.";
 "%@ is available" = "%@ est disponible";
 "%@ was completely indexed" = "%@ a été entièrement indexée";
+"%d indexed item(s)" = "%d élément(s) indexé(s)";
+"%d item(s)" = "%d élément(s)";
 "%@ — Loupe Machine" = "%@ — Loupe Machine";
 "%d value(s) changed outside Loupe Machine after this document was saved." = "%d valeur(s) ont changé en dehors de Loupe Machine depuis l’enregistrement de ce document.";
 ".loum file was created — %@" = "Le fichier .loum a été créé — %@";
@@ -26,7 +28,6 @@
 "Auto-Restart" = "Redémarrage automatique";
 "Auxiliary upgrades have been enabled." = "Les mises à niveau auxiliaires ont été activées.";
 "Both" = "Les deux";
-"Bug Fixes" = "Correctifs";
 "Cancel" = "Annuler";
 "Changes Applied" = "Modifications appliquées";
 "Changes Could Not Be Applied" = "Les modifications n’ont pas pu être appliquées";
@@ -85,7 +86,6 @@
 "Failed to start helper." = "Impossible de démarrer l’assistant.";
 "Feature Flags" = "Fonctionnalités";
 "File and indexing entries" = "Entrées de fichiers et d’indexation";
-"Fixed an issue where the 'Window' menu bar entry would have inaccurate items in some versions of Deboogey." = "Correction d’un problème à cause duquel le menu « Fenêtre » affichait des éléments inexacts dans certaines versions de Deboogey.";
 "Flag category" = "Catégorie d’indicateurs";
 "Flags" = "Drapeaux";
 "Foreground" = "Premier plan";
@@ -139,6 +139,9 @@
 "Network connection required" = "Connexion réseau requise";
 "Network connection required to download upgrade" = "Connexion réseau requise pour télécharger la mise à niveau";
 "New Loupe Machine Document" = "Nouveau document Loupe Machine";
+"No Flags" = "Aucun indicateur";
+"No Flags Found" = "Aucun indicateur trouvé";
+"No Results" = "Aucun résultat";
 "No flags were found for this application." = "Aucun drapeau n’a été trouvé pour cette application.";
 "No modifications recorded yet." = "Aucune modification enregistrée pour le moment.";
 "No network connection" = "Aucune connexion réseau";
@@ -158,7 +161,6 @@
 "PlaceholderText2" = "Chaînes, texte, variables, espaces réservés, etc.";
 "Play a sound after an application is completely indexed." = "Émet un son lorsqu’une application a été entièrement indexée.";
 "Play a sound when indexing finishes" = "Émettre un son à la fin de l’indexation";
-"Play around with the sandbox parameters of Deboogey using Apple's own built-in tool." = "Expérimentez avec les paramètres du bac à sable de Deboogey à l’aide de l’outil intégré d’Apple.";
 "Preferences" = "Préférences";
 "Preparing upgrade" = "Préparation de la mise à niveau";
 "PRESET" = "PRÉRÉGLAGE";
@@ -231,7 +233,6 @@
 "Unknown AppleScript error" = "Erreur AppleScript inconnue";
 "Untitled — Loupe Machine" = "Sans titre — Loupe Machine";
 "Untitled.loum" = "Sans titre.loum";
-"Updates to Loupe Machine" = "Mises à jour de Loupe Machine";
 "Upgrade" = "Mettre à niveau";
 "Upgrade available" = "Mise à niveau disponible";
 "Upgrade Channel" = "Canal de mise à niveau";
@@ -241,7 +242,6 @@
 "Verify Loupe Machine Changes" = "Vérifier les modifications de Loupe Machine";
 "Version" = "Version";
 "What's changed in %@" = "Nouveautés de %@";
-"You are now equipped with a search bar to look up any flags, along with a new 'All' category." = "Vous disposez désormais d’une barre de recherche pour trouver n’importe quel indicateur, ainsi que d’une nouvelle catégorie « Tout ».";
 "You might need to manually code-sign after upgrading." = "Vous devrez peut-être signer le code manuellement après la mise à niveau.";
 "Your unapplied drafted value changes will be lost if you don’t save them." = "Les brouillons de valeurs non appliqués seront perdus si vous ne les enregistrez pas.";
 "© Théo De Roy" = "© Théo De Roy";

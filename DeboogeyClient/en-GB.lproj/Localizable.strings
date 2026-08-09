@@ -2,6 +2,8 @@
 "%@ has been baked successfully." = "%@ has been baked successfully.";
 "%@ is available" = "%@ is available";
 "%@ was completely indexed" = "%@ was completely indexed";
+"%d indexed item(s)" = "%d indexed item(s)";
+"%d item(s)" = "%d item(s)";
 "%@ — Loupe Machine" = "%@ — Loupe Machine";
 "%d value(s) changed outside Loupe Machine after this document was saved." = "%d value(s) changed outside Loupe Machine after this document was saved.";
 ".loum file was created — %@" = ".loum file was created — %@";
@@ -26,7 +28,6 @@
 "Auto-Restart" = "Auto-Restart";
 "Auxiliary upgrades have been enabled." = "Auxiliary upgrades have been enabled.";
 "Both" = "Both";
-"Bug Fixes" = "Bug Fixes";
 "Cancel" = "Cancel";
 "Changes Applied" = "Changes Applied";
 "Changes Could Not Be Applied" = "Changes Could Not Be Applied";
@@ -85,7 +86,6 @@
 "Failed to start helper." = "Failed to start helper.";
 "Feature Flags" = "Feature Flags";
 "File and indexing entries" = "File and indexing entries";
-"Fixed an issue where the 'Window' menu bar entry would have inaccurate items in some versions of Deboogey." = "Fixed an issue where the 'Window' menu bar entry would have inaccurate items in some versions of Deboogey.";
 "Flag category" = "Flag category";
 "Flags" = "Flags";
 "Foreground" = "Foreground";
@@ -139,6 +139,9 @@
 "Network connection required" = "Network connection required";
 "Network connection required to download upgrade" = "Network connection required to download upgrade";
 "New Loupe Machine Document" = "New Loupe Machine Document";
+"No Flags" = "No Flags";
+"No Flags Found" = "No Flags Found";
+"No Results" = "No Results";
 "No flags were found for this application." = "No flags were found for this application.";
 "No modifications recorded yet." = "No modifications recorded yet.";
 "No network connection" = "No network connection";
@@ -158,7 +161,6 @@
 "PlaceholderText2" = "Strings, text, variables, placeholders and the sort.";
 "Play a sound after an application is completely indexed." = "Play a sound after an application is completely indexed.";
 "Play a sound when indexing finishes" = "Play a sound when indexing finishes";
-"Play around with the sandbox parameters of Deboogey using Apple's own built-in tool." = "Play around with the sandbox parameters of Deboogey using Apple's own built-in tool.";
 "Preferences" = "Preferences";
 "Preparing upgrade" = "Preparing upgrade";
 "PRESET" = "PRESET";
@@ -231,7 +233,6 @@
 "Unknown AppleScript error" = "Unknown AppleScript error";
 "Untitled — Loupe Machine" = "Untitled — Loupe Machine";
 "Untitled.loum" = "Untitled.loum";
-"Updates to Loupe Machine" = "Updates to Loupe Machine";
 "Upgrade" = "Upgrade";
 "Upgrade available" = "Upgrade available";
 "Upgrade Channel" = "Upgrade Channel";
@@ -241,7 +242,6 @@
 "Verify Loupe Machine Changes" = "Verify Loupe Machine Changes";
 "Version" = "Version";
 "What's changed in %@" = "What's changed in %@";
-"You are now equipped with a search bar to look up any flags, along with a new 'All' category." = "You are now equipped with a search bar to look up any flags, along with a new 'All' category.";
 "You might need to manually code-sign after upgrading." = "You might need to manually code-sign after upgrading.";
 "Your unapplied drafted value changes will be lost if you don’t save them." = "Your unapplied drafted value changes will be lost if you don’t save them.";
 "© Théo De Roy" = "© Théo De Roy";

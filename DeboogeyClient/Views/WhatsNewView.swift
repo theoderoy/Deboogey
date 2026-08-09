@@ -12,32 +12,21 @@ struct WhatsNewView: View {
 
     private let entries: [WhatsNewEntry] = [
         WhatsNewEntry(
-            scope: .MCEOnly,
-            icon: "wrench.and.screwdriver",
+            scope: .unified,
+            icon: "hand.wave",
             color: .accentColor,
-            title: "Cocoa Debug Menu",
-            description: "Play around with the sandbox parameters of Deboogey using Apple's own built-in tool."
-        ),
-        WhatsNewEntry(
-            scope: .unified,
-            icon: "loupe",
-            color: .blue,
-            title: "Updates to Loupe Machine",
-            description: "You are now equipped with a search bar to look up any flags, along with a new 'All' category."
-        ),
-        WhatsNewEntry(
-            scope: .unified,
-            icon: "ladybug",
-            color: .red,
-            title: "Bug Fixes",
-            description: "Fixed an issue where the 'Window' menu bar entry would have inaccurate items in some versions of Deboogey."
+            title: "PlaceholderText1",
+            description: "PlaceholderText2"
         )
     ]
 
     private var versionHeading: String {
+        #if DEBOOGEY_MCE
+        let version = shortVersion
+        #else
         let version = (shortVersion.isEmpty ? "" : shortVersion)
-            + (buildNumber.isEmpty
-                ? "" : shortVersion.isEmpty ? buildNumber : " \(buildNumber)")
+            + (buildNumber.isEmpty ? "" : shortVersion.isEmpty ? buildNumber : " \(buildNumber)")
+        #endif
         return L10n.f("What's changed in %@", version)
     }
 
