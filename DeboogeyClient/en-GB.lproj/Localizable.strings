@@ -28,6 +28,7 @@
 "Auto-Restart" = "Auto-Restart";
 "Auxiliary upgrades have been enabled." = "Auxiliary upgrades have been enabled.";
 "Both" = "Both";
+"Bug Fixes" = "Bug Fixes";
 "Cancel" = "Cancel";
 "Changes Applied" = "Changes Applied";
 "Changes Could Not Be Applied" = "Changes Could Not Be Applied";
@@ -94,6 +95,7 @@
 "Global Defaults" = "Global Defaults";
 "Go Back" = "Go Back";
 "Go Forward" = "Go Forward";
+"Got rid of an additional problematic 'Window' item in the menu bar." = "Got rid of an additional problematic 'Window' item in the menu bar.";
 "Hang" = "Hang";
 "Helper failed (code %d)." = "Helper failed (code %d).";
 "Helper failed (code %d). %@" = "Helper failed (code %d). %@";
@@ -221,6 +223,7 @@
 "Text" = "Text";
 "The application preferences could not be saved." = "The application preferences could not be saved.";
 "The dropped item could not be opened." = "The dropped item could not be opened.";
+"The Loupe Machine editor now features a total flag count." = "The Loupe Machine editor now features a total flag count.";
 "The selected application is unavailable." = "The selected application is unavailable.";
 "These notices will not be shown until System Integrity Protection is adjusted." = "These notices will not be shown until System Integrity Protection is adjusted.";
 "This build contains experimental features and is not officially notarised by Apple. Use caution when running it." = "This build contains experimental features and is not officially notarised by Apple. Use caution when running it.";
@@ -233,6 +236,7 @@
 "Unknown AppleScript error" = "Unknown AppleScript error";
 "Untitled — Loupe Machine" = "Untitled — Loupe Machine";
 "Untitled.loum" = "Untitled.loum";
+"Updates to Loupe Machine" = "Updates to Loupe Machine";
 "Upgrade" = "Upgrade";
 "Upgrade available" = "Upgrade available";
 "Upgrade Channel" = "Upgrade Channel";

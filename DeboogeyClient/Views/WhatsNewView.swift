@@ -13,10 +13,18 @@ struct WhatsNewView: View {
     private let entries: [WhatsNewEntry] = [
         WhatsNewEntry(
             scope: .unified,
-            icon: "hand.wave",
-            color: .accentColor,
-            title: "PlaceholderText1",
-            description: "PlaceholderText2"
+            icon: "loupe",
+            color: .blue,
+            title: "Updates to Loupe Machine",
+            description: "The Loupe Machine editor now features a total flag count."
+        ),
+
+        WhatsNewEntry(
+            scope: .MCEOnly,
+            icon: "ladybug",
+            color: .red,
+            title: "Bug Fixes",
+            description: "Got rid of an additional problematic 'Window' item in the menu bar."
         )
     ]
 
