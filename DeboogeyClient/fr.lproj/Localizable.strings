@@ -2,6 +2,8 @@
 "%@ has been baked successfully." = "%@ a été cuit avec succès.";
 "%@ is available" = "%@ est disponible";
 "%@ was completely indexed" = "%@ a été entièrement indexée";
+"%d indexed item(s)" = "%d élément(s) indexé(s)";
+"%d item(s)" = "%d élément(s)";
 "%@ — Loupe Machine" = "%@ — Loupe Machine";
 "%d value(s) changed outside Loupe Machine after this document was saved." = "%d valeur(s) ont changé en dehors de Loupe Machine depuis l’enregistrement de ce document.";
 ".loum file was created — %@" = "Le fichier .loum a été créé — %@";
@@ -137,6 +139,9 @@
 "Network connection required" = "Connexion réseau requise";
 "Network connection required to download upgrade" = "Connexion réseau requise pour télécharger la mise à niveau";
 "New Loupe Machine Document" = "Nouveau document Loupe Machine";
+"No Flags" = "Aucun indicateur";
+"No Flags Found" = "Aucun indicateur trouvé";
+"No Results" = "Aucun résultat";
 "No flags were found for this application." = "Aucun drapeau n’a été trouvé pour cette application.";
 "No modifications recorded yet." = "Aucune modification enregistrée pour le moment.";
 "No network connection" = "Aucune connexion réseau";

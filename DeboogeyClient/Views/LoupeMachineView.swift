@@ -582,7 +582,20 @@ struct LoupeMachineView: View {
         reconciliation = nil
     }
 
+    @ViewBuilder
     private var dropArea: some View {
+        if #available(macOS 26.0, *) {
+            dropAreaContent
+                .glassEffect(
+                    .clear.tint(.accentColor.opacity(0.15)).interactive(),
+                    in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+                )
+        } else {
+            dropAreaContent
+        }
+    }
+
+    private var dropAreaContent: some View {
         VStack(spacing: 20) {
             Image(importHintImageName)
                 .resizable()
@@ -713,22 +726,40 @@ struct LoupeMachineView: View {
                 isInspecting = false
                 switch result {
                 case .success(let inspectedFlags):
-                    recordCompletedIndex(for: url)
                     flagStore.replace(with: inspectedFlags)
                     hasFlags = !flagStore.isEmpty
                     if selectedFlagID == nil { selectedFlagID = inspectedFlags.first?.id }
                     if inspectedFlags.isEmpty {
-                        importError = L10n.t("No flags were found for this application.")
+                        discardSelectedApplication()
+                        presentNoFlagsAlert()
+                    } else {
+                        recordCompletedIndex(for: url)
                     }
                 case .failure(let error):
-                    selectedProgramURL = nil
-                    flagStore.reset()
-                    hasFlags = false
-                    selectedFlagID = nil
+                    discardSelectedApplication()
                     importError = error.localizedDescription
                 }
             }
         }
+    }
+
+    private func discardSelectedApplication() {
+        inspection = nil
+        selectedProgramURL = nil
+        flagStore.reset()
+        hasFlags = false
+        selectedFlagID = nil
+        draftStore.reset()
+        importError = nil
+    }
+
+    private func presentNoFlagsAlert() {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = L10n.t("No Flags Found")
+        alert.informativeText = L10n.t("No flags were found for this application.")
+        alert.addButton(withTitle: L10n.t("OK"))
+        alert.runModal()
     }
 
     private func recordCompletedIndex(for applicationURL: URL) {
@@ -1018,6 +1049,15 @@ private struct LoupeFlagSidebar: View {
                     flagList(for: option)
                 }
             }
+
+            Divider()
+
+            Text(itemCountLabel)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear(perform: selectVisibleFlagIfNeeded)
@@ -1029,16 +1069,41 @@ private struct LoupeFlagSidebar: View {
     @ViewBuilder
     private func flagList(for option: LoupeFlagCategory) -> some View {
         let optionNames = names(for: option)
-        LoupeFlagTable(
-            names: optionNames,
-            version: LoupeFlagListVersion(
-                storeRevision: store.revision,
-                category: option,
-                searchText: searchText
-            ),
-            dirtyIDs: drafts.dirtyIDs,
-            selection: $selection
-        )
+        if optionNames.isEmpty {
+            emptyFlagList
+        } else {
+            LoupeFlagTable(
+                names: optionNames,
+                version: LoupeFlagListVersion(
+                    storeRevision: store.revision,
+                    category: option,
+                    searchText: searchText
+                ),
+                dirtyIDs: drafts.dirtyIDs,
+                selection: $selection
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var emptyFlagList: some View {
+        let title = searchText.isEmpty ? L10n.t("No Flags") : L10n.t("No Results")
+        let systemImage = searchText.isEmpty ? "flag.slash" : "magnifyingglass"
+
+        Group {
+            if #available(macOS 14.0, *) {
+                ContentUnavailableView(title, systemImage: systemImage)
+            } else {
+                VStack(spacing: 8) {
+                    Image(systemName: systemImage)
+                        .font(.title2)
+                    Text(title)
+                        .font(.headline)
+                }
+                .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func names(for option: LoupeFlagCategory) -> [String] {
@@ -1046,6 +1111,12 @@ private struct LoupeFlagSidebar: View {
             option.contains(name)
                 && (searchText.isEmpty || name.localizedCaseInsensitiveContains(searchText))
         }
+    }
+
+    private var itemCountLabel: String {
+        searchText.isEmpty
+            ? L10n.f("%d indexed item(s)", names.count)
+            : L10n.f("%d item(s)", names.count)
     }
 
     private func selectVisibleFlagIfNeeded() {
@@ -1238,8 +1309,6 @@ private struct LoupeValueEditor: View {
             .onChange(of: value) { newValue in
                 updateDraft(newValue)
             }
-
-        Divider()
 
         HStack {
 #if DEBOOGEY_MCE

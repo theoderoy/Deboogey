@@ -2,6 +2,8 @@
 "%@ has been baked successfully." = "%@ has been baked successfully.";
 "%@ is available" = "%@ is available";
 "%@ was completely indexed" = "%@ was completely indexed";
+"%d indexed item(s)" = "%d indexed item(s)";
+"%d item(s)" = "%d item(s)";
 "%@ — Loupe Machine" = "%@ — Loupe Machine";
 "%d value(s) changed outside Loupe Machine after this document was saved." = "%d value(s) changed outside Loupe Machine after this document was saved.";
 ".loum file was created — %@" = ".loum file was created — %@";
@@ -137,6 +139,9 @@
 "Network connection required" = "Network connection required";
 "Network connection required to download upgrade" = "Network connection required to download upgrade";
 "New Loupe Machine Document" = "New Loupe Machine Document";
+"No Flags" = "No Flags";
+"No Flags Found" = "No Flags Found";
+"No Results" = "No Results";
 "No flags were found for this application." = "No flags were found for this application.";
 "No modifications recorded yet." = "No modifications recorded yet.";
 "No network connection" = "No network connection";
