@@ -77,11 +77,26 @@ private struct GeneralPanelView: View {
     
     @ViewBuilder
     private var panels: some View {
-        section(header: "Indexing") {
+        section(header: "Sounds") {
             Toggle(isOn: $vm.playIndexingDoneSound) {
                 Text(L10n.t("Play a sound when indexing finishes"))
             }
             Text(L10n.t("Play a sound after an application is completely indexed."))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            Toggle(isOn: $vm.playToolCycleSound) {
+#if DEBOOGEY_MCE
+                Text(L10n.t("Play sounds when Cocoa Debug Menu finishes or fails"))
+#else
+                Text(L10n.t("Play sounds when Apple System Tools finish or fail"))
+#endif
+            }
+#if DEBOOGEY_MCE
+            Text(L10n.t("Play sounds when Cocoa Debug Menu completes successfully or halts due to an error."))
+#else
+            Text(L10n.t("Play sounds when Apple System Tools complete successfully or halt due to an error."))
+#endif
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -600,6 +615,10 @@ final class ConfigurationViewModel: ObservableObject {
         didSet { vars.playIndexingDoneSound = playIndexingDoneSound }
     }
 
+    @Published var playToolCycleSound: Bool {
+        didSet { vars.playToolCycleSound = playToolCycleSound }
+    }
+
     private let vars: PersistentVariables
     
     init(initialSelection: Panel? = .general, vars: PersistentVariables = PersistentVariables()) {
@@ -617,6 +636,7 @@ final class ConfigurationViewModel: ObservableObject {
         self.entityTrackerAutoDeleteTrigger = vars.entityTrackerAutoDeleteTrigger
         self.entityTrackerAutoDeleteLoupeActivities = vars.entityTrackerAutoDeleteLoupeActivities
         self.playIndexingDoneSound = vars.playIndexingDoneSound
+        self.playToolCycleSound = vars.playToolCycleSound
     }
     
     func goBack() {

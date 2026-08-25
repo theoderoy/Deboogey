@@ -22,6 +22,7 @@ public final class PersistentVariables: ObservableObject {
         static let entityTrackerAutoDeleteTrigger = "theoderoy.Deboogey.EntityTracker.autoDeleteTrigger"
         static let entityTrackerAutoDeleteLoupeActivities = "theoderoy.Deboogey.EntityTracker.autoDeleteLoupeActivities"
         static let playIndexingDoneSound = "theoderoy.Deboogey.Indexing.playCompletionSound"
+        static let playToolCycleSound = "theoderoy.Deboogey.Tools.playCycleSound"
         static let showCLTNotices = "showCLTNotices"
         static let showLoupeApplyVerification = "showLoupeApplyVerification"
     }
@@ -40,6 +41,7 @@ public final class PersistentVariables: ObservableObject {
         Keys.entityTrackerAutoDeleteTrigger: "login",
         Keys.entityTrackerAutoDeleteLoupeActivities: true,
         Keys.playIndexingDoneSound: true,
+        Keys.playToolCycleSound: true,
         Keys.showCLTNotices: true,
         Keys.showLoupeApplyVerification: true
     ]
@@ -92,6 +94,10 @@ public final class PersistentVariables: ObservableObject {
         didSet { defaults.set(playIndexingDoneSound, forKey: Keys.playIndexingDoneSound) }
     }
 
+    @Published public var playToolCycleSound: Bool {
+        didSet { defaults.set(playToolCycleSound, forKey: Keys.playToolCycleSound) }
+    }
+
     @Published public var showCLTNotices: Bool {
         didSet { defaults.set(showCLTNotices, forKey: Keys.showCLTNotices) }
     }
@@ -114,6 +120,7 @@ public final class PersistentVariables: ObservableObject {
         self.entityTrackerAutoDeleteTrigger = self.defaults.string(forKey: Keys.entityTrackerAutoDeleteTrigger) ?? "login"
         self.entityTrackerAutoDeleteLoupeActivities = self.defaults.bool(forKey: Keys.entityTrackerAutoDeleteLoupeActivities)
         self.playIndexingDoneSound = self.defaults.bool(forKey: Keys.playIndexingDoneSound)
+        self.playToolCycleSound = self.defaults.bool(forKey: Keys.playToolCycleSound)
         self.showCLTNotices = self.defaults.bool(forKey: Keys.showCLTNotices)
         self.showLoupeApplyVerification = self.defaults.bool(forKey: Keys.showLoupeApplyVerification)
     }
