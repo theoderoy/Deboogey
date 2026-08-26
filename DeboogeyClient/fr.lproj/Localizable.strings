@@ -10,6 +10,7 @@
 ".loum file was modified — %@" = "Le fichier .loum a été modifié — %@";
 "About Deboogey" = "À propos de Deboogey";
 "Acknowledgements" = "Remerciements";
+"Added audible feedback for Apple System Tools completions/failures, and made 'Deboogey' window spawning more reliable." = "Ajout d’un retour sonore pour les réussites/échecs des Outils système Apple, et ouverture plus fiable des fenêtres « Deboogey ».";
 "ACTION" = "ACTION";
 "Actions" = "Actions";
 "All" = "Tout";
@@ -28,7 +29,6 @@
 "Auto-Restart" = "Redémarrage automatique";
 "Auxiliary upgrades have been enabled." = "Les mises à niveau auxiliaires ont été activées.";
 "Both" = "Les deux";
-"Bug Fixes" = "Correctifs";
 "Cancel" = "Annuler";
 "Changes Applied" = "Modifications appliquées";
 "Changes Could Not Be Applied" = "Les modifications n’ont pas pu être appliquées";
@@ -95,7 +95,6 @@
 "Global Defaults" = "Valeurs globales";
 "Go Back" = "Revenir";
 "Go Forward" = "Avancer";
-"Got rid of an additional problematic 'Window' item in the menu bar." = "Suppression d’une entrée Window supplémentaire problématique de la barre des menus.";
 "Hang" = "Blocage";
 "Helper failed (code %d)." = "L’assistant a échoué (code %d).";
 "Helper failed (code %d). %@" = "L’assistant a échoué (code %d). %@";
@@ -105,6 +104,7 @@
 "Import macOS Application" = "Importer une application macOS";
 "Imported application: %@" = "Application importée : %@";
 "Import…" = "Importer…";
+"Improvements" = "Améliorations";
 "Indexing" = "Indexation";
 "Indexing Finished" = "Indexation terminée";
 "Insight" = "Éclairage";
@@ -229,7 +229,6 @@
 "Text" = "Texte";
 "The application preferences could not be saved." = "Les préférences de l’application n’ont pas pu être enregistrées.";
 "The dropped item could not be opened." = "L’élément déposé n’a pas pu être ouvert.";
-"The Loupe Machine editor now features a total flag count." = "L’éditeur Loupe Machine affiche désormais le nombre total d’indicateurs.";
 "The selected application is unavailable." = "L’application sélectionnée n’est pas disponible.";
 "These notices will not be shown until System Integrity Protection is adjusted." = "Ces avis ne seront pas affichés tant que le réglage de la fonctionnalité Protection de l’intégrité du système n’aura pas été ajusté.";
 "This build contains experimental features and is not officially notarised by Apple. Use caution when running it." = "Ce build contient des fonctionnalités expérimentales et n’est pas officiellement notarié par Apple. Soyez prudent lors de son utilisation.";
@@ -242,7 +241,6 @@
 "Unknown AppleScript error" = "Erreur AppleScript inconnue";
 "Untitled — Loupe Machine" = "Sans titre — Loupe Machine";
 "Untitled.loum" = "Sans titre.loum";
-"Updates to Loupe Machine" = "Mises à jour de Loupe Machine";
 "Upgrade" = "Mettre à niveau";
 "Upgrade available" = "Mise à niveau disponible";
 "Upgrade Channel" = "Canal de mise à niveau";
