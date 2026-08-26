@@ -37,6 +37,15 @@ struct DeboogeySDLauncher {
             return try DispatchQueue.main.sync { try DeboogeySDLauncher.runOverlayHelper(arguments: arguments) }
         }
 
+        do {
+            return try runOverlayHelperImpl(arguments: arguments)
+        } catch {
+            ToolCycleFeedback.playHalt()
+            throw error
+        }
+    }
+
+    private static func runOverlayHelperImpl(arguments: [String]) throws -> String {
         guard let toolPath = Bundle.main.path(forResource: "DeboogeySDHelper", ofType: nil) else {
             throw DeboogeySDLauncherError.toolNotFound
         }
@@ -65,7 +74,10 @@ struct DeboogeySDLauncher {
         var errorDict: NSDictionary? = nil
         let result = script.executeAndReturnError(&errorDict)
 
-        if let output = result.stringValue { return output }
+        if let output = result.stringValue {
+            ToolCycleFeedback.playComplete()
+            return output
+        }
 
         if let errorDict = errorDict as? [String: Any] {
             let detailedMessage = (errorDict[NSAppleScript.errorMessage] as? String)

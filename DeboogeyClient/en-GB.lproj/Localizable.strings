@@ -141,6 +141,7 @@
 "Network connection required" = "Network connection required";
 "Network connection required to download upgrade" = "Network connection required to download upgrade";
 "New Loupe Machine Document" = "New Loupe Machine Document";
+"New Window" = "New Window";
 "No Flags" = "No Flags";
 "No Flags Found" = "No Flags Found";
 "No Results" = "No Results";
@@ -163,6 +164,10 @@
 "PlaceholderText2" = "Strings, text, variables, placeholders and the sort.";
 "Play a sound after an application is completely indexed." = "Play a sound after an application is completely indexed.";
 "Play a sound when indexing finishes" = "Play a sound when indexing finishes";
+"Play sounds when Apple System Tools complete successfully or halt due to an error." = "Play sounds when Apple System Tools complete successfully or halt due to an error.";
+"Play sounds when Apple System Tools finish or fail" = "Play sounds when Apple System Tools finish or fail";
+"Play sounds when Cocoa Debug Menu completes successfully or halts due to an error." = "Play sounds when Cocoa Debug Menu completes successfully or halts due to an error.";
+"Play sounds when Cocoa Debug Menu finishes or fails" = "Play sounds when Cocoa Debug Menu finishes or fails";
 "Preferences" = "Preferences";
 "Preparing upgrade" = "Preparing upgrade";
 "PRESET" = "PRESET";
@@ -209,6 +214,7 @@
 "Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks." = "Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks.";
 "Sort" = "Sort";
 "Sort by %@" = "Sort by %@";
+"Sounds" = "Sounds";
 "Sourced Article" = "Sourced Article";
 "Sources" = "Sources";
 "Special Thanks" = "Special Thanks";

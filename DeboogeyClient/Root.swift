@@ -109,6 +109,9 @@ private struct LoupeMachineCommandSet: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
+            Button(L10n.t("New Window"), action: DeboogeyWindowController.openMain)
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+
             Button(L10n.t("New Loupe Machine Document")) {
                 createDocument()
             }
@@ -310,9 +313,7 @@ struct Root: App {
             }
             if #available(macOS 13.0, *) {
                 WindowLauncherCommands(
-                    openMain: {
-                        DeboogeyWindowController.open(.main, sipSatisfied: sipSatisfied)
-                    },
+                    openMain: DeboogeyWindowController.openMain,
                     includesCocoaDebugMenu: true,
                     includesSkyLightDiagnostics: !DebugVariables.isMarketplaceCandidateEditionBuild,
                     skyLightDiagnosticsDisabled: sipSatisfied
@@ -320,9 +321,7 @@ struct Root: App {
             } else {
                 LoupeMachineLegacyCommands()
                 LegacyWindowLauncherCommands(
-                    openMain: {
-                        DeboogeyWindowController.open(.main, sipSatisfied: sipSatisfied)
-                    },
+                    openMain: DeboogeyWindowController.openMain,
                     openCocoaDebugMenu: {
                         DeboogeyWindowController.open(.cocoaDebugMenu, sipSatisfied: sipSatisfied)
                     },

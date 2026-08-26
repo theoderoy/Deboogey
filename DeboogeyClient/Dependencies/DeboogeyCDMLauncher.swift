@@ -36,6 +36,15 @@ enum DeboogeyCDMLauncherError: LocalizedError {
 
 struct DeboogeyCDMLauncher {
     nonisolated static func runDeboogeyCDMHelper(arguments: [String]) throws -> String {
+        do {
+            return try runDeboogeyCDMHelperImpl(arguments: arguments)
+        } catch {
+            ToolCycleFeedback.playHalt()
+            throw error
+        }
+    }
+
+    nonisolated private static func runDeboogeyCDMHelperImpl(arguments: [String]) throws -> String {
         guard arguments.count == 2 || arguments.count == 3 else {
             throw DeboogeyCDMLauncherError.invalidArguments(userFacing: L10n.t("Invalid arguments. Expected: enable|disable <bundle-id|global> [--autokill]"), details: ["arguments": arguments])
         }
@@ -118,6 +127,7 @@ struct DeboogeyCDMLauncher {
             throw DeboogeyCDMLauncherError.executionFailed(userFacing: userFacing, details: details)
         }
 
+        ToolCycleFeedback.playComplete()
         return stdout
     }
 }

@@ -267,11 +267,7 @@ struct DeboogeyCDMLauncherView: View {
     @MainActor
     private func terminateClientReliably() {
         UserDefaults.standard.synchronize()
-        NSApp.terminate(nil)
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            exit(EXIT_SUCCESS)
-        }
+        exit(EXIT_SUCCESS)
     }
 }
 

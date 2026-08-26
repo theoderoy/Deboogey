@@ -141,6 +141,7 @@
 "Network connection required" = "Connexion réseau requise";
 "Network connection required to download upgrade" = "Connexion réseau requise pour télécharger la mise à niveau";
 "New Loupe Machine Document" = "Nouveau document Loupe Machine";
+"New Window" = "Nouvelle fenêtre";
 "No Flags" = "Aucun indicateur";
 "No Flags Found" = "Aucun indicateur trouvé";
 "No Results" = "Aucun résultat";
@@ -163,6 +164,10 @@
 "PlaceholderText2" = "Chaînes, texte, variables, espaces réservés, etc.";
 "Play a sound after an application is completely indexed." = "Émet un son lorsqu’une application a été entièrement indexée.";
 "Play a sound when indexing finishes" = "Émettre un son à la fin de l’indexation";
+"Play sounds when Apple System Tools complete successfully or halt due to an error." = "Émet des sons lorsque les Outils système Apple se terminent avec succès ou s’arrêtent à cause d’une erreur.";
+"Play sounds when Apple System Tools finish or fail" = "Émettre des sons à la fin ou en cas d’échec des Outils système Apple";
+"Play sounds when Cocoa Debug Menu completes successfully or halts due to an error." = "Émet des sons lorsque le Menu de débogage Cocoa se termine avec succès ou s’arrête à cause d’une erreur.";
+"Play sounds when Cocoa Debug Menu finishes or fails" = "Émettre des sons à la fin ou en cas d’échec du Menu de débogage Cocoa";
 "Preferences" = "Préférences";
 "Preparing upgrade" = "Préparation de la mise à niveau";
 "PRESET" = "PRÉRÉGLAGE";
@@ -209,6 +214,7 @@
 "Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks." = "Certaines fonctionnalités de cette app nécessitent la levée des restrictions de débogage.\n\nCes restrictions contribuent à protéger votre Mac. Deboogey n’en tire pas parti de façon malveillante, mais ne les ajustez que si vous comprenez les risques.";
 "Sort" = "Trier";
 "Sort by %@" = "Trier par %@";
+"Sounds" = "Sons";
 "Sourced Article" = "Article source";
 "Sources" = "Sources";
 "Special Thanks" = "Remerciements particuliers";
