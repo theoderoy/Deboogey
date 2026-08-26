@@ -89,6 +89,11 @@ private struct MCELegacyCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
+            Button(L10n.t("New Window")) {
+                MCEWindowController.open(.main)
+            }
+            .keyboardShortcut("n", modifiers: [.command, .shift])
+
             Button(L10n.t("New Loupe Machine Document")) {
                 LoupeMachineNavigation.openLegacy(documentAt: nil)
             }
@@ -118,6 +123,11 @@ private struct MCELoupeCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
+            Button(L10n.t("New Window")) {
+                MCEWindowController.open(.main)
+            }
+            .keyboardShortcut("n", modifiers: [.command, .shift])
+
             Button(L10n.t("New Loupe Machine Document")) {
                 LoupeMachineNavigation.open(documentAt: nil, using: openWindow)
             }
