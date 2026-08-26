@@ -88,12 +88,8 @@ private struct GeneralPanelView: View {
             Toggle(isOn: $vm.playToolCycleSound) {
 #if DEBOOGEY_MCE
                 Text(L10n.t("Play sounds when Cocoa Debug Menu finishes or fails"))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
 #else
                 Text(L10n.t("Play sounds when Apple System Tools finish or fail"))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
 #endif
             }
 #if DEBOOGEY_MCE

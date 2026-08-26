@@ -862,7 +862,6 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 22;
 				DEVELOPMENT_TEAM = 7Z88K9GUU8;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -877,7 +876,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = Internal;
+				MARKETING_VERSION = Development;
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.DeboogeyClient;
 				PRODUCT_NAME = DeboogeyClient;
 				REGISTER_APP_GROUPS = YES;
@@ -908,7 +907,6 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 22;
 				DEVELOPMENT_TEAM = 7Z88K9GUU8;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -923,7 +921,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = Internal;
+				MARKETING_VERSION = Development;
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey;
 				PRODUCT_MODULE_NAME = DeboogeyClient;
 				PRODUCT_NAME = Deboogey;
