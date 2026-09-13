@@ -16,21 +16,15 @@ struct HelperEducationHeader: View {
     var body: some View {
         VStack(spacing: 0) {
             Group {
+#if canImport(AppKit)
                 if EducationPlayerView.hasAsset(named: assetName) {
                     EducationPlayerView(assetName: assetName)
                 } else {
-                    Rectangle()
-                        .fill(Color.secondary.opacity(0.1))
-                        .overlay(
-                            VStack(spacing: 12) {
-                                Image(systemName: fallbackSymbol)
-                                    .font(.system(size: 48, weight: .thin))
-                                Text(L10n.t(fallbackTitle))
-                                    .font(.headline)
-                            }
-                            .foregroundColor(.secondary)
-                        )
+                    fallbackMedia
                 }
+#else
+                fallbackMedia
+#endif
             }
             .aspectRatio(16.0/9.0, contentMode: .fill)
             .frame(maxWidth: .infinity)
@@ -45,5 +39,19 @@ struct HelperEducationHeader: View {
                 .padding(.top, 16)
                 .padding(.horizontal, 32)
         }
+    }
+
+    private var fallbackMedia: some View {
+        Rectangle()
+            .fill(Color.secondary.opacity(0.1))
+            .overlay(
+                VStack(spacing: 12) {
+                    Image(systemName: fallbackSymbol)
+                        .font(.system(size: 48, weight: .thin))
+                    Text(L10n.t(fallbackTitle))
+                        .font(.headline)
+                }
+                .foregroundColor(.secondary)
+            )
     }
 }

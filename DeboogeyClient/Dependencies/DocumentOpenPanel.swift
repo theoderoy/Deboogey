@@ -5,10 +5,13 @@
 //  Created by Théo De Roy on 13/09/2026.
 //
 
-import AppKit
 import UniformTypeIdentifiers
+#if canImport(AppKit)
+import AppKit
+#endif
 
 enum DocumentOpenPanel {
+#if canImport(AppKit)
     static func choose(
         title: String,
         contentTypes: [UTType],
@@ -24,4 +27,5 @@ enum DocumentOpenPanel {
             open(url)
         }
     }
+#endif
 }

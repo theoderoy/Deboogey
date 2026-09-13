@@ -5,8 +5,9 @@
 //  Created by Théo De Roy on 13/09/2026.
 //
 
-import AppKit
 import SwiftUI
+#if canImport(AppKit)
+import AppKit
 
 final class DocumentWindowAttachmentView: NSView {
     var didMoveToWindowHandler: ((NSWindow?) -> Void)?
@@ -115,3 +116,4 @@ enum ToolDocumentWindowHosting {
         }
     }
 }
+#endif

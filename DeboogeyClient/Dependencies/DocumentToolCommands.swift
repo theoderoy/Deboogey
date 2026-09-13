@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+#if os(macOS)
 struct DocumentToolCommandSet: Commands {
     let createLoupeDocument: () -> Void
     let openLoupeDocument: () -> Void
@@ -83,3 +84,4 @@ struct ExternalDocumentWindowHandler: ViewModifier {
         ))
     }
 }
+#endif

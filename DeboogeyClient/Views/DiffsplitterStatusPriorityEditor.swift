@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+#if os(macOS)
 struct DiffsplitterStatusPriorityEditor: View {
     @Binding var order: [String]
     var onMove: ((IndexSet, Int) -> Void)?
@@ -50,3 +51,4 @@ struct DiffsplitterStatusPriorityEditor: View {
         }
     }
 }
+#endif
