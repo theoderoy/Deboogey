@@ -152,6 +152,7 @@
   ],
   "supported-platforms" : {
     "squares" : [
+      "iOS",
       "macOS"
     ]
   }

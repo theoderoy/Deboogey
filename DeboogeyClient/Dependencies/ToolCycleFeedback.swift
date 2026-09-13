@@ -5,7 +5,10 @@
 //  Created by Théo De Roy on 26/08/2026.
 //
 
+import Foundation
+#if canImport(AppKit)
 import AppKit
+#endif
 
 nonisolated enum ToolCycleFeedback {
     private static let preferenceKey = "theoderoy.Deboogey.Tools.playCycleSound"
@@ -28,6 +31,7 @@ nonisolated enum ToolCycleFeedback {
     }
 
     private static func play(named name: String, bundle: Bundle, waitUntilFinished: Bool) {
+#if canImport(AppKit)
         let prepareAndStart: () -> (NSSound, TimeInterval)? = {
             let soundURL = bundle.url(forResource: name, withExtension: "aif")
                 ?? bundle.url(
@@ -74,5 +78,6 @@ nonisolated enum ToolCycleFeedback {
         while sound.isPlaying {
             Thread.sleep(forTimeInterval: 0.05)
         }
+#endif
     }
 }

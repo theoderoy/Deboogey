@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+#if canImport(AppKit)
+import AppKit
+#endif
 
 struct WhatsNewView: View {
     let onDismiss: () -> Void
@@ -33,12 +36,19 @@ struct WhatsNewView: View {
     var body: some View {
         VStack(spacing: 30) {
             VStack(spacing: 8) {
+#if canImport(AppKit)
                 if let appIcon = NSImage(named: NSImage.applicationIconName) {
                     Image(nsImage: appIcon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 128, height: 128)
                 }
+#else
+                Image("DeboogeyIdent")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 128, height: 128)
+#endif
                 
                 Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "DeboogeyClient")
                     .font(.largeTitle)

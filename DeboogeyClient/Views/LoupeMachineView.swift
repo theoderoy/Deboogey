@@ -7,9 +7,12 @@
 
 import SwiftUI
 import UniformTypeIdentifiers
-import AppKit
 import Combine
+#if canImport(AppKit)
+import AppKit
+#endif
 
+#if os(macOS)
 struct LoupeMachineCommandActions {
     let canSave: Bool
     let save: () -> Void
@@ -52,6 +55,7 @@ final class LoupeMachineCommandRouter: ObservableObject {
         saveAs ? actions.saveAs() : actions.save()
     }
 }
+#endif
 
 @MainActor
 private final class LoupeFlagStore: ObservableObject {
@@ -106,31 +110,89 @@ private final class LoupeFlagStore: ObservableObject {
 private final class LoupeDraftStore: ObservableObject {
     @Published private(set) var dirtyIDs: Set<String> = []
     private var values: [String: String] = [:]
+    private var savedSnapshot: [String: String] = [:]
 
     var hasChanges: Bool { !dirtyIDs.isEmpty }
     var allValues: [String: String] { values }
     func value(for id: String) -> String? { values[id] }
 
     func update(_ value: String, for id: String, originalValue: String) {
-        let wasDirty = values[id] != nil
-        if value == originalValue { values.removeValue(forKey: id) } else { values[id] = value }
-        let isDirty = values[id] != nil
-        if wasDirty != isDirty {
-            if isDirty { dirtyIDs.insert(id) } else { dirtyIDs.remove(id) }
+        if value == originalValue {
+            values.removeValue(forKey: id)
+        } else {
+            values[id] = value
         }
+        refreshDirty(for: id)
     }
 
-    func removeValue(for id: String) { values.removeValue(forKey: id); dirtyIDs.remove(id) }
-    func replace(with values: [String: String]) { self.values = values; dirtyIDs = Set(values.keys) }
-    func reset() { values.removeAll(); dirtyIDs.removeAll() }
+    func removeValue(for id: String) {
+        values.removeValue(forKey: id)
+        refreshDirty(for: id)
+    }
+
+    func replace(with values: [String: String]) {
+        self.values = values
+        savedSnapshot = [:]
+        dirtyIDs = Set(values.keys)
+    }
+
+    func markSaved() {
+        savedSnapshot = values
+        dirtyIDs = []
+    }
+
+    func reset() {
+        values.removeAll()
+        savedSnapshot.removeAll()
+        dirtyIDs.removeAll()
+    }
+
+    private func refreshDirty(for id: String) {
+        var next = dirtyIDs
+        if values[id] != savedSnapshot[id] {
+            next.insert(id)
+        } else {
+            next.remove(id)
+        }
+        if next != dirtyIDs {
+            dirtyIDs = next
+        }
+    }
 }
+
+#if os(iOS)
+private struct LoupeMachineExportDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.loupeMachineDocument] }
+    static var writableContentTypes: [UTType] { [.loupeMachineDocument] }
+
+    let data: Data
+
+    init(data: Data) {
+        self.data = data
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        guard let data = configuration.file.regularFileContents else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        self.data = data
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
+    }
+}
+#endif
 
 struct LoupeMachineView: View {
     @AppStorage("showLoupeApplyVerification") private var showLoupeApplyVerification = true
     let request: LoupeMachineWindowRequest
     @State private var isImporting = false
+    @State private var isOpeningDocument = false
+    @State private var showDiscardConfirmation = false
     @State private var isDropTargeted = false
     @State private var selectedProgramURL: URL?
+    @State private var sourceApplicationDisplayName: String?
     @State private var importError: String?
     @State private var flagStore = LoupeFlagStore()
     @StateObject private var draftStore = LoupeDraftStore()
@@ -141,7 +203,15 @@ struct LoupeMachineView: View {
     @State private var savedDocumentData: Data?
     @State private var documentError: String?
     @State private var reconciliation: Reconciliation?
+    @State private var unlockAllCategories = false
+#if os(iOS)
+    @State private var isExportingDocument = false
+    @State private var exportDocument: LoupeMachineExportDocument?
+    @State private var exportCompletion: ((Bool) -> Void)?
+#endif
+#if os(macOS)
     @State private var inspection: DeboogeyLoupeInspection?
+#endif
 
     private struct Reconciliation: Identifiable {
         let id = UUID()
@@ -158,7 +228,67 @@ struct LoupeMachineView: View {
                 importView
             }
         }
-        .minimumWindowContentSize(AppWindowSizing.loupeMachine)
+#if os(iOS)
+        .navigationBarBackButtonHidden(selectedFlagID != nil)
+        .navigationTitle(sourceApplicationDisplayName ?? "")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if selectedFlagID != nil {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        selectedFlagID = nil
+                    } label: {
+                        Label(L10n.t("Flags"), systemImage: "chevron.backward")
+                    }
+                }
+            }
+            if hasFlags {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        saveDocument(forceSaveAs: true)
+                    } label: {
+                        Label(L10n.t("Save Change Set"), systemImage: "square.and.arrow.down")
+                    }
+                    .labelStyle(.iconOnly)
+                    .disabled(!hasUnsavedDocumentChanges)
+                }
+            }
+        }
+        .fileImporter(
+            isPresented: $isOpeningDocument,
+            allowedContentTypes: [.loupeMachineDocument],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                openPickedDocument(at: url)
+            case .failure(let error):
+                documentError = error.localizedDescription
+            }
+        }
+        .fileExporter(
+            isPresented: $isExportingDocument,
+            document: exportDocument,
+            contentType: .loupeMachineDocument,
+            defaultFilename: documentExportDefaultFilename
+        ) { result in
+            handleDocumentExport(result)
+        }
+        .confirmationDialog(
+            L10n.t("Save changes to this Loupe Machine document?"),
+            isPresented: $showDiscardConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(L10n.t("Save Change Set")) {
+                saveDocument(forceSaveAs: true)
+            }
+            Button(L10n.t("Don't Save"), role: .destructive) {
+                resetSession()
+            }
+            Button(L10n.t("Cancel"), role: .cancel) {}
+        }
+#else
         .fileImporter(
             isPresented: $isImporting,
             allowedContentTypes: [.applicationBundle],
@@ -186,6 +316,7 @@ struct LoupeMachineView: View {
                 didClose: { inspection?.cancel() }
             )
         )
+#endif
         .alert(L10n.t("Loupe Machine Document Error"), isPresented: Binding(
             get: { documentError != nil },
             set: { if !$0 { documentError = nil } }
@@ -194,6 +325,7 @@ struct LoupeMachineView: View {
         } message: {
             Text(documentError ?? "")
         }
+#if os(macOS)
         .alert(item: $reconciliation) { reconciliation in
             Alert(
                 title: Text(L10n.t("Local values have changed")),
@@ -209,10 +341,44 @@ struct LoupeMachineView: View {
                 }
             )
         }
+#endif
         .onAppear(perform: handleDocumentRequest)
     }
 
     private var importView: some View {
+#if os(iOS)
+        VStack(spacing: 24) {
+            Spacer(minLength: 16)
+            Image("LoupeMachineIdent")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 88, height: 88)
+            Text(L10n.t("Loupe View"))
+                .font(.largeTitle.weight(.semibold))
+            Text(L10n.t("Open an existing Loupe Machine document to browse and edit its change set."))
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+            Button {
+                isOpeningDocument = true
+            } label: {
+                Text(L10n.t("Open Document"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding(.horizontal, 24)
+            if let importError {
+                Text(importError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+            Spacer()
+        }
+#else
         ZStack {
             LoupeMachineRippleEffect()
 
@@ -237,10 +403,20 @@ struct LoupeMachineView: View {
             .padding(48)
             .frame(maxWidth: 680)
         }
+#endif
     }
 
     @ViewBuilder
     private var flagBrowser: some View {
+#if os(iOS)
+        Group {
+            if selectedFlagID != nil {
+                flagDetail
+            } else {
+                flagSidebar
+            }
+        }
+#else
         if #available(macOS 13.0, *) {
             NavigationSplitView {
                 flagSidebar
@@ -256,18 +432,26 @@ struct LoupeMachineView: View {
                     .frame(minWidth: 520)
             }
         }
+#endif
     }
 
     private var flagSidebar: some View {
         VStack(spacing: 0) {
-            LoupeFlagSidebar(store: flagStore, drafts: draftStore, selection: $selectedFlagID)
+            LoupeFlagSidebar(
+                store: flagStore,
+                drafts: draftStore,
+                selection: $selectedFlagID,
+                unlockAllCategories: unlockAllCategories
+            )
             if isInspecting {
                 Divider()
                 ProgressView(L10n.t("Inspecting flags…"))
                     .padding()
             }
         }
+#if os(macOS)
         .navigationTitle(L10n.t("Flags"))
+#endif
     }
 
     @ViewBuilder
@@ -286,7 +470,11 @@ struct LoupeMachineView: View {
                 )
                 .id(selectedFlag.id)
             }
+#if os(iOS)
+            .padding(16)
+#else
             .padding(24)
+#endif
         } else {
             Text(L10n.t("Select a flag to inspect its value."))
                 .foregroundStyle(.secondary)
@@ -306,7 +494,11 @@ struct LoupeMachineView: View {
 #if DEBOOGEY_MCE
     private func applyCurrentlyViewed() {}
     private func applyAllPending() {
+#if os(iOS)
+        saveDocument(forceSaveAs: true)
+#else
         saveDocument(forceSaveAs: documentURL == nil)
+#endif
     }
 #else
     private func applyCurrentlyViewed() {
@@ -362,29 +554,52 @@ struct LoupeMachineView: View {
     private func handleDocumentRequest() {
         guard let url = request.documentURL else {
             resetSession()
+#if os(macOS)
             if request.action == .importApplication {
                 DispatchQueue.main.async { presentApplicationImporter() }
             }
+#endif
             return
         }
+        openExistingDocument(at: url, allowReinspect: true)
+    }
 
+    private func openPickedDocument(at url: URL) {
+        openExistingDocument(at: url, allowReinspect: false)
+    }
+
+    private func openExistingDocument(at url: URL, allowReinspect: Bool) {
         do {
             let hasAccess = url.startAccessingSecurityScopedResource()
             defer { if hasAccess { url.stopAccessingSecurityScopedResource() } }
             let document = try LoupeMachineDocument.read(from: url)
             documentURL = url
-            savedDocumentData = try document.encoded()
             importError = nil
+            unlockAllCategories = document.containsNonMCECategories
+#if os(iOS)
+            load(document)
+            savedDocumentData = try currentDocument.encoded()
+            draftStore.markSaved()
+            return
+#else
+            guard allowReinspect, !document.containsNonMCECategories else {
+                load(document)
+                savedDocumentData = try currentDocument.encoded()
+                return
+            }
             guard let sourceURL = sourceApplicationURL(in: document, relativeTo: url) else {
                 load(document)
+                savedDocumentData = try currentDocument.encoded()
                 return
             }
             guard FileManager.default.fileExists(atPath: sourceURL.path) else {
                 load(document)
+                savedDocumentData = try currentDocument.encoded()
                 return
             }
 
             load(document, sourceApplicationURL: sourceURL)
+            savedDocumentData = try currentDocument.encoded()
             isInspecting = true
             inspection?.cancel()
             let currentInspection = DeboogeyLoupeInspection()
@@ -406,10 +621,12 @@ struct LoupeMachineView: View {
                         reconcileIfNeeded(document: document, upstreamFlags: upstreamFlags)
                     case .failure(let error):
                         load(document, sourceApplicationURL: sourceURL)
+                        savedDocumentData = try? currentDocument.encoded()
                         documentError = error.localizedDescription
                     }
                 }
             }
+#endif
         } catch {
             resetSession()
             documentError = error.localizedDescription
@@ -427,6 +644,7 @@ struct LoupeMachineView: View {
 
         guard !changedFlagIDs.isEmpty else {
             load(document, using: upstreamFlags)
+            savedDocumentData = try? currentDocument.encoded()
             return
         }
         reconciliation = Reconciliation(
@@ -447,6 +665,7 @@ struct LoupeMachineView: View {
             }
         }
         load(reconciliation.document, using: reconciliation.upstreamFlags, draftedValues: drafts)
+        savedDocumentData = try? currentDocument.encoded()
     }
 
     private func load(
@@ -469,10 +688,28 @@ struct LoupeMachineView: View {
         }
         draftStore.replace(with: drafts)
         hasFlags = !flagStore.isEmpty
+#if os(iOS)
+        selectedFlagID = nil
+#else
         selectedFlagID = flagStore.names.first
+#endif
         selectedProgramURL = sourceApplicationURL
             ?? selectedProgramURL
             ?? document.sourceApplication.map(URL.init(fileURLWithPath:))
+        sourceApplicationDisplayName =
+            Self.applicationDisplayName(for: selectedProgramURL)
+            ?? Self.applicationDisplayName(forPath: document.sourceApplication)
+    }
+
+    private static func applicationDisplayName(for url: URL?) -> String? {
+        guard let url else { return nil }
+        return applicationDisplayName(forPath: url.path)
+    }
+
+    private static func applicationDisplayName(forPath path: String?) -> String? {
+        guard let path, !path.isEmpty else { return nil }
+        let name = URL(fileURLWithPath: path).deletingPathExtension().lastPathComponent
+        return name.isEmpty ? nil : name
     }
 
     private func saveDraftForClosing(completion: @escaping (Bool) -> Void) {
@@ -483,6 +720,10 @@ struct LoupeMachineView: View {
         forceSaveAs: Bool,
         completion: @escaping (Bool) -> Void = { _ in }
     ) {
+#if os(iOS)
+        _ = forceSaveAs
+        presentDocumentExporter(completion: completion)
+#else
         if !forceSaveAs, let documentURL {
             writeDocument(to: documentURL, completion: completion)
             return
@@ -504,7 +745,63 @@ struct LoupeMachineView: View {
             }
             writeDocument(to: url, completion: completion)
         }
+#endif
     }
+
+#if os(iOS)
+    private var documentExportDefaultFilename: String {
+        documentURL?.deletingPathExtension().lastPathComponent ?? L10n.t("Untitled")
+    }
+
+    private func presentDocumentExporter(completion: @escaping (Bool) -> Void) {
+        do {
+            let data = try currentDocument.encoded()
+            exportDocument = LoupeMachineExportDocument(data: data)
+            exportCompletion = completion
+            isExportingDocument = true
+        } catch {
+            documentError = error.localizedDescription
+            completion(false)
+        }
+    }
+
+    private func handleDocumentExport(_ result: Result<URL, Error>) {
+        let completion = exportCompletion ?? { _ in }
+        let data = exportDocument?.data
+        exportCompletion = nil
+        exportDocument = nil
+
+        switch result {
+        case .success(let url):
+            guard let data else {
+                completion(false)
+                return
+            }
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+            let activity: TrackedEntity.LoupeActivity =
+                documentURL?.standardizedFileURL == url.standardizedFileURL
+                    ? .documentModified
+                    : .documentCreated
+            documentURL = url
+            savedDocumentData = data
+            draftStore.markSaved()
+            EntityTracker.shared.record(
+                source: .loupeMachine,
+                arguments: [activity.rawValue, url.lastPathComponent]
+            )
+            completion(true)
+        case .failure(let error):
+            let nsError = error as NSError
+            if nsError.domain == NSCocoaErrorDomain, nsError.code == NSUserCancelledError {
+                completion(false)
+                return
+            }
+            documentError = error.localizedDescription
+            completion(false)
+        }
+    }
+#endif
 
     private func writeDocument(to url: URL, completion: @escaping (Bool) -> Void) {
         do {
@@ -515,6 +812,9 @@ struct LoupeMachineView: View {
             try data.write(to: url, options: .atomic)
             documentURL = url
             savedDocumentData = data
+#if os(iOS)
+            draftStore.markSaved()
+#endif
             EntityTracker.shared.record(
                 source: .loupeMachine,
                 arguments: [activity.rawValue, url.lastPathComponent]
@@ -540,7 +840,7 @@ struct LoupeMachineView: View {
     }
 
     private func sourceApplicationBookmark(relativeTo documentURL: URL?) -> Data? {
-#if DEBOOGEY_MCE
+#if os(macOS) && DEBOOGEY_MCE
         guard let selectedProgramURL, let documentURL else { return nil }
         return try? selectedProgramURL.bookmarkData(
             options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
@@ -556,7 +856,7 @@ struct LoupeMachineView: View {
         in document: LoupeMachineDocument,
         relativeTo documentURL: URL
     ) -> URL? {
-#if DEBOOGEY_MCE
+#if os(macOS) && DEBOOGEY_MCE
         if let bookmark = document.sourceApplicationBookmark {
             var stale = false
             if let url = try? URL(
@@ -579,6 +879,7 @@ struct LoupeMachineView: View {
 
     private func resetSession() {
         selectedProgramURL = nil
+        sourceApplicationDisplayName = nil
         flagStore.reset()
         hasFlags = false
         selectedFlagID = nil
@@ -588,8 +889,10 @@ struct LoupeMachineView: View {
         importError = nil
         isInspecting = false
         reconciliation = nil
+        unlockAllCategories = false
     }
 
+#if os(macOS)
     @ViewBuilder
     private var dropArea: some View {
         if #available(macOS 26.0, *) {
@@ -714,6 +1017,7 @@ struct LoupeMachineView: View {
         hasFlags = false
         draftStore.reset()
         selectedFlagID = nil
+        unlockAllCategories = false
 
         inspection?.cancel()
         let currentInspection = DeboogeyLoupeInspection()
@@ -759,6 +1063,7 @@ struct LoupeMachineView: View {
         selectedFlagID = nil
         draftStore.reset()
         importError = nil
+        unlockAllCategories = false
     }
 
     private func presentNoFlagsAlert() {
@@ -787,6 +1092,7 @@ struct LoupeMachineView: View {
         IndexCompletionFeedback.playSoundIfEnabled()
         IndexCompletionFeedback.notifyIndexingFinished(for: applicationName)
     }
+#endif
 }
 
 private struct LoupeMachineRippleEffect: View {
@@ -887,16 +1193,17 @@ private enum LoupeFlagCategory: Int, CaseIterable, Identifiable {
 
     var id: Int { rawValue }
 
-    static var visibleCases: [Self] {
+    static func visibleCases(unlockAll: Bool) -> [Self] {
 #if DEBOOGEY_MCE
-        [.all, .featureFlags, .disassembled]
+        return unlockAll ? Array(allCases) : [.all, .featureFlags, .disassembled]
 #else
-        allCases
+        _ = unlockAll
+        return Array(allCases)
 #endif
     }
 
-    static var initialSelection: Self {
-        visibleCases.first ?? .defaults
+    static func initialSelection(unlockAll: Bool) -> Self {
+        visibleCases(unlockAll: unlockAll).first ?? .all
     }
 
     var title: String {
@@ -935,15 +1242,17 @@ private enum LoupeFlagCategory: Int, CaseIterable, Identifiable {
     }
 }
 
+#if os(macOS)
 private struct LoupeCategoryPicker: NSViewRepresentable {
     @Binding var selection: LoupeFlagCategory
+    var unlockAllCategories: Bool
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     func makeNSView(context: Context) -> NSView {
         let container = NSView()
         let control = NSSegmentedControl(
-            labels: Array(repeating: "", count: LoupeFlagCategory.visibleCases.count),
+            labels: Array(repeating: "", count: visibleCases.count),
             trackingMode: .selectOne,
             target: context.coordinator,
             action: #selector(Coordinator.selectCategory(_:))
@@ -951,17 +1260,7 @@ private struct LoupeCategoryPicker: NSViewRepresentable {
         control.segmentDistribution = .fillEqually
         control.translatesAutoresizingMaskIntoConstraints = false
         control.setAccessibilityLabel(L10n.t("Flag category"))
-
-        for (segment, option) in LoupeFlagCategory.visibleCases.enumerated() {
-            control.setImage(
-                NSImage(
-                    systemSymbolName: option.systemImage,
-                    accessibilityDescription: option.title
-                ),
-                forSegment: segment
-            )
-            control.setToolTip(option.title, forSegment: segment)
-        }
+        configure(control)
 
         container.addSubview(control)
         NSLayoutConstraint.activate([
@@ -976,8 +1275,29 @@ private struct LoupeCategoryPicker: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {
         context.coordinator.parent = self
-        context.coordinator.control?.selectedSegment = LoupeFlagCategory.visibleCases.firstIndex(of: selection)
-            ?? 0
+        guard let control = context.coordinator.control else { return }
+        if control.segmentCount != visibleCases.count {
+            control.segmentCount = visibleCases.count
+            configure(control)
+        }
+        control.selectedSegment = visibleCases.firstIndex(of: selection) ?? 0
+    }
+
+    private var visibleCases: [LoupeFlagCategory] {
+        LoupeFlagCategory.visibleCases(unlockAll: unlockAllCategories)
+    }
+
+    private func configure(_ control: NSSegmentedControl) {
+        for (segment, option) in visibleCases.enumerated() {
+            control.setImage(
+                NSImage(
+                    systemSymbolName: option.systemImage,
+                    accessibilityDescription: option.title
+                ),
+                forSegment: segment
+            )
+            control.setToolTip(option.title, forSegment: segment)
+        }
     }
 
     final class Coordinator: NSObject {
@@ -987,9 +1307,9 @@ private struct LoupeCategoryPicker: NSViewRepresentable {
         init(_ parent: LoupeCategoryPicker) { self.parent = parent }
 
         @objc func selectCategory(_ sender: NSSegmentedControl) {
-            guard LoupeFlagCategory.visibleCases.indices.contains(sender.selectedSegment) else { return }
-            let category = LoupeFlagCategory.visibleCases[sender.selectedSegment]
-            parent.selection = category
+            let cases = LoupeFlagCategory.visibleCases(unlockAll: parent.unlockAllCategories)
+            guard cases.indices.contains(sender.selectedSegment) else { return }
+            parent.selection = cases[sender.selectedSegment]
         }
     }
 }
@@ -1028,16 +1348,79 @@ private struct LoupeFlagSearchField: NSViewRepresentable {
     }
 }
 
+#endif
+
 private struct LoupeFlagSidebar: View {
     @ObservedObject var store: LoupeFlagStore
     @ObservedObject var drafts: LoupeDraftStore
     @Binding var selection: String?
-    @State private var category = LoupeFlagCategory.initialSelection
+    var unlockAllCategories: Bool
+    @State private var category: LoupeFlagCategory = .all
     @State private var searchText = ""
+
+    private var visibleCases: [LoupeFlagCategory] {
+        LoupeFlagCategory.visibleCases(unlockAll: unlockAllCategories)
+    }
 
     private var names: [String] { names(for: category) }
 
     var body: some View {
+#if os(iOS)
+        List {
+            Section {
+                Picker(L10n.t("Flag category"), selection: $category) {
+                    ForEach(visibleCases) { option in
+                        Image(systemName: option.systemImage)
+                            .accessibilityLabel(option.title)
+                            .tag(option)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+
+                if names.isEmpty {
+                    emptyFlagList
+                        .listRowBackground(Color.clear)
+                } else {
+                    ForEach(names, id: \.self) { name in
+                        Button {
+                            selection = name
+                        } label: {
+                            HStack {
+                                Text(name)
+                                    .font(.system(.body, design: .monospaced))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                Spacer(minLength: 8)
+                                if drafts.dirtyIDs.contains(name) {
+                                    Image(systemName: "exclamationmark.circle.fill")
+                                        .foregroundStyle(.red)
+                                        .accessibilityLabel(L10n.t("Pending change"))
+                                }
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            } footer: {
+                Text(itemCountLabel)
+            }
+        }
+        .listStyle(.insetGrouped)
+        .contentMargins(.top, 0)
+        .searchable(text: $searchText, prompt: L10n.t("Search Flags"))
+        .onAppear(perform: clampCategoryIfNeeded)
+        .onChange(of: unlockAllCategories) { _, _ in clampCategoryIfNeeded() }
+        .onChange(of: category) { _, _ in clearSelectionIfNotVisible() }
+        .onChange(of: searchText) { _, _ in clearSelectionIfNotVisible() }
+        .onChange(of: store.revision) { _, _ in clearSelectionIfNotVisible() }
+#else
         VStack(spacing: 0) {
             LoupeFlagSearchField(text: $searchText)
                 .frame(height: 28)
@@ -1045,14 +1428,14 @@ private struct LoupeFlagSidebar: View {
                 .padding(.top, 8)
                 .padding(.bottom, 6)
 
-            LoupeCategoryPicker(selection: $category)
+            LoupeCategoryPicker(selection: $category, unlockAllCategories: unlockAllCategories)
                 .frame(maxWidth: .infinity)
                 .frame(height: 38)
                 .padding(.horizontal, 8)
 
             Divider()
 
-            ForEach(LoupeFlagCategory.visibleCases) { option in
+            ForEach(visibleCases) { option in
                 if category == option {
                     flagList(for: option)
                 }
@@ -1068,12 +1451,26 @@ private struct LoupeFlagSidebar: View {
                 .padding(.vertical, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .onAppear(perform: selectVisibleFlagIfNeeded)
+        .onAppear {
+            clampCategoryIfNeeded()
+            selectVisibleFlagIfNeeded()
+        }
+        .onChange(of: unlockAllCategories) { _ in
+            clampCategoryIfNeeded()
+            selectVisibleFlagIfNeeded()
+        }
         .onChange(of: category) { _ in selectVisibleFlagIfNeeded() }
         .onChange(of: searchText) { _ in selectVisibleFlagIfNeeded() }
         .onChange(of: store.revision) { _ in selectVisibleFlagIfNeeded() }
+#endif
     }
 
+    private func clampCategoryIfNeeded() {
+        guard !visibleCases.contains(category) else { return }
+        category = LoupeFlagCategory.initialSelection(unlockAll: unlockAllCategories)
+    }
+
+#if os(macOS)
     @ViewBuilder
     private func flagList(for option: LoupeFlagCategory) -> some View {
         let optionNames = names(for: option)
@@ -1092,6 +1489,7 @@ private struct LoupeFlagSidebar: View {
             )
         }
     }
+#endif
 
     @ViewBuilder
     private var emptyFlagList: some View {
@@ -1099,7 +1497,7 @@ private struct LoupeFlagSidebar: View {
         let systemImage = searchText.isEmpty ? "flag.slash" : "magnifyingglass"
 
         Group {
-            if #available(macOS 14.0, *) {
+            if #available(iOS 17.0, macOS 14.0, *) {
                 ContentUnavailableView(title, systemImage: systemImage)
             } else {
                 VStack(spacing: 8) {
@@ -1131,8 +1529,16 @@ private struct LoupeFlagSidebar: View {
         if let selection, names.contains(selection) { return }
         selection = names.first
     }
+
+#if os(iOS)
+    private func clearSelectionIfNotVisible() {
+        guard let selection, !names.contains(selection) else { return }
+        self.selection = nil
+    }
+#endif
 }
 
+#if os(macOS)
 private struct LoupeFlagListVersion: Equatable {
     let storeRevision: Int
     let category: LoupeFlagCategory
@@ -1282,6 +1688,8 @@ private struct LoupeFlagTable: NSViewRepresentable {
     }
 }
 
+#endif
+
 private struct LoupeValueEditor: View {
     let flag: LoupeFlag
     let initialValue: String?
@@ -1312,14 +1720,18 @@ private struct LoupeValueEditor: View {
         TextEditor(text: $value)
             .font(.system(.body, design: .monospaced))
             .textSelection(.enabled)
+#if os(iOS)
+            .background(Color(.secondarySystemBackground))
+#else
             .background(Color(nsColor: .textBackgroundColor))
+#endif
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .onChange(of: value) { newValue in
                 updateDraft(newValue)
             }
 
+#if !os(iOS) && DEBOOGEY_MCE
         HStack {
-#if DEBOOGEY_MCE
             Text(L10n.t("Save pending edits as a portable Loupe Machine change set."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -1328,23 +1740,25 @@ private struct LoupeValueEditor: View {
                 flushDraft()
                 applyAll()
             }
-                .buttonStyle(.borderedProminent)
-                .disabled(!hasPendingValues && value == flag.value)
-#else
+            .buttonStyle(.borderedProminent)
+            .disabled(!hasPendingValues && value == flag.value)
+        }
+#elseif !DEBOOGEY_MCE
+        HStack {
             Spacer()
             Button(L10n.t("Apply Currently Viewed")) {
                 flushDraft()
                 applyCurrent()
             }
-                .disabled(value == flag.value)
+            .disabled(value == flag.value)
             Button(L10n.t("Apply All Pending")) {
                 flushDraft()
                 applyAll()
             }
-                .buttonStyle(.borderedProminent)
-                .disabled(!hasPendingValues && value == flag.value)
-#endif
+            .buttonStyle(.borderedProminent)
+            .disabled(!hasPendingValues && value == flag.value)
         }
+#endif
     }
 
     private func flushDraft() {
@@ -1352,6 +1766,7 @@ private struct LoupeValueEditor: View {
     }
 }
 
+#if os(macOS)
 private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
     private static let applicationAccessoryIdentifier = NSUserInterfaceItemIdentifier(
         "theoderoy.Deboogey.LoupeMachine.application-accessory"
@@ -1608,3 +2023,5 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
 #Preview {
     LoupeMachineView(request: LoupeMachineWindowRequest(action: .create))
 }
+
+#endif

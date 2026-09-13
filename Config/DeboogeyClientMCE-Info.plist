@@ -4,13 +4,17 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>$(APP_BUNDLE_DISPLAY_NAME)</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>loum</string>
+			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>LoumDocumentIcon.icns</string>
-			<key>CFBundleTypeExtensions</key>
-			<array><string>loum</string></array>
 			<key>CFBundleTypeName</key>
 			<string>Loupe Machine Document</string>
 			<key>CFBundleTypeRole</key>
@@ -18,11 +22,15 @@
 			<key>LSHandlerRank</key>
 			<string>Owner</string>
 			<key>LSItemContentTypes</key>
-			<array><string>theoderoy.Deboogey.LoupeMachine</string></array>
+			<array>
+				<string>theoderoy.Deboogey.LoupeMachine</string>
+			</array>
 		</dict>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
-			<array><string>dsplt</string></array>
+			<array>
+				<string>dsplt</string>
+			</array>
 			<key>CFBundleTypeName</key>
 			<string>Diffsplitter Document</string>
 			<key>CFBundleTypeRole</key>
@@ -30,11 +38,15 @@
 			<key>LSHandlerRank</key>
 			<string>Owner</string>
 			<key>LSItemContentTypes</key>
-			<array><string>theoderoy.Deboogey.Diffsplitter</string></array>
+			<array>
+				<string>theoderoy.Deboogey.Diffsplitter</string>
+			</array>
 		</dict>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
-			<array><string>dspltx</string></array>
+			<array>
+				<string>dspltx</string>
+			</array>
 			<key>CFBundleTypeName</key>
 			<string>DiffsplitterX Document</string>
 			<key>CFBundleTypeRole</key>
@@ -42,11 +54,11 @@
 			<key>LSHandlerRank</key>
 			<string>Owner</string>
 			<key>LSItemContentTypes</key>
-			<array><string>theoderoy.Deboogey.DiffsplitterX</string></array>
+			<array>
+				<string>theoderoy.Deboogey.DiffsplitterX</string>
+			</array>
 		</dict>
 	</array>
-	<key>CFBundleDisplayName</key>
-	<string>$(APP_BUNDLE_DISPLAY_NAME)</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIconName</key>
@@ -79,7 +91,9 @@
 	<array>
 		<dict>
 			<key>UTTypeConformsTo</key>
-			<array><string>public.json</string></array>
+			<array>
+				<string>public.json</string>
+			</array>
 			<key>UTTypeDescription</key>
 			<string>Loupe Machine Document</string>
 			<key>UTTypeIconFile</key>
@@ -89,14 +103,18 @@
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>
-				<array><string>loum</string></array>
+				<array>
+					<string>loum</string>
+				</array>
 				<key>public.mime-type</key>
 				<string>application/vnd.deboogey.loupe-machine+json</string>
 			</dict>
 		</dict>
 		<dict>
 			<key>UTTypeConformsTo</key>
-			<array><string>public.json</string></array>
+			<array>
+				<string>public.json</string>
+			</array>
 			<key>UTTypeDescription</key>
 			<string>Diffsplitter Document</string>
 			<key>UTTypeIdentifier</key>
@@ -104,14 +122,18 @@
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>
-				<array><string>dsplt</string></array>
+				<array>
+					<string>dsplt</string>
+				</array>
 				<key>public.mime-type</key>
 				<string>application/vnd.deboogey.diffsplitter+json</string>
 			</dict>
 		</dict>
 		<dict>
 			<key>UTTypeConformsTo</key>
-			<array><string>public.json</string></array>
+			<array>
+				<string>public.json</string>
+			</array>
 			<key>UTTypeDescription</key>
 			<string>DiffsplitterX Document</string>
 			<key>UTTypeIdentifier</key>
@@ -119,7 +141,9 @@
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>
-				<array><string>dspltx</string></array>
+				<array>
+					<string>dspltx</string>
+				</array>
 				<key>public.mime-type</key>
 				<string>application/vnd.deboogey.diffsplitterx+json</string>
 			</dict>

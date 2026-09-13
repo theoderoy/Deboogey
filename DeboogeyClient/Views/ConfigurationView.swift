@@ -7,6 +7,17 @@
 
 import SwiftUI
 import Combine
+#if canImport(AppKit)
+import AppKit
+#endif
+
+private var platformGroupedBackground: Color {
+#if canImport(AppKit)
+    platformGroupedBackground
+#else
+    Color(.secondarySystemBackground)
+#endif
+}
 
 private struct LegacyGroupedSection<Content: View>: View {
     let header: String
@@ -29,7 +40,7 @@ private struct LegacyGroupedSection<Content: View>: View {
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(platformGroupedBackground)
             .cornerRadius(10)
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
@@ -49,11 +60,13 @@ private struct GeneralPanelView: View {
     
     var body: some View {
         Group {
-            if #available(macOS 13.0, *) {
+            if #available(iOS 16.0, macOS 13.0, *) {
                 Form {
                     panels
                 }
+#if os(macOS)
                 .formStyle(.grouped)
+#endif
             } else {
                 ScrollView {
                     VStack(spacing: 20) {
@@ -102,6 +115,7 @@ private struct GeneralPanelView: View {
                 .foregroundColor(.secondary)
 #endif
 
+#if os(macOS)
             Toggle(isOn: $vm.playDiffsplitterDoneSound) {
                 Text(L10n.t("Play a sound when Diffsplitter finishes a comparison"))
             }
@@ -148,8 +162,10 @@ private struct GeneralPanelView: View {
                     }
                 }
             }
+#endif
         }
 
+#if os(macOS)
         section(header: "Diffsplitter") {
             Picker(
                 L10n.t("Offload Large Dumps to Temporary Storage"),
@@ -327,6 +343,7 @@ private struct GeneralPanelView: View {
             }
             .disabled(vm.diffsplitterStatusPriority == PersistentVariables.defaultDiffsplitterStatusPriority)
         }
+#endif
         
 #if !DEBOOGEY_MCE
         section(header: "Notices") {
@@ -426,7 +443,7 @@ private struct GeneralPanelView: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(NSColor.controlBackgroundColor))
+                .background(platformGroupedBackground)
                 .cornerRadius(10)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
@@ -450,6 +467,7 @@ private struct GeneralPanelView: View {
         .accessibilityLabel(L10n.t("Reset to Default"))
     }
 
+#if os(macOS)
     private func diffsplitterStatusTitle(_ raw: String) -> String {
         switch DiffsplitterEngine.DirEntryStatus(rawValue: raw) {
         case .added: return L10n.t("Added")
@@ -469,8 +487,10 @@ private struct GeneralPanelView: View {
         case .identical, .none: return .secondary
         }
     }
+#endif
 }
 
+#if os(macOS)
 private struct DiffsplitterPriorityListScrollModifier: ViewModifier {
     func body(content: Content) -> some View {
         if #available(macOS 13.0, *) {
@@ -480,7 +500,9 @@ private struct DiffsplitterPriorityListScrollModifier: ViewModifier {
         }
     }
 }
+#endif
 
+#if os(macOS)
 private struct EntityTrackerPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
     @AppStorage("theoderoy.Deboogey.EntityTracker.rowScale") private var rowScale: Double = 1.0
@@ -624,7 +646,7 @@ private struct EntityTrackerPanelView: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(NSColor.controlBackgroundColor))
+                .background(platformGroupedBackground)
                 .cornerRadius(10)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
@@ -635,6 +657,8 @@ private struct EntityTrackerPanelView: View {
         }
     }
 }
+
+#endif
 
 private struct AcknowledgementsPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
@@ -788,7 +812,7 @@ private struct AcknowledgementsPanelView: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(NSColor.controlBackgroundColor))
+                .background(platformGroupedBackground)
                 .cornerRadius(10)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
@@ -800,14 +824,24 @@ private struct AcknowledgementsPanelView: View {
     }
 }
 
-enum Panel: CaseIterable, Identifiable, Hashable, Codable {
+enum Panel: Identifiable, Hashable, Codable {
     case general
+    case about
     case entityTracker
     case acknowledge
+
+    static var allCases: [Panel] {
+#if os(iOS)
+        [.about, .acknowledge]
+#else
+        [.general, .entityTracker, .acknowledge]
+#endif
+    }
     
     var id: String {
         switch self {
         case .general: return "general"
+        case .about: return "about"
         case .entityTracker: return "entityTracker"
         case .acknowledge: return "acknowledge"
         }
@@ -816,6 +850,8 @@ enum Panel: CaseIterable, Identifiable, Hashable, Codable {
         switch self {
         case .general:
             return L10n.t("General")
+        case .about:
+            return L10n.t("About Deboogey")
         case .entityTracker:
             return L10n.t("Entity Tracker")
         case .acknowledge:
@@ -825,6 +861,7 @@ enum Panel: CaseIterable, Identifiable, Hashable, Codable {
     var systemImage: String {
         switch self {
         case .general: return "gear"
+        case .about: return "info.circle"
         case .entityTracker: return "binoculars"
         case .acknowledge: return "star"
         }
@@ -927,7 +964,16 @@ final class ConfigurationViewModel: ObservableObject {
 
     private let vars: PersistentVariables
     
-    init(initialSelection: Panel? = .general, vars: PersistentVariables = PersistentVariables()) {
+    init(
+        initialSelection: Panel? = {
+#if os(iOS)
+            .about
+#else
+            .general
+#endif
+        }(),
+        vars: PersistentVariables = PersistentVariables()
+    ) {
         self.vars = vars
         self.selection = initialSelection
         self.pesterMeWithSipping = vars.pesterMeWithSipping
@@ -1038,8 +1084,14 @@ private struct PanelDetail: View {
             switch vm.selection {
             case .general:
                 GeneralPanelView(vm: vm)
+            case .about:
+                AboutView()
             case .entityTracker:
+#if os(macOS)
                 EntityTrackerPanelView(vm: vm)
+#else
+                EmptyView()
+#endif
             case .acknowledge:
                 AcknowledgementsPanelView(vm: vm)
             case .none:
@@ -1054,6 +1106,25 @@ struct ConfigurationRootView: View {
     @StateObject private var vm = ConfigurationViewModel()
     
     var body: some View {
+#if os(iOS)
+        List {
+            NavigationLink {
+                AboutView()
+                    .navigationTitle(Panel.about.title)
+                    .navigationBarTitleDisplayMode(.inline)
+            } label: {
+                Label(Panel.about.title, systemImage: Panel.about.systemImage)
+            }
+            NavigationLink {
+                AcknowledgementsPanelView(vm: vm)
+                    .navigationTitle(Panel.acknowledge.title)
+                    .navigationBarTitleDisplayMode(.inline)
+            } label: {
+                Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+            }
+        }
+        .navigationTitle(L10n.t("Settings"))
+#else
         if #available(macOS 14.0, *) {
             ModernNavigationView(vm: vm)
                 .minimumWindowContentSize(AppWindowSizing.Configuration.modern)
@@ -1076,6 +1147,7 @@ struct ConfigurationRootView: View {
             }
             .minimumWindowContentSize(AppWindowSizing.Configuration.legacy)
         }
+#endif
     }
 }
 

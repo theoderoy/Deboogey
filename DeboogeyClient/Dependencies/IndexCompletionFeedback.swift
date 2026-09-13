@@ -5,8 +5,11 @@
 //  Created by Théo De Roy on 30/07/2026.
 //
 
-import AppKit
+import Foundation
 import UserNotifications
+#if canImport(AppKit)
+import AppKit
+#endif
 
 enum IndexCompletionFeedback {
     private static let preferenceKey = "theoderoy.Deboogey.Indexing.playCompletionSound"
@@ -17,7 +20,7 @@ enum IndexCompletionFeedback {
         bundle: Bundle = .main
     ) {
         guard defaults.bool(forKey: preferenceKey) else { return }
-
+#if canImport(AppKit)
         let soundURL = bundle.url(forResource: "ProcessDone", withExtension: "aif")
             ?? bundle.url(
                 forResource: "ProcessDone",
@@ -29,6 +32,7 @@ enum IndexCompletionFeedback {
         }
         sound.volume = completionSoundVolume
         sound.play()
+#endif
     }
 
     static func notifyIndexingFinished(for applicationName: String) {

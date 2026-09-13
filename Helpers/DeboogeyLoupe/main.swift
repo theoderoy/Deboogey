@@ -973,7 +973,7 @@ private func arm64PreferenceKeys(in machO: SandboxedMachO) -> Set<String> {
             guard let instruction = unsigned32(machO.data, at: section.fileOffset + relativeOffset, order: machO.order) else { break }
             let pc = section.address + UInt64(relativeOffset)
 
-            if instruction & 0x9f000000 == 0x90000000 { // ADRP
+            if instruction & 0x9f000000 == 0x90000000 {
                 let destination = Int(instruction & 0x1f)
                 let immediate = (UInt64((instruction >> 5) & 0x7ffff) << 2) | UInt64((instruction >> 29) & 0x3)
                 let displacement = signed(immediate, bits: 21) << 12
@@ -981,13 +981,13 @@ private func arm64PreferenceKeys(in machO: SandboxedMachO) -> Set<String> {
                 registers[destination] = .address(UInt64(bitPattern: page &+ displacement))
                 continue
             }
-            if instruction & 0x9f000000 == 0x10000000 { // ADR
+            if instruction & 0x9f000000 == 0x10000000 {
                 let destination = Int(instruction & 0x1f)
                 let immediate = (UInt64((instruction >> 5) & 0x7ffff) << 2) | UInt64((instruction >> 29) & 0x3)
                 registers[destination] = resolved(UInt64(bitPattern: Int64(bitPattern: pc) &+ signed(immediate, bits: 21)))
                 continue
             }
-            if instruction & 0x7f000000 == 0x11000000 { // ADD immediate
+            if instruction & 0x7f000000 == 0x11000000 {
                 let destination = Int(instruction & 0x1f)
                 let source = Int((instruction >> 5) & 0x1f)
                 let shift = (instruction >> 22) & 0x1
@@ -999,7 +999,7 @@ private func arm64PreferenceKeys(in machO: SandboxedMachO) -> Set<String> {
                 }
                 continue
             }
-            if instruction & 0xffc00000 == 0xf9400000 { // LDR 64-bit unsigned immediate
+            if instruction & 0xffc00000 == 0xf9400000 {
                 let destination = Int(instruction & 0x1f)
                 let source = Int((instruction >> 5) & 0x1f)
                 let immediate = UInt64((instruction >> 10) & 0xfff) * 8
@@ -1010,13 +1010,13 @@ private func arm64PreferenceKeys(in machO: SandboxedMachO) -> Set<String> {
                 }
                 continue
             }
-            if instruction & 0xffe0ffe0 == 0xaa0003e0 { // MOV register alias
+            if instruction & 0xffe0ffe0 == 0xaa0003e0 {
                 let destination = Int(instruction & 0x1f)
                 let source = Int((instruction >> 16) & 0x1f)
                 registers[destination] = registers[source]
                 continue
             }
-            if instruction & 0xfc000000 == 0x94000000 { // BL
+            if instruction & 0xfc000000 == 0x94000000 {
                 let displacement = signed(UInt64(instruction & 0x03ffffff), bits: 26) << 2
                 let target = UInt64(bitPattern: Int64(bitPattern: pc) &+ displacement)
                 guard let symbol = imports[target] else {
@@ -1041,7 +1041,7 @@ private func arm64PreferenceKeys(in machO: SandboxedMachO) -> Set<String> {
 private func x86PreferenceKeys(in machO: SandboxedMachO) -> Set<String> {
     let strings = machO.stringsByAddress
     let imports = machO.importedSymbolsByAddress
-    let argumentRegisters = [7, 6, 2, 1, 8, 9] // rdi, rsi, rdx, rcx, r8, r9
+    let argumentRegisters = [7, 6, 2, 1, 8, 9]
     var result = Set<String>()
 
     for section in machO.sections where section.name == "__text" {

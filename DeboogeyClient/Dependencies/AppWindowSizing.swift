@@ -34,7 +34,12 @@ enum AppWindowSizing {
 }
 
 extension View {
+    @ViewBuilder
     func minimumWindowContentSize(_ sizing: AppWindowSize) -> some View {
+#if os(macOS)
         frame(minWidth: sizing.minimumSize.width, minHeight: sizing.minimumSize.height)
+#else
+        self
+#endif
     }
 }

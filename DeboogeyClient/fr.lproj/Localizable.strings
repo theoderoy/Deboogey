@@ -210,6 +210,11 @@
 "Local values have changed" = "Les valeurs en amont ont changé";
 "Log actions" = "Actions du journal";
 "Loupe Machine" = "Loupe Machine";
+"Don't Save" = "Ne pas enregistrer";
+"Open a Loupe Machine document before saving." = "Ouvrez un document Loupe Machine avant d’enregistrer.";
+"Open an existing Loupe Machine document to browse and edit its change set." = "Ouvrez un document Loupe Machine existant pour parcourir et modifier son jeu de modifications.";
+"Open Document" = "Ouvrir le document";
+"Loupe View" = "Vue Loupe";
 "Loupe Machine Document Error" = "Erreur de document Loupe Machine";
 "Loupe Machine applied %d value(s) successfully." = "Loupe Machine a appliqué %d valeur(s) avec succès.";
 "Loupe Machine lets you select an application, discover binary preference flags, inspect and edit them, and prepare a change set to apply elsewhere." = "Loupe Machine vous permet de sélectionner une application, de découvrir ses indicateurs de préférence binaires, de les inspecter et de les modifier, puis de préparer un ensemble de modifications à appliquer ailleurs.";

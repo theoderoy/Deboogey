@@ -6,7 +6,9 @@
 //
 
 import Foundation
+#if canImport(AppKit)
 import AppKit
+#endif
 import Combine
 
 public final class PersistentVariables: ObservableObject {
@@ -299,6 +301,8 @@ public final class PersistentVariables: ObservableObject {
         defaults.removePersistentDomain(forName: bundleID)
         defaults.synchronize()
 
+#if canImport(AppKit)
         NSApp.terminate(nil)
+#endif
     }
 }

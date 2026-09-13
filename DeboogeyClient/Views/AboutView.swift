@@ -5,8 +5,10 @@
 //  Created by Théo De Roy on 27/07/2026.
 //
 
-import AppKit
 import SwiftUI
+#if canImport(AppKit)
+import AppKit
+#endif
 
 struct AboutView: View {
     private var clientVersion: String {
@@ -19,10 +21,17 @@ struct AboutView: View {
 
     var body: some View {
         VStack(spacing: 10) {
+#if canImport(AppKit)
             Image(nsImage: NSImage(named: NSImage.applicationIconName) ?? NSImage())
                 .resizable()
                 .scaledToFit()
                 .frame(width: 112, height: 112)
+#else
+            Image("DeboogeyIdent")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 112, height: 112)
+#endif
 
             Text(L10n.t("Deboogey"))
                 .font(.title.bold())
@@ -39,6 +48,10 @@ struct AboutView: View {
             .foregroundStyle(.secondary)
         }
         .padding(32)
+#if os(macOS)
         .frame(width: 360)
+#else
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+#endif
     }
 }

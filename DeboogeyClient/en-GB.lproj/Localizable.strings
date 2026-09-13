@@ -210,6 +210,11 @@
 "Local values have changed" = "Local values have changed";
 "Log actions" = "Log actions";
 "Loupe Machine" = "Loupe Machine";
+"Don't Save" = "Don't Save";
+"Open a Loupe Machine document before saving." = "Open a Loupe Machine document before saving.";
+"Open an existing Loupe Machine document to browse and edit its change set." = "Open an existing Loupe Machine document to browse and edit its change set.";
+"Open Document" = "Open Document";
+"Loupe View" = "Loupe View";
 "Loupe Machine Document Error" = "Loupe Machine Document Error";
 "Loupe Machine applied %d value(s) successfully." = "Loupe Machine applied %d value(s) successfully.";
 "Loupe Machine lets you select an application, discover binary preference flags, inspect and edit them, and prepare a change set to apply elsewhere." = "Loupe Machine lets you select an application, discover binary preference flags, inspect and edit them, and prepare a change set to apply elsewhere.";

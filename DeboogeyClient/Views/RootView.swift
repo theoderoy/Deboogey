@@ -5,8 +5,10 @@
 //  Created by Théo De Roy on 13/10/2025.
 //
 
-import AppKit
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 let appName =
 Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
@@ -15,6 +17,7 @@ let shortVersion =
 Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
 let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
 
+#if os(macOS)
 private struct WindowDefaultSizeApplier: NSViewRepresentable {
     let sizing: AppWindowSize
     let onWindowPrepared: () -> Void
@@ -80,6 +83,7 @@ private extension CGSize {
         width < other.width || height < other.height
     }
 }
+#endif
 
 struct IdentifiableString: Identifiable {
     let id = UUID()
@@ -90,6 +94,7 @@ struct LauncherButton: View {
     let title: String
     let icon: String
     let color: Color
+    var prominent: Bool = false
     let action: () -> Void
     
     var body: some View {
@@ -103,22 +108,88 @@ struct LauncherButton: View {
             .frame(width: 220)
             .contentShape(Rectangle())
         }
-        .launcherButtonStyle(tint: color)
+        .launcherButtonStyle(tint: color, prominent: prominent)
     }
 }
 
 private extension View {
-    func launcherButtonStyle(tint color: Color) -> some View {
-        self
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.roundedRectangle)
-            .controlSize(.large)
-            .tint(color)
+    @ViewBuilder
+    func launcherButtonStyle(tint color: Color, prominent: Bool = false) -> some View {
+        if #available(macOS 26.0, iOS 26.0, *) {
+            if prominent {
+                self
+                    .buttonStyle(.glassProminent)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.large)
+                    .tint(color)
+            } else {
+                self
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.large)
+                    .tint(color)
+            }
+        } else if prominent {
+            self
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.roundedRectangle)
+                .controlSize(.large)
+                .tint(color)
+        } else {
+            self
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.roundedRectangle)
+                .controlSize(.large)
+                .tint(color)
+        }
     }
 }
 
 struct RootView: View {
 #if DEBOOGEY_MCE
+#if os(iOS)
+    @Environment(\.mceIOSNavigate) private var navigate
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer(minLength: 24)
+
+            Image("DeboogeyIdent")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 96, height: 96)
+
+            Text(appName ?? "Deboogey")
+                .font(.largeTitle.weight(.bold))
+                .multilineTextAlignment(.center)
+
+            VStack(spacing: 12) {
+                Button {
+                    navigate(.loupe(LoupeMachineWindowRequest(action: .open, documentURL: nil)))
+                } label: {
+                    Label(L10n.t("Loupe View"), systemImage: "scope")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                }
+                .launcherButtonStyle(tint: .accentColor, prominent: true)
+
+                Button {
+                    navigate(.settings)
+                } label: {
+                    Label(L10n.t("Settings"), systemImage: "gear")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                }
+                .launcherButtonStyle(tint: .gray)
+            }
+            .padding(.horizontal, 24)
+
+            Spacer()
+        }
+    }
+#else
     @StateObject private var vars = PersistentVariables()
 
     @State private var showingDeboogeyCDMLauncher = false
@@ -226,6 +297,7 @@ struct RootView: View {
             WindowDefaultSizeApplier(sizing: AppWindowSizing.root) {}
         )
     }
+#endif
 #else
     @Environment(\.openURL) private var openURL
     @Environment(\.sipSatisfied) private var sipSatisfied
@@ -783,6 +855,7 @@ struct RootView: View {
 #endif
 }
 
+#if os(macOS)
 private struct DeboogeyLoupeLauncherMenu: View {
     let openDocument: () -> Void
     let createDocument: () -> Void
@@ -801,7 +874,8 @@ private struct DeboogeyLoupeLauncherMenu: View {
         LauncherButton(
             title: "Loupe Machine",
             icon: "loupe",
-            color: .accentColor
+            color: .accentColor,
+            prominent: true
         ) {
             showingActions = true
         }
@@ -1027,6 +1101,8 @@ private struct ModernSettingsLauncher: View {
         }
     }
 }
+
+#endif
 
 #Preview {
     RootView()

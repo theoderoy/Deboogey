@@ -5,9 +5,12 @@
 //  Created by Théo De Roy on 30/07/2026.
 //
 
-
-import AppKit
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
+
+#if os(macOS)
 
 @MainActor
 private final class MCEAboutWindowController: NSWindowController {
@@ -345,3 +348,58 @@ struct DeboogeyClientMCE: App {
         }
     }
 }
+
+#elseif os(iOS)
+
+enum MCEIOSRoute: Hashable {
+    case loupe(LoupeMachineWindowRequest)
+    case settings
+}
+
+@main
+struct DeboogeyClientMCE: App {
+    @State private var path = NavigationPath()
+
+    init() {
+        PersistentVariables.registerDefaults()
+        EntityTracker.shared.performConfiguredAutoRemoval()
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            NavigationStack(path: $path) {
+                RootView()
+                    .navigationDestination(for: MCEIOSRoute.self) { route in
+                        switch route {
+                        case .loupe(let request):
+                            LoupeMachineView(request: request)
+                        case .settings:
+                            ConfigurationRootView()
+                        }
+                    }
+            }
+            .environment(\.locale, L10n.locale)
+            .environment(\.mceIOSNavigate) { route in
+                path.append(route)
+            }
+            .onOpenURL { url in
+                guard url.pathExtension.lowercased() == "loum" else { return }
+                _ = url.startAccessingSecurityScopedResource()
+                path.append(MCEIOSRoute.loupe(LoupeMachineWindowRequest(action: .open, documentURL: url)))
+            }
+        }
+    }
+}
+
+private struct MCEIOSNavigateKey: EnvironmentKey {
+    static let defaultValue: (MCEIOSRoute) -> Void = { _ in }
+}
+
+extension EnvironmentValues {
+    var mceIOSNavigate: (MCEIOSRoute) -> Void {
+        get { self[MCEIOSNavigateKey.self] }
+        set { self[MCEIOSNavigateKey.self] = newValue }
+    }
+}
+
+#endif
