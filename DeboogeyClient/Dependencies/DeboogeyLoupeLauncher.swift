@@ -142,23 +142,13 @@ struct LoupeApplicationData {
         try data.write(to: temporaryURL, options: [.atomic, .completeFileProtection])
 
         let directory = destination.deletingLastPathComponent().path
-        let command = "/bin/mkdir -p \(shellQuoted(directory)) && "
-            + "/bin/cp -f \(shellQuoted(temporaryURL.path)) \(shellQuoted(destination.path))"
-        let source = "do shell script \(appleScriptString(command)) with administrator privileges"
-        var errorInfo: NSDictionary?
-        guard NSAppleScript(source: source)?.executeAndReturnError(&errorInfo) != nil else {
+        let command = "/bin/mkdir -p \(PrivilegedShell.quoted(directory)) && "
+            + "/bin/cp -f \(PrivilegedShell.quoted(temporaryURL.path)) \(PrivilegedShell.quoted(destination.path))"
+        do {
+            _ = try PrivilegedShell.runAdministrator(command: command)
+        } catch {
             throw LoupeApplicationDataError.writeFailed
         }
-    }
-
-    private static func shellQuoted(_ value: String) -> String {
-        "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
-    }
-
-    private static func appleScriptString(_ value: String) -> String {
-        "\"" + value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"") + "\""
     }
 
     private static func setting(
@@ -249,16 +239,30 @@ struct DeboogeyLoupeLauncher {
         didLoad: (([LoupeFlag]) -> Void)? = nil
     ) throws -> [LoupeFlag] {
 #if DEBOOGEY_MCE
-        let toolURL = Bundle.main.url(forAuxiliaryExecutable: "DeboogeyLoupeMCE")
-#else
-        let toolURL = Bundle.main.url(forResource: "DeboogeyLoupe", withExtension: nil)
-#endif
-        guard let toolURL else {
+        let toolPath: String
+        do {
+            toolPath = try BundleHelperTool.path(
+                resource: nil,
+                auxiliaryExecutable: "DeboogeyLoupeMCE",
+                expectedDirectory: "/Contents/MacOS/"
+            )
+        } catch {
             throw DeboogeyLoupeLauncherError.toolNotFound
         }
-        guard FileManager.default.isExecutableFile(atPath: toolURL.path) else {
+#else
+        let toolPath: String
+        do {
+            toolPath = try BundleHelperTool.path(
+                resource: "DeboogeyLoupe",
+                expectedDirectory: "/Contents/Resources/"
+            )
+        } catch BundleHelperTool.ResolveError.notExecutable {
             throw DeboogeyLoupeLauncherError.toolNotExecutable
+        } catch {
+            throw DeboogeyLoupeLauncherError.toolNotFound
         }
+#endif
+        let toolURL = URL(fileURLWithPath: toolPath)
 
         let process = Process()
         process.executableURL = toolURL

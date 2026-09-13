@@ -46,60 +46,50 @@ nonisolated struct DeboogeySDLauncher {
     }
 
     private static func runOverlayHelperImpl(arguments: [String]) throws -> String {
-        guard let toolPath = Bundle.main.path(forResource: "DeboogeySDHelper", ofType: nil) else {
+        let toolPath: String
+        do {
+            toolPath = try BundleHelperTool.path(
+                resource: "DeboogeySDHelper",
+                expectedDirectory: "/Contents/Resources/"
+            )
+        } catch BundleHelperTool.ResolveError.notFound {
+            throw DeboogeySDLauncherError.toolNotFound
+        } catch BundleHelperTool.ResolveError.outsideExpectedDirectory(let path) {
+            throw DeboogeySDLauncherError.toolOutsideResources(path: path)
+        } catch BundleHelperTool.ResolveError.notExecutable(let path) {
+            throw DeboogeySDLauncherError.toolNotExecutable(path: path)
+        } catch {
             throw DeboogeySDLauncherError.toolNotFound
         }
-        if !toolPath.contains("/Contents/Resources/") {
-            throw DeboogeySDLauncherError.toolOutsideResources(path: toolPath)
-        }
-        if !FileManager.default.isExecutableFile(atPath: toolPath) {
-            throw DeboogeySDLauncherError.toolNotExecutable(path: toolPath)
-        }
 
-        @inline(__always)
-        func shellEscape(_ s: String) -> String {
-            "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'"
-        }
+        let escapedArgs = arguments.map(PrivilegedShell.quoted).joined(separator: " ")
+        let command = PrivilegedShell.quoted("/usr/bin/env")
+            + " " + PrivilegedShell.quoted(toolPath)
+            + (escapedArgs.isEmpty ? "" : " " + escapedArgs)
+            + " 2>&1"
 
-        let escapedArgs = arguments.map(shellEscape).joined(separator: " ")
-        let command = shellEscape("/usr/bin/env") + " " + shellEscape(toolPath) + (escapedArgs.isEmpty ? "" : " " + escapedArgs) + " 2>&1"
-        let scriptSource = "do shell script \"" + command
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"") + "\" with administrator privileges"
-
-        guard let script = NSAppleScript(source: scriptSource) else {
-            throw DeboogeySDLauncherError.scriptCreationFailed
-        }
-
-        var errorDict: NSDictionary? = nil
-        let result = script.executeAndReturnError(&errorDict)
-
-        if let output = result.stringValue {
+        do {
+            let output = try PrivilegedShell.runAdministrator(command: command)
             ToolCycleFeedback.playComplete()
             return output
-        }
-
-        if let errorDict = errorDict as? [String: Any] {
-            let detailedMessage = (errorDict[NSAppleScript.errorMessage] as? String)
-                ?? (errorDict[NSAppleScript.errorBriefMessage] as? String)
-                ?? (errorDict[NSLocalizedDescriptionKey] as? String)
-                ?? L10n.t("Unknown AppleScript error")
-            let number = (errorDict[NSAppleScript.errorNumber] as? Int) ?? 0
+        } catch PrivilegedShell.ExecutionError.scriptCreationFailed {
+            throw DeboogeySDLauncherError.scriptCreationFailed
+        } catch PrivilegedShell.ExecutionError.executionFailed(let message, let number, let details) {
+            let detailedMessage = message ?? L10n.t("Unknown AppleScript error")
             let userFacing = L10n.f("Helper failed (code %d). %@", number, detailedMessage)
-
-            var details: [String: Any] = [:]
-            details["AppleScriptErrorNumber"] = number
-            details["AppleScriptErrorMessage"] = errorDict[NSAppleScript.errorMessage] as Any
-            details["AppleScriptErrorBriefMessage"] = errorDict[NSAppleScript.errorBriefMessage] as Any
-            details["AppleScriptError"] = errorDict
-            details["command"] = command
-            details["toolPath"] = toolPath
+            var fullDetails: [String: Any] = details
+            fullDetails["AppleScriptErrorNumber"] = number
+            fullDetails["command"] = command
+            fullDetails["toolPath"] = toolPath
             #if DEBUG
-            print("[DeboogeyClient] AppleScript error (\(number)): \(detailedMessage)\nDict: \(errorDict)\nCommand: \(command)\nTool: \(toolPath)")
+            print("[DeboogeyClient] AppleScript error (\(number)): \(detailedMessage)\nCommand: \(command)\nTool: \(toolPath)")
             #endif
-            throw DeboogeySDLauncherError.executionFailed(userFacing: userFacing, details: details)
+            throw DeboogeySDLauncherError.executionFailed(userFacing: userFacing, details: fullDetails)
+        } catch {
+            throw DeboogeySDLauncherError.executionFailed(
+                userFacing: L10n.t("Failed to run DeboogeySDHelper with administrator privileges."),
+                details: [:]
+            )
         }
-
-        throw DeboogeySDLauncherError.executionFailed(userFacing: L10n.t("Failed to run DeboogeySDHelper with administrator privileges."), details: [:])
     }
 }

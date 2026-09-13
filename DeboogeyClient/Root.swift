@@ -51,30 +51,32 @@ private struct UpgradeCommands: Commands {
     
     var body: some Commands {
         CommandGroup(after: .appInfo) {
-            if #available(macOS 13.0, *) {
-                Button(
-                    upgradeChecker.upgradeAvailable ? L10n.f("Upgrade to %@", upgradeChecker.formattedLatestVersion) : L10n.t("Check for Upgrades..."),
-                    systemImage: networkMonitor.isConnected ? "network" : "network.slash"
-                ) { 
-                    UpgradeChecker.shared.requestManualCheck() 
-                }
-                .disabled(!networkMonitor.isConnected)
-                
-                if !networkMonitor.isConnected {
-                    Text(L10n.t("Network connection required"))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            } else {
-                Button(upgradeChecker.upgradeAvailable ? L10n.f("Upgrade to %@", upgradeChecker.formattedLatestVersion) : L10n.t("Check for Upgrades...")) {
-                    UpgradeChecker.shared.requestManualCheck() 
-                }
-                .disabled(!networkMonitor.isConnected)
-                
-                if !networkMonitor.isConnected {
-                    Text(L10n.t("Network connection required"))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+            if !DebugVariables.areUpdatesDisabled {
+                if #available(macOS 13.0, *) {
+                    Button(
+                        upgradeChecker.upgradeAvailable ? L10n.f("Upgrade to %@", upgradeChecker.formattedLatestVersion) : L10n.t("Check for Upgrades..."),
+                        systemImage: networkMonitor.isConnected ? "network" : "network.slash"
+                    ) { 
+                        UpgradeChecker.shared.requestManualCheck() 
+                    }
+                    .disabled(!networkMonitor.isConnected)
+                    
+                    if !networkMonitor.isConnected {
+                        Text(L10n.t("Network connection required"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    Button(upgradeChecker.upgradeAvailable ? L10n.f("Upgrade to %@", upgradeChecker.formattedLatestVersion) : L10n.t("Check for Upgrades...")) {
+                        UpgradeChecker.shared.requestManualCheck() 
+                    }
+                    .disabled(!networkMonitor.isConnected)
+                    
+                    if !networkMonitor.isConnected {
+                        Text(L10n.t("Network connection required"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
         }
@@ -90,55 +92,6 @@ private struct LoupeMachineLegacyCommands: Commands {
             openDiffsplitterDocument: DiffsplitterNavigation.chooseDocumentLegacy,
             openMain: DeboogeyWindowController.openMain
         )
-    }
-}
-
-private struct DocumentToolCommandSet: Commands {
-    let createLoupeDocument: () -> Void
-    let openLoupeDocument: () -> Void
-    let createDiffsplitterDocument: () -> Void
-    let openDiffsplitterDocument: () -> Void
-    let openMain: () -> Void
-    @ObservedObject private var saveBridge = DocumentSaveDispatcherBridge.shared
-
-    var body: some Commands {
-        CommandGroup(replacing: .newItem) {
-            Button(L10n.t("New Window"), action: openMain)
-                .keyboardShortcut("n", modifiers: [.command, .shift])
-
-            Button(L10n.t("New Loupe Machine Document")) {
-                createLoupeDocument()
-            }
-            .keyboardShortcut("n", modifiers: .command)
-
-            Button(L10n.t("Open Loupe Machine Document…")) {
-                openLoupeDocument()
-            }
-            .keyboardShortcut("o", modifiers: .command)
-
-            Button(L10n.t("New Diffsplitter Document")) {
-                createDiffsplitterDocument()
-            }
-
-            Button(L10n.t("Open Diffsplitter Document…")) {
-                openDiffsplitterDocument()
-            }
-
-            Divider()
-
-            Button(L10n.t("Save")) { DocumentSaveDispatcher.save(saveAs: false) }
-                .keyboardShortcut("s", modifiers: .command)
-                .disabled(!saveBridge.canSave)
-
-            Button(L10n.t("Save As…")) { DocumentSaveDispatcher.save(saveAs: true) }
-                .keyboardShortcut("s", modifiers: [.command, .shift])
-                .disabled(!saveBridge.canSave)
-
-            Button(L10n.t("Export DiffsplitterX Document…")) {
-                DocumentSaveDispatcher.exportDiffsplitterX()
-            }
-            .disabled(!saveBridge.canExportDiffsplitterX)
-        }
     }
 }
 
@@ -363,42 +316,16 @@ struct Root: App {
     }
 }
 
-@available(macOS 13.0, *)
-private struct ExternalDocumentHandler: ViewModifier {
-    @Environment(\.openWindow) private var openWindow
-
-    func body(content: Content) -> some View {
-        content.onOpenURL { url in
-            let ext = url.pathExtension.lowercased()
-            if ext == "loum" {
-                LoupeMachineNavigation.open(documentAt: url, using: openWindow)
-            } else if ext == "dsplt" || ext == "dspltx" {
-                DiffsplitterNavigation.open(documentAt: url, using: openWindow)
-            }
-        }
-    }
-}
-
-private struct LegacyExternalDocumentHandler: ViewModifier {
-    func body(content: Content) -> some View {
-        content.onOpenURL { url in
-            let ext = url.pathExtension.lowercased()
-            if ext == "loum" {
-                LoupeMachineNavigation.openLegacy(documentAt: url)
-            } else if ext == "dsplt" || ext == "dspltx" {
-                DiffsplitterNavigation.openLegacy(documentAt: url)
-            }
-        }
-    }
-}
-
 private struct RootContentView: View {
     @ViewBuilder
     var body: some View {
         if #available(macOS 13.0, *) {
-            RootView().modifier(ExternalDocumentHandler())
+            RootView().modifier(ExternalDocumentWindowHandler())
         } else {
-            RootView().modifier(LegacyExternalDocumentHandler())
+            RootView().modifier(ExternalDocumentHandler(
+                openLoupe: { LoupeMachineNavigation.openLegacy(documentAt: $0) },
+                openDiffsplitter: { DiffsplitterNavigation.openLegacy(documentAt: $0) }
+            ))
         }
     }
 }

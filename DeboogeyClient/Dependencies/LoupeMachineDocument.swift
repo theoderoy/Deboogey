@@ -150,15 +150,11 @@ enum LoupeMachineNavigation {
     }
 
     private static func chooseDocument(open: @escaping (URL) -> Void) {
-        let panel = NSOpenPanel()
-        panel.title = L10n.t("Open Loupe Machine Document")
-        panel.allowedContentTypes = [.loupeMachineDocument]
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.begin { response in
-            guard response == .OK, let url = panel.url else { return }
-            open(url)
-        }
+        DocumentOpenPanel.choose(
+            title: L10n.t("Open Loupe Machine Document"),
+            contentTypes: [.loupeMachineDocument],
+            open: open
+        )
     }
 #endif
 }

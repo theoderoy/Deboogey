@@ -12,6 +12,7 @@ enum DebugVariables {
         case release = "Release"
         case `internal` = "Internal"
         case development = "Development"
+        case securityResearchPreview = "Security Research Preview"
 #if DEBOOGEY_MCE
         case marketplaceCandidateEdition = "Marketplace Candidate Edition"
 #endif
@@ -68,5 +69,13 @@ enum DebugVariables {
 #else
         false
 #endif
+    }
+
+    static var isSecurityResearchPreviewBuild: Bool {
+        effectiveVersionType == .securityResearchPreview
+    }
+
+    static var areUpdatesDisabled: Bool {
+        isMarketplaceCandidateEditionBuild || isSecurityResearchPreviewBuild
     }
 }

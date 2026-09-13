@@ -57,26 +57,7 @@ private struct ActionButton: View {
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
         }
-        .ActionButtonStyle(tint: color)
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func ActionButtonStyle(tint color: Color) -> some View {
-        if #available(macOS 26.0, *) {
-            self
-                .buttonStyle(.glassProminent)
-                .buttonBorderShape(.capsule)
-                .controlSize(.large)
-                .tint(color)
-        } else {
-            self
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle)
-                .controlSize(.large)
-                .tint(color)
-        }
+        .deboogeyProminentButtonStyle(tint: color)
     }
 }
 

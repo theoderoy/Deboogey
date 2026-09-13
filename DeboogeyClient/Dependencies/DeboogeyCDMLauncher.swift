@@ -60,24 +60,28 @@ struct DeboogeyCDMLauncher {
             }
         }
         
-        #if DEBOOGEY_MCE
-        let toolPath = Bundle.main.url(forAuxiliaryExecutable: "DeboogeyCDMHelperMCE")?.path
-        #else
-        let toolPath = Bundle.main.path(forResource: "DeboogeyCDMHelper", ofType: nil)
-        #endif
-        guard let toolPath else {
+        let toolPath: String
+        do {
+#if DEBOOGEY_MCE
+            toolPath = try BundleHelperTool.path(
+                resource: nil,
+                auxiliaryExecutable: "DeboogeyCDMHelperMCE",
+                expectedDirectory: "/Contents/MacOS/"
+            )
+#else
+            toolPath = try BundleHelperTool.path(
+                resource: "DeboogeyCDMHelper",
+                expectedDirectory: "/Contents/Resources/"
+            )
+#endif
+        } catch BundleHelperTool.ResolveError.notFound {
             throw DeboogeyCDMLauncherError.toolNotFound
-        }
-        #if DEBOOGEY_MCE
-        let expectedDirectory = "/Contents/MacOS/"
-        #else
-        let expectedDirectory = "/Contents/Resources/"
-        #endif
-        if !toolPath.contains(expectedDirectory) {
-            throw DeboogeyCDMLauncherError.toolOutsideResources(path: toolPath)
-        }
-        if !FileManager.default.isExecutableFile(atPath: toolPath) {
-            throw DeboogeyCDMLauncherError.toolNotExecutable(path: toolPath)
+        } catch BundleHelperTool.ResolveError.outsideExpectedDirectory(let path) {
+            throw DeboogeyCDMLauncherError.toolOutsideResources(path: path)
+        } catch BundleHelperTool.ResolveError.notExecutable(let path) {
+            throw DeboogeyCDMLauncherError.toolNotExecutable(path: path)
+        } catch {
+            throw DeboogeyCDMLauncherError.toolNotFound
         }
 
         let process = Process()

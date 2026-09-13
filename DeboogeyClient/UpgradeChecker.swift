@@ -73,7 +73,7 @@ class UpgradeChecker: ObservableObject {
 
     var isExperimentalBuild: Bool {
         guard let versionType = DebugVariables.effectiveVersionType else { return false }
-        return [.internal, .development].contains(versionType)
+        return [.internal, .development, .securityResearchPreview].contains(versionType)
     }
 
     var isDevelopmentBuild: Bool {
@@ -85,12 +85,12 @@ class UpgradeChecker: ObservableObject {
     }
 
     func requestManualCheck() {
-        guard !DebugVariables.isMarketplaceCandidateEditionBuild else { return }
+        guard !DebugVariables.areUpdatesDisabled else { return }
         manualCheck.send()
     }
     
     func checkForUpdates(force: Bool = false, clearIfNone: Bool = false, completion: ((Bool)->Void)? = nil) {
-        guard !DebugVariables.isMarketplaceCandidateEditionBuild else {
+        guard !DebugVariables.areUpdatesDisabled else {
             completion?(false)
             return
         }
@@ -169,7 +169,7 @@ class UpgradeChecker: ObservableObject {
     }
 
     func proceedWithUpdate() {
-        guard !DebugVariables.isMarketplaceCandidateEditionBuild else { return }
+        guard !DebugVariables.areUpdatesDisabled else { return }
         guard let url = pendingUpdateURL else { return }
         let version = latestVersion
         isUpdating = true

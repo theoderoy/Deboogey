@@ -88,6 +88,7 @@ enum DocumentSaveDispatcher {
     }
 }
 
+@MainActor
 final class DocumentSaveDispatcherBridge: ObservableObject {
     static let shared = DocumentSaveDispatcherBridge()
     private var loupeBag: AnyCancellable?
@@ -549,7 +550,7 @@ struct DiffsplitterView: View {
     private func directoryBrowserRow(_ item: DiffsplitterSession.DirectoryBrowserItem) -> some View {
         HStack(spacing: 10) {
             Circle()
-                .fill(color(for: item.status))
+                .fill(item.status.color)
                 .frame(width: 8, height: 8)
             Image(systemName: item.kind == .folder ? "folder.fill" : "doc")
                 .font(.caption)
@@ -565,7 +566,7 @@ struct DiffsplitterView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Text(title(for: item.status))
+                Text(item.status.title)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -581,7 +582,7 @@ struct DiffsplitterView: View {
         .accessibilityValue(
             item.kind == .folder
                 ? L10n.f("%d changed", item.childCount)
-                : title(for: item.status)
+                : item.status.title
         )
     }
     private func directoryMemberDetail(path: String) -> some View {
@@ -619,7 +620,7 @@ struct DiffsplitterView: View {
                 } label: {
                     ZStack {
                         Circle()
-                            .fill(color(for: status).opacity(count == 0 ? 0.25 : (isActive ? 1 : 0.35)))
+                            .fill(status.color.opacity(count == 0 ? 0.25 : (isActive ? 1 : 0.35)))
                             .frame(width: 12, height: 12)
                         if session.directoryStatusFilters.contains(status) {
                             Circle()
@@ -633,7 +634,7 @@ struct DiffsplitterView: View {
                 .buttonStyle(.plain)
                 .disabled(count == 0)
                 .help(directoryStatusFilterHelp(status, count: count))
-                .accessibilityLabel(title(for: status))
+                .accessibilityLabel(status.title)
                 .accessibilityValue(session.directoryStatusFilters.contains(status) ? L10n.t("On") : L10n.t("Off"))
                 .accessibilityAddTraits(session.directoryStatusFilters.contains(status) ? .isSelected : [])
             }
@@ -652,16 +653,7 @@ struct DiffsplitterView: View {
         _ status: DiffsplitterEngine.DirEntryStatus,
         count: Int
     ) -> String {
-        L10n.f("%@ — %d", title(for: status), count)
-    }
-    private func title(for status: DiffsplitterEngine.DirEntryStatus) -> String {
-        switch status {
-        case .added: return L10n.t("Added")
-        case .removed: return L10n.t("Removed")
-        case .modified: return L10n.t("Modified")
-        case .binary: return L10n.t("Binary")
-        case .identical: return L10n.t("Identical")
-        }
+        L10n.f("%@ — %d", status.title, count)
     }
     private var evenColumns: some View {
         VStack(spacing: 0) {
@@ -758,8 +750,11 @@ struct DiffsplitterView: View {
             .background(binaryDumpHighlight(kind: kind, side: side, hasText: text != nil))
             .textSelection(.enabled)
     }
-    private func binaryDumpHighlight(
-        kind: DiffsplitterBinaryDump.HexRow.Kind,
+    private enum DiffHighlightKind {
+        case equal, delete, insert, replace
+    }
+    private func highlightColor(
+        kind: DiffHighlightKind,
         side: DiffsplitterSession.Side,
         hasText: Bool
     ) -> Color {
@@ -775,6 +770,20 @@ struct DiffsplitterView: View {
             return (side == .left ? Color.orange : Color.blue).opacity(0.16)
         }
     }
+    private func binaryDumpHighlight(
+        kind: DiffsplitterBinaryDump.HexRow.Kind,
+        side: DiffsplitterSession.Side,
+        hasText: Bool
+    ) -> Color {
+        let mapped: DiffHighlightKind
+        switch kind {
+        case .equal: mapped = .equal
+        case .delete: mapped = .delete
+        case .insert: mapped = .insert
+        case .replace: mapped = .replace
+        }
+        return highlightColor(kind: mapped, side: side, hasText: hasText)
+    }
     private var textDiffRows: some View {
         Group {
             if session.rows.isEmpty {
@@ -788,7 +797,8 @@ struct DiffsplitterView: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(session.rows.prefix(session.visibleRowCount))) { row in
+                        ForEach(0..<session.visibleRowCount, id: \.self) { index in
+                            let row = session.rows[index]
                             HStack(alignment: .top, spacing: 0) {
                                 rowView(row, side: .left)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -963,26 +973,14 @@ struct DiffsplitterView: View {
         side: DiffsplitterSession.Side,
         hasText: Bool
     ) -> Color {
-        guard hasText else { return Color.clear }
+        let mapped: DiffHighlightKind
         switch kind {
-        case .equal:
-            return Color.clear
-        case .delete:
-            return side == .left ? Color.red.opacity(0.18) : Color.clear
-        case .insert:
-            return side == .right ? Color.green.opacity(0.18) : Color.clear
-        case .replace:
-            return (side == .left ? Color.orange : Color.blue).opacity(0.16)
+        case .equal: mapped = .equal
+        case .delete: mapped = .delete
+        case .insert: mapped = .insert
+        case .replace: mapped = .replace
         }
-    }
-    private func color(for status: DiffsplitterEngine.DirEntryStatus) -> Color {
-        switch status {
-        case .added: return .green
-        case .removed: return .red
-        case .modified: return .orange
-        case .binary: return .purple
-        case .identical: return .secondary
-        }
+        return highlightColor(kind: mapped, side: side, hasText: hasText)
     }
 }
 
@@ -1110,7 +1108,7 @@ private struct DiffsplitterWindowCoordinator: NSViewRepresentable {
     let saveDraft: (@escaping (Bool) -> Void) -> Void
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeNSView(context: Context) -> NSView {
-        let view = WindowAttachmentView()
+        let view = DocumentWindowAttachmentView()
         view.didMoveToWindowHandler = { [weak coordinator = context.coordinator] window in
             coordinator?.attach(to: window)
         }
@@ -1128,18 +1126,11 @@ private struct DiffsplitterWindowCoordinator: NSViewRepresentable {
         }
     }
     static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
-        (nsView as? WindowAttachmentView)?.didMoveToWindowHandler = nil
+        (nsView as? DocumentWindowAttachmentView)?.didMoveToWindowHandler = nil
         coordinator.removeQuitEventMonitor()
     }
 
-    private final class WindowAttachmentView: NSView {
-        var didMoveToWindowHandler: ((NSWindow?) -> Void)?
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            didMoveToWindowHandler?(window)
-        }
-    }
-
+    @MainActor
     final class Coordinator: NSObject, NSWindowDelegate {
         weak var window: NSWindow?
         var previousDelegate: NSWindowDelegate?
@@ -1176,19 +1167,13 @@ private struct DiffsplitterWindowCoordinator: NSViewRepresentable {
         }
         private func installQuitEventMonitor() {
             guard quitEventMonitor == nil else { return }
-            quitEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
-                [weak self] event in
-                guard let self,
-                      self.hasUnsavedChanges,
-                      self.window?.isKeyWindow == true,
-                      event.charactersIgnoringModifiers?.lowercased() == "q",
-                      event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command
-                else { return event }
-                self.promptToSave(in: self.window) {
-                    NSApp.terminate(nil)
+            quitEventMonitor = DocumentUnsavedChangesPrompt.installQuitMonitor(
+                hasUnsavedChanges: { [weak self] in self?.hasUnsavedChanges == true },
+                isKeyWindow: { [weak self] in self?.window?.isKeyWindow == true },
+                prompt: { [weak self] onDiscardOrSave in
+                    self?.promptToSave(in: self?.window, onDiscardOrSave: onDiscardOrSave)
                 }
-                return nil
-            }
+            )
         }
         fileprivate func removeQuitEventMonitor() {
             guard let quitEventMonitor else { return }
@@ -1196,28 +1181,15 @@ private struct DiffsplitterWindowCoordinator: NSViewRepresentable {
             self.quitEventMonitor = nil
         }
         private func promptToSave(in window: NSWindow?, onDiscardOrSave: @escaping () -> Void) {
-            guard let window, !isPrompting else { return }
-            isPrompting = true
-            let alert = NSAlert()
-            alert.messageText = L10n.t("Save changes to this Diffsplitter document?")
-            alert.informativeText = L10n.t("Your session pair will be lost if you don’t save it.")
-            alert.addButton(withTitle: L10n.t("Save"))
-            alert.addButton(withTitle: L10n.t("Don’t Save"))
-            alert.addButton(withTitle: L10n.t("Cancel"))
-            alert.beginSheetModal(for: window) { [weak self] response in
-                guard let self else { return }
-                self.isPrompting = false
-                switch response {
-                case .alertFirstButtonReturn:
-                    self.saveDraft? { saved in
-                        if saved { onDiscardOrSave() }
-                    }
-                case .alertSecondButtonReturn:
-                    onDiscardOrSave()
-                default:
-                    break
-                }
-            }
+            guard !isPrompting else { return }
+            DocumentUnsavedChangesPrompt.present(
+                in: window,
+                messageText: L10n.t("Save changes to this Diffsplitter document?"),
+                informativeText: L10n.t("Your session pair will be lost if you don’t save it."),
+                setPrompting: { [weak self] value in self?.isPrompting = value },
+                saveDraft: saveDraft,
+                onDiscardOrSave: onDiscardOrSave
+            )
         }
         func windowShouldClose(_ sender: NSWindow) -> Bool {
             if closeApproved { return true }
@@ -1244,6 +1216,12 @@ private struct DiffsplitterWindowCoordinator: NSViewRepresentable {
         }
         func windowDidResignKey(_ notification: Notification) {
             previousDelegate?.windowDidResignKey?(notification)
+        }
+        override func responds(to aSelector: Selector!) -> Bool {
+            super.responds(to: aSelector) || previousDelegate?.responds(to: aSelector) == true
+        }
+        override func forwardingTarget(for aSelector: Selector!) -> Any? {
+            previousDelegate?.responds(to: aSelector) == true ? previousDelegate : super.forwardingTarget(for: aSelector)
         }
     }
 }
@@ -1408,34 +1386,7 @@ struct DiffsplitterEducationView: View {
                 title: L10n.t("Folder Status Dot Priority"),
                 detail: L10n.t("Drag to reorder. Items nearer the top win when a folder contains mixed changes.")
             )
-            List {
-                ForEach(Array(vars.diffsplitterStatusPriority.enumerated()), id: \.element) { index, raw in
-                    HStack(spacing: 10) {
-                        Text("\(index + 1)")
-                            .font(.caption.monospacedDigit())
-                            .foregroundColor(.secondary)
-                            .frame(width: 16, alignment: .trailing)
-                        Circle()
-                            .fill(statusColor(raw))
-                            .frame(width: 10, height: 10)
-                        Text(statusTitle(raw))
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.vertical, 2)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(statusTitle(raw))
-                    .accessibilityValue(L10n.f("Priority %d", index + 1))
-                }
-                .onMove(perform: moveStatusPriority)
-            }
-            .frame(height: CGFloat(vars.diffsplitterStatusPriority.count) * 28)
-            .listStyle(.bordered)
-            .modifier(DiffsplitterEducationPriorityListScrollModifier())
-
-            Button(L10n.t("Reset to Default")) {
-                vars.diffsplitterStatusPriority = PersistentVariables.defaultDiffsplitterStatusPriority
-            }
-            .disabled(vars.diffsplitterStatusPriority == PersistentVariables.defaultDiffsplitterStatusPriority)
+            DiffsplitterStatusPriorityEditor(order: $vars.diffsplitterStatusPriority)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 40)
@@ -1468,31 +1419,7 @@ struct DiffsplitterEducationView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func moveStatusPriority(from source: IndexSet, to destination: Int) {
-        var order = vars.diffsplitterStatusPriority
-        order.move(fromOffsets: source, toOffset: destination)
-        vars.diffsplitterStatusPriority = order
-    }
 
-    private func statusTitle(_ raw: String) -> String {
-        switch DiffsplitterEngine.DirEntryStatus(rawValue: raw) {
-        case .added: return L10n.t("Added")
-        case .removed: return L10n.t("Removed")
-        case .modified: return L10n.t("Modified")
-        case .binary: return L10n.t("Binary")
-        case .identical, .none: return raw
-        }
-    }
-
-    private func statusColor(_ raw: String) -> Color {
-        switch DiffsplitterEngine.DirEntryStatus(rawValue: raw) {
-        case .added: return .green
-        case .removed: return .red
-        case .modified: return .orange
-        case .binary: return .purple
-        case .identical, .none: return .secondary
-        }
-    }
 }
 
 private struct DiffsplitterEducationContinueButton: View {
@@ -1505,35 +1432,7 @@ private struct DiffsplitterEducationContinueButton: View {
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
         }
-        .diffsplitterEducationButtonStyle()
+        .deboogeyProminentButtonStyle()
     }
 }
 
-private struct DiffsplitterEducationPriorityListScrollModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(macOS 13.0, *) {
-            content.scrollDisabled(true)
-        } else {
-            content
-        }
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func diffsplitterEducationButtonStyle() -> some View {
-        if #available(macOS 26.0, *) {
-            self
-                .buttonStyle(.glassProminent)
-                .buttonBorderShape(.capsule)
-                .controlSize(.large)
-                .tint(.accentColor)
-        } else {
-            self
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle)
-                .controlSize(.large)
-                .tint(.accentColor)
-        }
-    }
-}

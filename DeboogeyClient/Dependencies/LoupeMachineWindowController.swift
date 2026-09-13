@@ -17,29 +17,15 @@ final class LoupeMachineWindowController: NSWindowController {
 
     private init(request: LoupeMachineWindowRequest) {
         requestID = request.id
-
-        let content = LoupeMachineView(request: request)
-            .environment(\.locale, L10n.locale)
-        let window = NSWindow(contentViewController: NSHostingController(rootView: content))
-        window.title = L10n.t("Loupe Machine")
-        window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
-        let sizing = AppWindowSizing.loupeMachine
-        window.setContentSize(sizing.defaultSize)
-        window.minSize = window.frameRect(
-            forContentRect: NSRect(origin: .zero, size: sizing.minimumSize)
-        ).size
-        window.isReleasedWhenClosed = false
-        window.center()
-
+        let window = ToolDocumentWindowHosting.makeWindow(
+            title: L10n.t("Loupe Machine"),
+            sizing: AppWindowSizing.loupeMachine,
+            bridgeToolbars: false,
+            rootView: LoupeMachineView(request: request)
+        )
         super.init(window: window)
-        closeObserver = NotificationCenter.default.addObserver(
-            forName: NSWindow.willCloseNotification,
-            object: window,
-            queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.windowDidClose()
-            }
+        closeObserver = ToolDocumentWindowHosting.observeClose(of: window) { [weak self] in
+            self?.windowDidClose()
         }
     }
 

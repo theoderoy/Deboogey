@@ -33,16 +33,9 @@ nonisolated enum ToolCycleFeedback {
     private static func play(named name: String, bundle: Bundle, waitUntilFinished: Bool) {
 #if canImport(AppKit)
         let prepareAndStart: () -> (NSSound, TimeInterval)? = {
-            let soundURL = bundle.url(forResource: name, withExtension: "aif")
-                ?? bundle.url(
-                    forResource: name,
-                    withExtension: "aif",
-                    subdirectory: "Resources"
-                )
-            guard let soundURL, let sound = NSSound(contentsOf: soundURL, byReference: true) else {
+            guard let sound = BundleAIFSound.load(named: name, bundle: bundle, volume: soundVolume) else {
                 return nil
             }
-            sound.volume = soundVolume
             let duration = sound.duration
             sound.play()
             return (sound, duration)

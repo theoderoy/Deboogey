@@ -31,7 +31,6 @@
 "Acknowledgements" = "Remerciements";
 "Actions" = "Actions";
 "Added" = "Ajouté";
-"Added audible feedback for Apple System Tools completions/failures, and made 'Deboogey' window spawning more reliable." = "Ajout d’un retour sonore pour les réussites/échecs des Outils système Apple, et ouverture plus fiable des fenêtres « Deboogey ».";
 "Aligning…" = "Alignement…";
 "All" = "Tout";
 "All Entries" = "Toutes les entrées";
@@ -177,7 +176,6 @@
 "Imported application: %@" = "Application importée : %@";
 "Importing DiffsplitterX Document…" = "Importation du document DiffsplitterX…";
 "Import…" = "Importer…";
-"Improvements" = "Améliorations";
 "Include Hidden Files" = "Inclure les fichiers masqués";
 "Indexing" = "Indexation";
 "Indexing Finished" = "Indexation terminée";
@@ -323,6 +321,7 @@
 "Scope" = "Portée";
 "Search Flags" = "Rechercher des indicateurs";
 "Search paths" = "Rechercher des chemins";
+"Security Research Preview" = "Security Research Preview";
 "Select a flag to inspect its value." = "Sélectionnez un drapeau pour consulter sa valeur.";
 "Select a panel" = "Sélectionnez un panneau";
 "Session Disk Space" = "Espace disque de session";

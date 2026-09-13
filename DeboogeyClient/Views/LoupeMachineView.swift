@@ -57,7 +57,6 @@ final class LoupeMachineCommandRouter: ObservableObject {
 }
 #endif
 
-@MainActor
 private final class LoupeFlagStore: ObservableObject {
     @Published private(set) var names: [String] = []
     private(set) var revision = 0
@@ -106,7 +105,6 @@ private final class LoupeFlagStore: ObservableObject {
     }
 }
 
-@MainActor
 private final class LoupeDraftStore: ObservableObject {
     @Published private(set) var dirtyIDs: Set<String> = []
     private var values: [String: String] = [:]
@@ -194,7 +192,7 @@ struct LoupeMachineView: View {
     @State private var selectedProgramURL: URL?
     @State private var sourceApplicationDisplayName: String?
     @State private var importError: String?
-    @State private var flagStore = LoupeFlagStore()
+    @StateObject private var flagStore = LoupeFlagStore()
     @StateObject private var draftStore = LoupeDraftStore()
     @State private var hasFlags = false
     @State private var selectedFlagID: String?
@@ -1366,6 +1364,9 @@ private struct LoupeFlagSidebar: View {
 
     var body: some View {
 #if os(iOS)
+        let rowNames = names
+        let dirtyIDs = drafts.dirtyIDs
+        let countLabel = itemCountLabel
         List {
             Section {
                 Picker(L10n.t("Flag category"), selection: $category) {
@@ -1379,11 +1380,11 @@ private struct LoupeFlagSidebar: View {
                 .labelsHidden()
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
 
-                if names.isEmpty {
+                if rowNames.isEmpty {
                     emptyFlagList
                         .listRowBackground(Color.clear)
                 } else {
-                    ForEach(names, id: \.self) { name in
+                    ForEach(rowNames, id: \.self) { name in
                         Button {
                             selection = name
                         } label: {
@@ -1394,7 +1395,7 @@ private struct LoupeFlagSidebar: View {
                                     .lineLimit(1)
                                     .truncationMode(.middle)
                                 Spacer(minLength: 8)
-                                if drafts.dirtyIDs.contains(name) {
+                                if dirtyIDs.contains(name) {
                                     Image(systemName: "exclamationmark.circle.fill")
                                         .foregroundStyle(.red)
                                         .accessibilityLabel(L10n.t("Pending change"))
@@ -1409,7 +1410,7 @@ private struct LoupeFlagSidebar: View {
                     }
                 }
             } footer: {
-                Text(itemCountLabel)
+                Text(countLabel)
             }
         }
         .listStyle(.insetGrouped)
@@ -1781,7 +1782,7 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeNSView(context: Context) -> NSView {
-        let view = WindowAttachmentView()
+        let view = DocumentWindowAttachmentView()
         view.didMoveToWindowHandler = { [weak coordinator = context.coordinator] window in
             coordinator?.attach(to: window)
         }
@@ -1806,20 +1807,12 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
     }
 
     static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
-        (nsView as? WindowAttachmentView)?.didMoveToWindowHandler = nil
+        (nsView as? DocumentWindowAttachmentView)?.didMoveToWindowHandler = nil
         coordinator.removeQuitEventMonitor()
         coordinator.removeApplicationAccessory()
     }
 
-    private final class WindowAttachmentView: NSView {
-        var didMoveToWindowHandler: ((NSWindow?) -> Void)?
-
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            didMoveToWindowHandler?(window)
-        }
-    }
-
+    @MainActor
     final class Coordinator: NSObject, NSWindowDelegate {
         weak var window: NSWindow?
         var previousDelegate: NSWindowDelegate?
@@ -1935,20 +1928,13 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
 
         private func installQuitEventMonitor() {
             guard quitEventMonitor == nil else { return }
-            quitEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
-                [weak self] event in
-                guard let self,
-                      self.hasUnappliedChanges,
-                      self.window?.isKeyWindow == true,
-                      event.charactersIgnoringModifiers?.lowercased() == "q",
-                      event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command
-                else { return event }
-
-                self.promptToSave(in: self.window) {
-                    NSApp.terminate(nil)
+            quitEventMonitor = DocumentUnsavedChangesPrompt.installQuitMonitor(
+                hasUnsavedChanges: { [weak self] in self?.hasUnappliedChanges == true },
+                isKeyWindow: { [weak self] in self?.window?.isKeyWindow == true },
+                prompt: { [weak self] onDiscardOrSave in
+                    self?.promptToSave(in: self?.window, onDiscardOrSave: onDiscardOrSave)
                 }
-                return nil
-            }
+            )
         }
 
         fileprivate func removeQuitEventMonitor() {
@@ -1958,29 +1944,15 @@ private struct LoupeWindowCloseCoordinator: NSViewRepresentable {
         }
 
         private func promptToSave(in window: NSWindow?, onDiscardOrSave: @escaping () -> Void) {
-            guard let window, !isPrompting else { return }
-            isPrompting = true
-
-            let alert = NSAlert()
-            alert.messageText = L10n.t("Save changes to this Loupe Machine document?")
-            alert.informativeText = L10n.t("Your unapplied drafted value changes will be lost if you don’t save them.")
-            alert.addButton(withTitle: L10n.t("Save"))
-            alert.addButton(withTitle: L10n.t("Don’t Save"))
-            alert.addButton(withTitle: L10n.t("Cancel"))
-            alert.beginSheetModal(for: window) { [weak self] response in
-                guard let self else { return }
-                self.isPrompting = false
-                switch response {
-                case .alertFirstButtonReturn:
-                    self.saveDraft? { saved in
-                        if saved { onDiscardOrSave() }
-                    }
-                case .alertSecondButtonReturn:
-                    onDiscardOrSave()
-                default:
-                    break
-                }
-            }
+            guard !isPrompting else { return }
+            DocumentUnsavedChangesPrompt.present(
+                in: window,
+                messageText: L10n.t("Save changes to this Loupe Machine document?"),
+                informativeText: L10n.t("Your unapplied drafted value changes will be lost if you don’t save them."),
+                setPrompting: { [weak self] value in self?.isPrompting = value },
+                saveDraft: saveDraft,
+                onDiscardOrSave: onDiscardOrSave
+            )
         }
 
         func windowShouldClose(_ sender: NSWindow) -> Bool {

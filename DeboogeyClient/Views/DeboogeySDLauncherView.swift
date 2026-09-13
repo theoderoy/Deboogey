@@ -69,34 +69,12 @@ struct DeboogeySDLauncherView: View {
         VStack(spacing: 0) {
         ScrollView {
             VStack(spacing: 24) {
-                VStack(spacing: 0) {
-                    Group {
-                        if EducationPlayerView.hasAsset(named: "DEBOOGEY_EDUCATION-DEBOOGEYSD_h265") {
-                            EducationPlayerView(assetName: "DEBOOGEY_EDUCATION-DEBOOGEYSD_h265")
-                        } else {
-                            Rectangle()
-                                .fill(Color.secondary.opacity(0.1))
-                                .overlay(
-                                    VStack(spacing: 12) {
-                                        Image(systemName: "macwindow").font(.system(size: 48, weight: .thin))
-                                        Text(L10n.t("SkyLight Diagnostics")).font(.headline)
-                                    }.foregroundColor(.secondary)
-                                )
-                        }
-                    }
-                    .aspectRatio(16.0/9.0, contentMode: .fill)
-                    .frame(maxWidth: .infinity)
-                    .clipped()
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-
-                    Text(L10n.t("Take a look at the system's internal diagnostics, such as the refresh rate, collision boxes, screen activity and more."))
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 16)
-                        .padding(.horizontal, 32)
-                }
+                HelperEducationHeader(
+                    assetName: "DEBOOGEY_EDUCATION-DEBOOGEYSD_h265",
+                    fallbackSymbol: "macwindow",
+                    fallbackTitle: "SkyLight Diagnostics",
+                    blurb: "Take a look at the system's internal diagnostics, such as the refresh rate, collision boxes, screen activity and more."
+                )
 
                 VStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 12) {

@@ -88,92 +88,29 @@ private struct MCEAboutCommands: Commands {
 }
 
 private struct MCELegacyCommands: Commands {
-    @ObservedObject private var saveBridge = DocumentSaveDispatcherBridge.shared
-
     var body: some Commands {
-        CommandGroup(replacing: .newItem) {
-            Button(L10n.t("New Window")) {
-                MCEWindowController.open(.main)
-            }
-            .keyboardShortcut("n", modifiers: [.command, .shift])
-
-            Button(L10n.t("New Loupe Machine Document")) {
-                LoupeMachineNavigation.openLegacy(documentAt: nil)
-            }
-            .keyboardShortcut("n", modifiers: .command)
-
-            Button(L10n.t("Open Loupe Machine Document…")) {
-                LoupeMachineNavigation.chooseDocumentLegacy()
-            }
-            .keyboardShortcut("o", modifiers: .command)
-
-            Button(L10n.t("New Diffsplitter Document")) {
-                DiffsplitterNavigation.openLegacy(documentAt: nil)
-            }
-
-            Button(L10n.t("Open Diffsplitter Document…")) {
-                DiffsplitterNavigation.chooseDocumentLegacy()
-            }
-
-            Divider()
-
-            Button(L10n.t("Save")) { DocumentSaveDispatcher.save(saveAs: false) }
-                .keyboardShortcut("s", modifiers: .command)
-                .disabled(!saveBridge.canSave)
-            Button(L10n.t("Save As…")) { DocumentSaveDispatcher.save(saveAs: true) }
-                .keyboardShortcut("s", modifiers: [.command, .shift])
-                .disabled(!saveBridge.canSave)
-            Button(L10n.t("Export DiffsplitterX Document…")) {
-                DocumentSaveDispatcher.exportDiffsplitterX()
-            }
-            .disabled(!saveBridge.canExportDiffsplitterX)
-        }
+        DocumentToolCommandSet(
+            createLoupeDocument: { LoupeMachineNavigation.openLegacy(documentAt: nil) },
+            openLoupeDocument: LoupeMachineNavigation.chooseDocumentLegacy,
+            createDiffsplitterDocument: { DiffsplitterNavigation.openLegacy(documentAt: nil) },
+            openDiffsplitterDocument: DiffsplitterNavigation.chooseDocumentLegacy,
+            openMain: { MCEWindowController.open(.main) }
+        )
     }
 }
 
 @available(macOS 13.0, *)
 private struct MCELoupeCommands: Commands {
     @Environment(\.openWindow) private var openWindow
-    @ObservedObject private var saveBridge = DocumentSaveDispatcherBridge.shared
 
     var body: some Commands {
-        CommandGroup(replacing: .newItem) {
-            Button(L10n.t("New Window")) {
-                MCEWindowController.open(.main)
-            }
-            .keyboardShortcut("n", modifiers: [.command, .shift])
-
-            Button(L10n.t("New Loupe Machine Document")) {
-                LoupeMachineNavigation.open(documentAt: nil, using: openWindow)
-            }
-            .keyboardShortcut("n", modifiers: .command)
-
-            Button(L10n.t("Open Loupe Machine Document…")) {
-                LoupeMachineNavigation.chooseDocument(using: openWindow)
-            }
-            .keyboardShortcut("o", modifiers: .command)
-
-            Button(L10n.t("New Diffsplitter Document")) {
-                DiffsplitterNavigation.open(documentAt: nil, using: openWindow)
-            }
-
-            Button(L10n.t("Open Diffsplitter Document…")) {
-                DiffsplitterNavigation.chooseDocument(using: openWindow)
-            }
-
-            Divider()
-
-            Button(L10n.t("Save")) { DocumentSaveDispatcher.save(saveAs: false) }
-                .keyboardShortcut("s", modifiers: .command)
-                .disabled(!saveBridge.canSave)
-            Button(L10n.t("Save As…")) { DocumentSaveDispatcher.save(saveAs: true) }
-                .keyboardShortcut("s", modifiers: [.command, .shift])
-                .disabled(!saveBridge.canSave)
-            Button(L10n.t("Export DiffsplitterX Document…")) {
-                DocumentSaveDispatcher.exportDiffsplitterX()
-            }
-            .disabled(!saveBridge.canExportDiffsplitterX)
-        }
+        DocumentToolCommandSet(
+            createLoupeDocument: { LoupeMachineNavigation.open(documentAt: nil, using: openWindow) },
+            openLoupeDocument: { LoupeMachineNavigation.chooseDocument(using: openWindow) },
+            createDiffsplitterDocument: { DiffsplitterNavigation.open(documentAt: nil, using: openWindow) },
+            openDiffsplitterDocument: { DiffsplitterNavigation.chooseDocument(using: openWindow) },
+            openMain: { MCEWindowController.open(.main) }
+        )
     }
 }
 
@@ -268,42 +205,16 @@ private struct MCEConfigurationModern: Scene {
     }
 }
 
-@available(macOS 13.0, *)
-private struct MCEExternalDocumentHandler: ViewModifier {
-    @Environment(\.openWindow) private var openWindow
-
-    func body(content: Content) -> some View {
-        content.onOpenURL { url in
-            let ext = url.pathExtension.lowercased()
-            if ext == "loum" {
-                LoupeMachineNavigation.open(documentAt: url, using: openWindow)
-            } else if ext == "dsplt" || ext == "dspltx" {
-                DiffsplitterNavigation.open(documentAt: url, using: openWindow)
-            }
-        }
-    }
-}
-
-private struct MCELegacyExternalDocumentHandler: ViewModifier {
-    func body(content: Content) -> some View {
-        content.onOpenURL { url in
-            let ext = url.pathExtension.lowercased()
-            if ext == "loum" {
-                LoupeMachineNavigation.openLegacy(documentAt: url)
-            } else if ext == "dsplt" || ext == "dspltx" {
-                DiffsplitterNavigation.openLegacy(documentAt: url)
-            }
-        }
-    }
-}
-
 private struct MCERootContentView: View {
     @ViewBuilder
     var body: some View {
         if #available(macOS 13.0, *) {
-            RootView().modifier(MCEExternalDocumentHandler())
+            RootView().modifier(ExternalDocumentWindowHandler())
         } else {
-            RootView().modifier(MCELegacyExternalDocumentHandler())
+            RootView().modifier(ExternalDocumentHandler(
+                openLoupe: { LoupeMachineNavigation.openLegacy(documentAt: $0) },
+                openDiffsplitter: { DiffsplitterNavigation.openLegacy(documentAt: $0) }
+            ))
         }
     }
 }
@@ -353,7 +264,6 @@ struct DeboogeyClientMCE: App {
 
 enum MCEIOSRoute: Hashable {
     case loupe(LoupeMachineWindowRequest)
-    case settings
 }
 
 @main
@@ -373,8 +283,6 @@ struct DeboogeyClientMCE: App {
                         switch route {
                         case .loupe(let request):
                             LoupeMachineView(request: request)
-                        case .settings:
-                            ConfigurationRootView()
                         }
                     }
             }

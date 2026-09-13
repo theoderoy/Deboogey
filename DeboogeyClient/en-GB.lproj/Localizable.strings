@@ -31,7 +31,6 @@
 "Acknowledgements" = "Acknowledgements";
 "Actions" = "Actions";
 "Added" = "Added";
-"Added audible feedback for Apple System Tools completions/failures, and made 'Deboogey' window spawning more reliable." = "Added audible feedback for Apple System Tools completions/failures, and made 'Deboogey' window spawning more reliable.";
 "Aligning…" = "Aligning…";
 "All" = "All";
 "All Entries" = "All Entries";
@@ -177,7 +176,6 @@
 "Imported application: %@" = "Imported application: %@";
 "Importing DiffsplitterX Document…" = "Importing DiffsplitterX Document…";
 "Import…" = "Import…";
-"Improvements" = "Improvements";
 "Include Hidden Files" = "Include Hidden Files";
 "Indexing" = "Indexing";
 "Indexing Finished" = "Indexing Finished";
@@ -323,6 +321,7 @@
 "Scope" = "Scope";
 "Search Flags" = "Search Flags";
 "Search paths" = "Search paths";
+"Security Research Preview" = "Security Research Preview";
 "Select a flag to inspect its value." = "Select a flag to inspect its value.";
 "Select a panel" = "Select a panel";
 "Session Disk Space" = "Session Disk Space";

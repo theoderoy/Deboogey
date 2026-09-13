@@ -324,6 +324,14 @@ nonisolated enum DiffsplitterZip {
         if entries.count > maxEntries { throw ZipError.tooLarge }
         return entries
     }
+    private static func entry(named memberPath: String, in archive: URL) throws -> Entry {
+        let entries = try listEntries(archive: archive)
+        guard let entry = entries.first(where: { $0.name == memberPath })
+            ?? entries.first(where: { $0.name.hasSuffix("/" + memberPath) }) else {
+            throw ZipError.memberNotFound
+        }
+        return entry
+    }
     static func extractMember(
         archive: URL,
         memberPath: String,
@@ -331,11 +339,7 @@ nonisolated enum DiffsplitterZip {
         expectedBytes: Int? = nil,
         progress: DiffsplitterContent.MaterializeProgress? = nil
     ) throws {
-        let entries = try listEntries(archive: archive)
-        guard let entry = entries.first(where: { $0.name == memberPath })
-            ?? entries.first(where: { $0.name.hasSuffix("/" + memberPath) }) else {
-            throw ZipError.memberNotFound
-        }
+        let entry = try entry(named: memberPath, in: archive)
         try extract(entry: entry, archive: archive, to: destination, expectedBytes: expectedBytes, progress: progress)
     }
     static func extractMemberToMemory(
@@ -344,11 +348,7 @@ nonisolated enum DiffsplitterZip {
         expectedBytes: Int? = nil,
         progress: DiffsplitterContent.MaterializeProgress? = nil
     ) throws -> Data {
-        let entries = try listEntries(archive: archive)
-        guard let entry = entries.first(where: { $0.name == memberPath })
-            ?? entries.first(where: { $0.name.hasSuffix("/" + memberPath) }) else {
-            throw ZipError.memberNotFound
-        }
+        let entry = try entry(named: memberPath, in: archive)
         return try extractToMemory(
             entry: entry,
             archive: archive,
@@ -1574,6 +1574,19 @@ nonisolated enum DiffsplitterBinaryDump {
         return String(format: "%08llx  %@  |%@|", offset, paddedHex, ascii)
     }
 }
+nonisolated enum DiffsplitterBinaryHeuristic {
+    static let sampleLimit = 8_192
+
+    static func looksBinary(_ data: Data) -> Bool {
+        let sample = data.prefix(sampleLimit)
+        guard !sample.isEmpty else { return false }
+        if sample.contains(0) { return true }
+        let nonPrintable = sample.reduce(into: 0) { count, byte in
+            if byte < 9 || (byte > 13 && byte < 32) { count += 1 }
+        }
+        return Double(nonPrintable) / Double(sample.count) > 0.30
+    }
+}
 nonisolated enum DiffsplitterContent {
     typealias MaterializeProgress = @Sendable (_ completed: Int, _ expected: Int?) -> Void
     static let hexEncodingName = "Hex"
@@ -1591,8 +1604,101 @@ nonisolated enum DiffsplitterContent {
         return try prefersHexDump(resolvedURL: resolved)
     }
     static func prefersHexDump(resolvedURL: URL) throws -> Bool {
-        try prefersHexDump(at: resolvedURL)
+        try presentation(resolvedURL: resolvedURL).prefersHexDump
     }
+
+    struct Presentation: Equatable {
+        let prefersHexDump: Bool
+        let content: DiffsplitterEngine.TextContent
+    }
+
+    static func presentation(resolvedURL: URL) throws -> Presentation {
+        if DiffsplitterAEA.isAEAExtension(of: resolvedURL) {
+            if let lines = try? DiffsplitterAEA.summarize(at: resolvedURL), !lines.isEmpty {
+                return Presentation(
+                    prefersHexDump: false,
+                    content: DiffsplitterEngine.TextContent(lines: lines, encodingName: "AEA")
+                )
+            }
+        } else if DiffsplitterAEA.looksLikeFile(at: resolvedURL) {
+            if let lines = try? DiffsplitterAEA.summarize(at: resolvedURL), !lines.isEmpty {
+                return Presentation(
+                    prefersHexDump: false,
+                    content: DiffsplitterEngine.TextContent(lines: lines, encodingName: "AEA")
+                )
+            }
+        }
+        if DiffsplitterImage4.isImage4Extension(of: resolvedURL) {
+            let data = try Data(contentsOf: resolvedURL, options: [.mappedIfSafe])
+            if let lines = try? DiffsplitterImage4.summarize(data), !lines.isEmpty {
+                return Presentation(
+                    prefersHexDump: false,
+                    content: DiffsplitterEngine.TextContent(lines: lines, encodingName: "Image4")
+                )
+            }
+            return try presentation(data: data, displayURL: resolvedURL)
+        }
+
+        let fileSize = (try? resolvedURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        if fileSize > DiffsplitterBinaryHeuristic.sampleLimit {
+            let head = try readHead(at: resolvedURL, maxLength: DiffsplitterBinaryHeuristic.sampleLimit)
+            if DiffsplitterAEA.looksLike(head) {
+                if let lines = try? DiffsplitterAEA.summarize(at: resolvedURL), !lines.isEmpty {
+                    return Presentation(
+                        prefersHexDump: false,
+                        content: DiffsplitterEngine.TextContent(lines: lines, encodingName: "AEA")
+                    )
+                }
+            }
+            if DiffsplitterImage4.looksLike(head) {
+                let data = try Data(contentsOf: resolvedURL, options: [.mappedIfSafe])
+                if let lines = try? DiffsplitterImage4.summarize(data), !lines.isEmpty {
+                    return Presentation(
+                        prefersHexDump: false,
+                        content: DiffsplitterEngine.TextContent(lines: lines, encodingName: "Image4")
+                    )
+                }
+                return try presentation(data: data, displayURL: resolvedURL)
+            }
+            let isPlistHead = head.starts(with: Data("bplist".utf8))
+                || head.starts(with: Data("<?xml".utf8))
+                || head.starts(with: Data("<plist".utf8))
+            if isPlistHead {
+                let data = try Data(contentsOf: resolvedURL, options: [.mappedIfSafe])
+                return try presentation(data: data, displayURL: resolvedURL)
+            }
+            if DiffsplitterBinaryHeuristic.looksBinary(head) {
+                return Presentation(
+                    prefersHexDump: true,
+                    content: DiffsplitterEngine.TextContent(
+                        lines: [
+                            "format: hex",
+                            "size: \(fileSize)"
+                        ],
+                        encodingName: hexEncodingName
+                    )
+                )
+            }
+        }
+
+        let data = try Data(contentsOf: resolvedURL, options: [.mappedIfSafe])
+        return try presentation(data: data, displayURL: resolvedURL)
+    }
+
+    private static func readHead(at url: URL, maxLength: Int) throws -> Data {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        return try handle.read(upToCount: maxLength) ?? Data()
+    }
+
+    private static func presentation(data: Data, displayURL: URL) throws -> Presentation {
+        let content = try decode(data: data, displayURL: displayURL)
+        return Presentation(
+            prefersHexDump: content.encodingName == hexEncodingName,
+            content: content
+        )
+    }
+
     static func decode(
         url: URL?,
         session: DiffsplitterContainerSession?,
@@ -1606,19 +1712,7 @@ nonisolated enum DiffsplitterContent {
             session: session,
             progress: progress
         )
-        if DiffsplitterAEA.isAEAExtension(of: resolved) || DiffsplitterAEA.looksLikeFile(at: resolved) {
-            if let lines = try? DiffsplitterAEA.summarize(at: resolved), !lines.isEmpty {
-                return DiffsplitterEngine.TextContent(lines: lines, encodingName: "AEA")
-            }
-        }
-        if DiffsplitterImage4.isImage4Extension(of: resolved) {
-            let data = try Data(contentsOf: resolved, options: [.mappedIfSafe])
-            if let lines = try? DiffsplitterImage4.summarize(data), !lines.isEmpty {
-                return DiffsplitterEngine.TextContent(lines: lines, encodingName: "Image4")
-            }
-        }
-        let data = try Data(contentsOf: resolved, options: [.mappedIfSafe])
-        return try decode(data: data, displayURL: resolved)
+        return try presentation(resolvedURL: resolved).content
     }
     static func decode(data: Data, displayURL: URL) throws -> DiffsplitterEngine.TextContent {
         if DiffsplitterAEA.looksLike(data) || DiffsplitterAEA.isAEAExtension(of: displayURL) {
@@ -1634,7 +1728,7 @@ nonisolated enum DiffsplitterContent {
         if let plistLines = plistXMLLines(from: data) {
             return DiffsplitterEngine.TextContent(lines: plistLines, encodingName: "Property List")
         }
-        if !looksBinary(data) {
+        if !DiffsplitterBinaryHeuristic.looksBinary(data) {
             if let string = String(data: data, encoding: .utf8) {
                 return DiffsplitterEngine.TextContent(lines: splitLines(string), encodingName: "UTF-8")
             }
@@ -1672,39 +1766,6 @@ nonisolated enum DiffsplitterContent {
         )
         return lines
     }
-    private static func prefersHexDump(at resolved: URL) throws -> Bool {
-        if DiffsplitterAEA.isAEAExtension(of: resolved) || DiffsplitterAEA.looksLikeFile(at: resolved) {
-            if let lines = try? DiffsplitterAEA.summarize(at: resolved), !lines.isEmpty {
-                return false
-            }
-        }
-        if DiffsplitterImage4.isImage4Extension(of: resolved) {
-            let data = try Data(contentsOf: resolved, options: [.mappedIfSafe])
-            if let lines = try? DiffsplitterImage4.summarize(data), !lines.isEmpty {
-                return false
-            }
-        }
-        let data = try Data(contentsOf: resolved, options: [.mappedIfSafe])
-        if DiffsplitterAEA.looksLike(data) {
-            if let lines = try? DiffsplitterAEA.summarize(data), !lines.isEmpty {
-                return false
-            }
-        }
-        if DiffsplitterImage4.looksLike(data) {
-            if let lines = try? DiffsplitterImage4.summarize(data), !lines.isEmpty {
-                return false
-            }
-        }
-        if plistXMLLines(from: data) != nil {
-            return false
-        }
-        if !looksBinary(data) {
-            if String(data: data, encoding: .utf8) != nil { return false }
-            if String(data: data, encoding: .utf16) != nil { return false }
-            if String(data: data, encoding: .isoLatin1) != nil { return false }
-        }
-        return true
-    }
     private static func plistXMLLines(from data: Data) -> [String]? {
         guard !data.isEmpty else { return nil }
         let isBinary = data.starts(with: Data("bplist".utf8))
@@ -1722,15 +1783,6 @@ nonisolated enum DiffsplitterContent {
         } catch {
             return nil
         }
-    }
-    private static func looksBinary(_ data: Data) -> Bool {
-        if data.contains(0) { return true }
-        let sample = data.prefix(8_192)
-        guard !sample.isEmpty else { return false }
-        let nonPrintable = sample.reduce(into: 0) { count, byte in
-            if byte < 9 || (byte > 13 && byte < 32) { count += 1 }
-        }
-        return Double(nonPrintable) / Double(sample.count) > 0.30
     }
     private static func splitLines(_ string: String) -> [String] {
         if string.isEmpty { return [] }
@@ -2720,6 +2772,34 @@ nonisolated enum DiffsplitterEngine {
         case modified
         case identical
         case binary
+
+        var title: String {
+            switch self {
+            case .added: return L10n.t("Added")
+            case .removed: return L10n.t("Removed")
+            case .modified: return L10n.t("Modified")
+            case .binary: return L10n.t("Binary")
+            case .identical: return L10n.t("Identical")
+            }
+        }
+
+        var color: Color {
+            switch self {
+            case .added: return .green
+            case .removed: return .red
+            case .modified: return .orange
+            case .binary: return .purple
+            case .identical: return .secondary
+            }
+        }
+
+        static func title(forRawValue raw: String) -> String {
+            Self(rawValue: raw)?.title ?? raw
+        }
+
+        static func color(forRawValue raw: String) -> Color {
+            Self(rawValue: raw)?.color ?? .secondary
+        }
     }
 
     static let defaultStatusPriority: [DirEntryStatus] = [
@@ -3303,21 +3383,21 @@ nonisolated enum DiffsplitterEngine {
         var trace: [[Int]] = []
         trace.reserveCapacity(maxD + 1)
         var foundD: Int?
+        var working = Array(repeating: 0, count: 2 * maxD + 1)
         outer: for d in 0...maxD {
             try Task.checkCancellation()
             onDepth?(d, maxD)
-            var v = Array(repeating: 0, count: 2 * d + 1)
             for k in stride(from: -d, through: d, by: 2) {
                 let x: Int
                 if d == 0 {
                     x = 0
                 } else {
                     let prev = trace[d - 1]
-                    let down = k == -d || (k != d && prev[(k - 1) + (d - 1)] < prev[(k + 1) + (d - 1)])
+                    let down = k == -d || (k != d && prev[(k - 1) + maxD] < prev[(k + 1) + maxD])
                     if down {
-                        x = prev[(k + 1) + (d - 1)]
+                        x = prev[(k + 1) + maxD]
                     } else {
-                        x = prev[(k - 1) + (d - 1)] + 1
+                        x = prev[(k - 1) + maxD] + 1
                     }
                 }
                 var xx = x
@@ -3326,14 +3406,14 @@ nonisolated enum DiffsplitterEngine {
                     xx += 1
                     y += 1
                 }
-                v[k + d] = xx
+                working[k + maxD] = xx
                 if xx >= n, y >= m {
-                    trace.append(v)
+                    trace.append(Array(working))
                     foundD = d
                     break outer
                 }
             }
-            trace.append(v)
+            trace.append(Array(working))
         }
         guard let finalD = foundD else {
             return .tooDifferent
@@ -3351,9 +3431,9 @@ nonisolated enum DiffsplitterEngine {
                 prevY = 0
             } else {
                 let prev = trace[d - 1]
-                let down = k == -d || (k != d && prev[(k - 1) + (d - 1)] < prev[(k + 1) + (d - 1)])
+                let down = k == -d || (k != d && prev[(k - 1) + maxD] < prev[(k + 1) + maxD])
                 let prevK = down ? k + 1 : k - 1
-                prevX = prev[prevK + (d - 1)]
+                prevX = prev[prevK + maxD]
                 prevY = prevX - prevK
             }
             while x > prevX, y > prevY {
@@ -3385,15 +3465,6 @@ nonisolated enum DiffsplitterEngine {
         line
             .split(whereSeparator: \.isWhitespace)
             .joined(separator: " ")
-    }
-    private static func looksBinarySample(_ data: Data) -> Bool {
-        if data.contains(0) { return true }
-        let sample = data.prefix(8_192)
-        guard !sample.isEmpty else { return false }
-        let nonPrintable = sample.reduce(into: 0) { count, byte in
-            if byte < 9 || (byte > 13 && byte < 32) { count += 1 }
-        }
-        return Double(nonPrintable) / Double(sample.count) > 0.30
     }
     private static func fileStatus(left: URL, right: URL) throws -> DirEntryStatus {
         if let leftZip = DiffsplitterContainer.zipStubMetadata(at: left),
@@ -3456,7 +3527,7 @@ nonisolated enum DiffsplitterEngine {
         let rightFP = try fingerprint(at: right, size: rightSize)
         if leftFP == rightFP { return .identical }
         let head = try readChunk(at: left, offset: 0, maxLength: min(8_192, leftSize))
-        if looksBinarySample(head) { return .binary }
+        if DiffsplitterBinaryHeuristic.looksBinary(head) { return .binary }
         return .modified
     }
     private static func fileSize(at url: URL) throws -> Int {
@@ -3839,15 +3910,11 @@ enum DiffsplitterNavigation {
         chooseDocument { url in open(documentAt: url, using: openWindow) }
     }
     private static func chooseDocument(open: @escaping (URL) -> Void) {
-        let panel = NSOpenPanel()
-        panel.title = L10n.t("Open Diffsplitter Document")
-        panel.allowedContentTypes = [.diffsplitterDocument, .diffsplitterXDocument]
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.begin { response in
-            guard response == .OK, let url = panel.url else { return }
-            open(url)
-        }
+        DocumentOpenPanel.choose(
+            title: L10n.t("Open Diffsplitter Document"),
+            contentTypes: [.diffsplitterDocument, .diffsplitterXDocument],
+            open: open
+        )
     }
 }
 
@@ -4081,40 +4148,15 @@ final class DiffsplitterWindowController: NSWindowController {
     private var closeObserver: NSObjectProtocol?
     private init(request: DiffsplitterWindowRequest) {
         requestID = request.id
-        let root = DiffsplitterView(request: request)
-            .environment(\.locale, L10n.locale)
-        let sizing = AppWindowSizing.diffsplitter
-        let window: NSWindow
-        if #available(macOS 14.0, *) {
-            let hostingView = NSHostingView(rootView: root)
-            hostingView.sceneBridgingOptions = [.toolbars]
-            window = NSWindow(
-                contentRect: NSRect(origin: .zero, size: sizing.defaultSize),
-                styleMask: [.titled, .closable, .miniaturizable, .resizable],
-                backing: .buffered,
-                defer: false
-            )
-            window.contentView = hostingView
-        } else {
-            window = NSWindow(contentViewController: NSHostingController(rootView: root))
-            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
-            window.setContentSize(sizing.defaultSize)
-        }
-        window.title = L10n.t("Diffsplitter")
-        window.minSize = window.frameRect(
-            forContentRect: NSRect(origin: .zero, size: sizing.minimumSize)
-        ).size
-        window.isReleasedWhenClosed = false
-        window.center()
+        let window = ToolDocumentWindowHosting.makeWindow(
+            title: L10n.t("Diffsplitter"),
+            sizing: AppWindowSizing.diffsplitter,
+            bridgeToolbars: true,
+            rootView: DiffsplitterView(request: request)
+        )
         super.init(window: window)
-        closeObserver = NotificationCenter.default.addObserver(
-            forName: NSWindow.willCloseNotification,
-            object: window,
-            queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.windowDidClose()
-            }
+        closeObserver = ToolDocumentWindowHosting.observeClose(of: window) { [weak self] in
+            self?.windowDidClose()
         }
     }
     required init?(coder: NSCoder) {
@@ -4675,14 +4717,18 @@ final class DiffsplitterSession: ObservableObject {
                         status: L10n.t("Loading…"),
                         force: true
                     )
-                    let leftPrefersHex = try DiffsplitterContent.prefersHexDump(url: leftURL, session: nil)
+                    let leftPresentation = try DiffsplitterContent.presentation(
+                        resolvedURL: try DiffsplitterContainer.resolvedFileURL(for: leftURL, session: nil)
+                    )
                     progressPublish.publish(
                         fractionCompleted: 0.06,
                         status: L10n.t("Loading…"),
                         force: true
                     )
-                    let rightPrefersHex = try DiffsplitterContent.prefersHexDump(url: rightURL, session: nil)
-                    if leftPrefersHex || rightPrefersHex {
+                    let rightPresentation = try DiffsplitterContent.presentation(
+                        resolvedURL: try DiffsplitterContainer.resolvedFileURL(for: rightURL, session: nil)
+                    )
+                    if leftPresentation.prefersHexDump || rightPresentation.prefersHexDump {
                         progressPublish.publish(
                             fractionCompleted: 0.2,
                             status: L10n.t("Loading window…"),
@@ -4709,21 +4755,14 @@ final class DiffsplitterSession: ObservableObject {
                             binaryDump: dump
                         ))
                     } else {
-                        let leftText = try DiffsplitterEngine.readText(from: leftURL)
-                        progressPublish.publish(
-                            fractionCompleted: 0.08,
-                            status: L10n.t("Loading…"),
-                            force: true
-                        )
-                        let rightText = try DiffsplitterEngine.readText(from: rightURL)
                         progressPublish.publish(
                             fractionCompleted: 0.15,
                             status: L10n.t("Aligning…"),
                             force: true
                         )
                         let aligned = try DiffsplitterEngine.alignLines(
-                            left: leftText.lines,
-                            right: rightText.lines,
+                            left: leftPresentation.content.lines,
+                            right: rightPresentation.content.lines,
                             ignoreWhitespace: ignoreWhitespace
                         ) { fraction in
                             progressPublish.publish(
@@ -4875,16 +4914,9 @@ final class DiffsplitterSession: ObservableObject {
                     } else {
                         self.applyRows(payload.rows)
                     }
-                    DiffsplitterCompletionFeedback.notifyIfNeeded(
-                        elapsed: Date().timeIntervalSince(compareStartedAt),
-                        label: "\(leftName) ↔ \(rightName)"
-                    )
-                    EntityTracker.shared.record(
-                        source: .diffsplitter,
-                        arguments: [
-                            TrackedEntity.DiffsplitterActivity.comparisonFinished.rawValue,
-                            "\(leftName) ↔ \(rightName)"
-                        ]
+                    finishSuccessfulCompare(
+                        label: "\(leftName) ↔ \(rightName)",
+                        startedAt: compareStartedAt
                     )
                 case .failure(let error):
                     if error is CancellationError { return }
@@ -5094,17 +5126,7 @@ final class DiffsplitterSession: ObservableObject {
                         self.selectedRelativePath = nil
                         self.applyRows([])
                         self.directoryBrowsePrefix = path
-                        DiffsplitterCompletionFeedback.notifyIfNeeded(
-                            elapsed: Date().timeIntervalSince(compareStartedAt),
-                            label: compareLabel
-                        )
-                        EntityTracker.shared.record(
-                            source: .diffsplitter,
-                            arguments: [
-                                TrackedEntity.DiffsplitterActivity.comparisonFinished.rawValue,
-                                compareLabel
-                            ]
-                        )
+                        finishSuccessfulCompare(label: compareLabel, startedAt: compareStartedAt)
                     } else {
                         self.openSkippedContainerAsFileComparison(
                             path: path,
@@ -5230,9 +5252,13 @@ final class DiffsplitterSession: ObservableObject {
                 } else {
                     rightResolved = nil
                 }
-                let leftHex = try leftResolved.map { try DiffsplitterContent.prefersHexDump(resolvedURL: $0) } ?? false
-                let rightHex = try rightResolved.map { try DiffsplitterContent.prefersHexDump(resolvedURL: $0) } ?? false
-                if leftHex || rightHex {
+                let leftPresentation = try leftResolved.map {
+                    try DiffsplitterContent.presentation(resolvedURL: $0)
+                }
+                let rightPresentation = try rightResolved.map {
+                    try DiffsplitterContent.presentation(resolvedURL: $0)
+                }
+                if (leftPresentation?.prefersHexDump ?? false) || (rightPresentation?.prefersHexDump ?? false) {
                     progressPublish.publish(
                         fractionCompleted: 0.9,
                         status: L10n.t("Loading window…"),
@@ -5261,13 +5287,13 @@ final class DiffsplitterSession: ObservableObject {
                     return Outcome.rows([])
                 case .added:
                     leftLines = []
-                    rightLines = try Self.decodeResolvedLines(rightResolved)
+                    rightLines = rightPresentation?.content.lines ?? []
                 case .removed:
-                    leftLines = try Self.decodeResolvedLines(leftResolved)
+                    leftLines = leftPresentation?.content.lines ?? []
                     rightLines = []
                 case .modified:
-                    leftLines = try Self.decodeResolvedLines(leftResolved)
-                    rightLines = try Self.decodeResolvedLines(rightResolved)
+                    leftLines = leftPresentation?.content.lines ?? []
+                    rightLines = rightPresentation?.content.lines ?? []
                 case .binary:
                     return Outcome.rows([])
                 }
@@ -5307,17 +5333,7 @@ final class DiffsplitterSession: ObservableObject {
                         self.rows = []
                         self.visibleRowCount = 0
                     }
-                    DiffsplitterCompletionFeedback.notifyIfNeeded(
-                        elapsed: Date().timeIntervalSince(compareStartedAt),
-                        label: compareLabel
-                    )
-                    EntityTracker.shared.record(
-                        source: .diffsplitter,
-                        arguments: [
-                            TrackedEntity.DiffsplitterActivity.comparisonFinished.rawValue,
-                            compareLabel
-                        ]
-                    )
+                    finishSuccessfulCompare(label: compareLabel, startedAt: compareStartedAt)
                 case .failure(let error):
                     if error is CancellationError { return }
                     self.applyRows([])
@@ -5325,11 +5341,6 @@ final class DiffsplitterSession: ObservableObject {
                 }
             }
         }
-    }
-    nonisolated private static func decodeResolvedLines(_ url: URL?) throws -> [String] {
-        guard let url else { return [] }
-        let data = try Data(contentsOf: url, options: [.mappedIfSafe])
-        return try DiffsplitterContent.decode(data: data, displayURL: url).lines
     }
     private func presentBinaryDumpPrompt(path: String, entry: DiffsplitterEngine.DirEntry) {
         guard !isPresentingAppKitAlert else { return }
@@ -5406,17 +5417,7 @@ final class DiffsplitterSession: ObservableObject {
                 switch result {
                 case .success(let aligned):
                     self.applyRows(aligned)
-                    DiffsplitterCompletionFeedback.notifyIfNeeded(
-                        elapsed: Date().timeIntervalSince(compareStartedAt),
-                        label: compareLabel
-                    )
-                    EntityTracker.shared.record(
-                        source: .diffsplitter,
-                        arguments: [
-                            TrackedEntity.DiffsplitterActivity.comparisonFinished.rawValue,
-                            compareLabel
-                        ]
-                    )
+                    finishSuccessfulCompare(label: compareLabel, startedAt: compareStartedAt)
                 case .failure(let error):
                     if error is CancellationError { return }
                     self.setupError = error.localizedDescription
@@ -5521,17 +5522,7 @@ final class DiffsplitterSession: ObservableObject {
                     self.binaryDumpOffsetField = String(format: "%08x", sessionDump.windowStartLine * DiffsplitterBinaryDump.bytesPerLine)
                     self.rows = []
                     self.visibleRowCount = 0
-                    DiffsplitterCompletionFeedback.notifyIfNeeded(
-                        elapsed: Date().timeIntervalSince(compareStartedAt),
-                        label: compareLabel
-                    )
-                    EntityTracker.shared.record(
-                        source: .diffsplitter,
-                        arguments: [
-                            TrackedEntity.DiffsplitterActivity.comparisonFinished.rawValue,
-                            compareLabel
-                        ]
-                    )
+                    finishSuccessfulCompare(label: compareLabel, startedAt: compareStartedAt)
                 case .failure(let error):
                     if error is CancellationError { return }
                     self.setupError = error.localizedDescription
@@ -5585,6 +5576,19 @@ final class DiffsplitterSession: ObservableObject {
         binaryDumpOffsetField = String(
             format: "%08x",
             dump.windowStartLine * DiffsplitterBinaryDump.bytesPerLine
+        )
+    }
+    private func finishSuccessfulCompare(label: String, startedAt: Date) {
+        DiffsplitterCompletionFeedback.notifyIfNeeded(
+            elapsed: Date().timeIntervalSince(startedAt),
+            label: label
+        )
+        EntityTracker.shared.record(
+            source: .diffsplitter,
+            arguments: [
+                TrackedEntity.DiffsplitterActivity.comparisonFinished.rawValue,
+                label
+            ]
         )
     }
     private func byteCount(for url: URL?) -> Int? {

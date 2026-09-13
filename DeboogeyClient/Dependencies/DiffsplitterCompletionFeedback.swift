@@ -6,10 +6,6 @@
 //
 
 import Foundation
-import UserNotifications
-#if canImport(AppKit)
-import AppKit
-#endif
 
 enum DiffsplitterCompletionFeedback {
     private static let soundPreferenceKey = "theoderoy.Deboogey.Diffsplitter.playCompletionSound"
@@ -60,72 +56,13 @@ enum DiffsplitterCompletionFeedback {
         guard defaults.bool(forKey: soundPreferenceKey) else { return }
         let minimumSeconds = preferredMinimumSeconds(defaults: defaults)
         guard elapsed >= minimumSeconds else { return }
-        playSound(bundle: bundle)
-        DiffsplitterCompletionNotificationCenter.shared.notify(label: label)
-    }
-
-    private static func playSound(bundle: Bundle) {
 #if canImport(AppKit)
-        let soundURL = bundle.url(forResource: "ProcessDone", withExtension: "aif")
-            ?? bundle.url(
-                forResource: "ProcessDone",
-                withExtension: "aif",
-                subdirectory: "Resources"
-            )
-        guard let soundURL, let sound = NSSound(contentsOf: soundURL, byReference: true) else {
-            return
-        }
-        sound.volume = completionSoundVolume
-        sound.play()
+        _ = BundleAIFSound.play(named: "ProcessDone", bundle: bundle, volume: completionSoundVolume)
 #endif
-    }
-}
-
-private final class DiffsplitterCompletionNotificationCenter: NSObject, UNUserNotificationCenterDelegate {
-    static let shared = DiffsplitterCompletionNotificationCenter()
-    private let center = UNUserNotificationCenter.current()
-
-    private override init() {
-        super.init()
-        center.delegate = self
-    }
-
-    func notify(label: String) {
-        center.getNotificationSettings { [weak self] settings in
-            guard let self else { return }
-            switch settings.authorizationStatus {
-            case .authorized, .provisional:
-                self.deliver(label: label)
-            case .notDetermined:
-                self.center.requestAuthorization(options: [.alert]) { granted, _ in
-                    guard granted else { return }
-                    self.deliver(label: label)
-                }
-            case .denied:
-                break
-            @unknown default:
-                break
-            }
-        }
-    }
-
-    private func deliver(label: String) {
-        let content = UNMutableNotificationContent()
-        content.title = L10n.t("Diffsplitter Finished")
-        content.body = L10n.f("%@ finished comparing", label)
-        let request = UNNotificationRequest(
-            identifier: "diffsplitter-complete-\(UUID().uuidString)",
-            content: content,
-            trigger: nil
+        BannerNotificationCenter.shared.notify(
+            title: L10n.t("Diffsplitter Finished"),
+            body: L10n.f("%@ finished comparing", label),
+            identifierPrefix: "diffsplitter-complete"
         )
-        center.add(request)
-    }
-
-    nonisolated func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-    ) {
-        completionHandler([.banner])
     }
 }

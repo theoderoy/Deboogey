@@ -108,40 +108,7 @@ struct LauncherButton: View {
             .frame(width: 220)
             .contentShape(Rectangle())
         }
-        .launcherButtonStyle(tint: color, prominent: prominent)
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func launcherButtonStyle(tint color: Color, prominent: Bool = false) -> some View {
-        if #available(macOS 26.0, iOS 26.0, *) {
-            if prominent {
-                self
-                    .buttonStyle(.glassProminent)
-                    .buttonBorderShape(.capsule)
-                    .controlSize(.large)
-                    .tint(color)
-            } else {
-                self
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.capsule)
-                    .controlSize(.large)
-                    .tint(color)
-            }
-        } else if prominent {
-            self
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle)
-                .controlSize(.large)
-                .tint(color)
-        } else {
-            self
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.roundedRectangle)
-                .controlSize(.large)
-                .tint(color)
-        }
+        .deboogeyButtonStyle(tint: color, prominent: prominent)
     }
 }
 
@@ -149,6 +116,7 @@ struct RootView: View {
 #if DEBOOGEY_MCE
 #if os(iOS)
     @Environment(\.mceIOSNavigate) private var navigate
+    @State private var showingSettings = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -172,21 +140,36 @@ struct RootView: View {
                         .frame(maxWidth: .infinity)
                         .contentShape(Rectangle())
                 }
-                .launcherButtonStyle(tint: .accentColor, prominent: true)
+                .deboogeyButtonStyle(tint: .accentColor, prominent: true)
 
                 Button {
-                    navigate(.settings)
+                    showingSettings = true
                 } label: {
                     Label(L10n.t("Settings"), systemImage: "gear")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .contentShape(Rectangle())
                 }
-                .launcherButtonStyle(tint: .gray)
+                .deboogeyButtonStyle(tint: .gray)
             }
             .padding(.horizontal, 24)
 
             Spacer()
+        }
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack {
+                ConfigurationRootView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button {
+                                showingSettings = false
+                            } label: {
+                                Image(systemName: "xmark")
+                            }
+                            .accessibilityLabel(L10n.t("Close"))
+                        }
+                    }
+            }
         }
     }
 #else
@@ -339,7 +322,7 @@ struct RootView: View {
     }
 
     private var shouldShowUpdateCard: Bool {
-        !DebugVariables.isMarketplaceCandidateEditionBuild
+        !DebugVariables.areUpdatesDisabled
         && (upgradeChecker.isUpdating
         || (upgradeChecker.upgradeAvailable && (!vars.hideUpgradeAlerts || showUpdateCardOverride) && (!hideUpdateCard || showUpdateCardOverride))
         || (!networkMonitor.isConnected && !vars.hideUpgradeAlerts && !hideUpdateCard && vars.showNetworkNotices))
@@ -809,14 +792,14 @@ struct RootView: View {
                 activeAlert = .cltNotice
             }
         }
-        if !DebugVariables.isMarketplaceCandidateEditionBuild {
+        if !DebugVariables.areUpdatesDisabled {
             upgradeChecker.cleanUpOldApp()
             upgradeChecker.checkForUpdates()
         }
     }
     
     private func runManualCheck() {
-        guard !DebugVariables.isMarketplaceCandidateEditionBuild else { return }
+        guard !DebugVariables.areUpdatesDisabled else { return }
         if !networkMonitor.isConnected && !upgradeChecker.upgradeAvailable {
             if vars.showNetworkNotices {
                 showUpdateCardOverride = true
@@ -856,11 +839,18 @@ struct RootView: View {
 }
 
 #if os(macOS)
-private struct DeboogeyLoupeLauncherMenu: View {
+private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
+    let title: String
+    let icon: String
+    let prominent: Bool
+    let openLabel: String
+    let openIcon: String
     let openDocument: () -> Void
     let createDocument: () -> Void
-    @AppStorage("theoderoy.Deboogey.LoupeMachine.hasShownEducation")
-    private var hasShownEducation = false
+    @Binding var hasShownEducation: Bool
+    var forceEducation: Bool = false
+    @ViewBuilder let education: (@escaping () -> Void) -> Education
+
     @State private var showingEducation = false
     @State private var showingActions = false
     @State private var pendingAction: Action = .open
@@ -872,10 +862,10 @@ private struct DeboogeyLoupeLauncherMenu: View {
 
     var body: some View {
         LauncherButton(
-            title: "Loupe Machine",
-            icon: "loupe",
+            title: title,
+            icon: icon,
             color: .accentColor,
-            prominent: true
+            prominent: prominent
         ) {
             showingActions = true
         }
@@ -884,7 +874,7 @@ private struct DeboogeyLoupeLauncherMenu: View {
                 Button {
                     request(.open)
                 } label: {
-                    Label(L10n.t("Open Loupe Machine Document"), systemImage: "doc.text.magnifyingglass")
+                    Label(L10n.t(openLabel), systemImage: openIcon)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                 }
@@ -908,7 +898,7 @@ private struct DeboogeyLoupeLauncherMenu: View {
             .frame(minWidth: 280)
         }
         .sheet(isPresented: $showingEducation) {
-            LoupeMachineEducationView {
+            education {
                 hasShownEducation = true
                 showingEducation = false
                 DispatchQueue.main.async {
@@ -921,7 +911,7 @@ private struct DeboogeyLoupeLauncherMenu: View {
     private func request(_ action: Action) {
         showingActions = false
         pendingAction = action
-        if hasShownEducation && !DebugVariables.alwaysShowLMEducation {
+        if hasShownEducation && !forceEducation {
             perform(action)
         } else {
             showingEducation = true
@@ -932,6 +922,29 @@ private struct DeboogeyLoupeLauncherMenu: View {
         switch action {
         case .open: openDocument()
         case .create: createDocument()
+        }
+    }
+}
+
+private struct DeboogeyLoupeLauncherMenu: View {
+    let openDocument: () -> Void
+    let createDocument: () -> Void
+    @AppStorage("theoderoy.Deboogey.LoupeMachine.hasShownEducation")
+    private var hasShownEducation = false
+
+    var body: some View {
+        DeboogeyDocumentToolLauncherMenu(
+            title: "Loupe Machine",
+            icon: "loupe",
+            prominent: true,
+            openLabel: "Open Loupe Machine Document",
+            openIcon: "doc.text.magnifyingglass",
+            openDocument: openDocument,
+            createDocument: createDocument,
+            hasShownEducation: $hasShownEducation,
+            forceEducation: DebugVariables.alwaysShowLMEducation
+        ) { onContinue in
+            LoupeMachineEducationView(onDismiss: onContinue)
         }
     }
 }
@@ -962,76 +975,19 @@ private struct DeboogeyDiffsplitterLauncherMenu: View {
     let createDocument: () -> Void
     @AppStorage("theoderoy.Deboogey.Diffsplitter.hasShownEducation")
     private var hasShownEducation = false
-    @State private var showingEducation = false
-    @State private var showingActions = false
-    @State private var pendingAction: Action = .open
-
-    private enum Action {
-        case open
-        case create
-    }
 
     var body: some View {
-        LauncherButton(
+        DeboogeyDocumentToolLauncherMenu(
             title: "Diffsplitter",
             icon: "square.split.2x1",
-            color: .accentColor
-        ) {
-            showingActions = true
-        }
-        .popover(isPresented: $showingActions, arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: 0) {
-                Button {
-                    request(.open)
-                } label: {
-                    Label(L10n.t("Open Diffsplitter Document"), systemImage: "doc.text")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(12)
-                .padding(.horizontal, 4)
-
-                Divider()
-
-                Button {
-                    request(.create)
-                } label: {
-                    Label(L10n.t("Create New Document…"), systemImage: "plus.app")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(12)
-                .padding(.horizontal, 4)
-            }
-            .frame(minWidth: 280)
-        }
-        .sheet(isPresented: $showingEducation) {
-            DiffsplitterEducationView {
-                hasShownEducation = true
-                showingEducation = false
-                DispatchQueue.main.async {
-                    perform(pendingAction)
-                }
-            }
-        }
-    }
-
-    private func request(_ action: Action) {
-        showingActions = false
-        pendingAction = action
-        if hasShownEducation {
-            perform(action)
-        } else {
-            showingEducation = true
-        }
-    }
-
-    private func perform(_ action: Action) {
-        switch action {
-        case .open: openDocument()
-        case .create: createDocument()
+            prominent: false,
+            openLabel: "Open Diffsplitter Document",
+            openIcon: "doc.text",
+            openDocument: openDocument,
+            createDocument: createDocument,
+            hasShownEducation: $hasShownEducation
+        ) { onContinue in
+            DiffsplitterEducationView(onDismiss: onContinue)
         }
     }
 }

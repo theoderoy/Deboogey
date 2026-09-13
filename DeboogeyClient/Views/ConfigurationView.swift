@@ -314,34 +314,10 @@ private struct GeneralPanelView: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
-            List {
-                ForEach(Array(vm.diffsplitterStatusPriority.enumerated()), id: \.element) { index, raw in
-                    HStack(spacing: 10) {
-                        Text("\(index + 1)")
-                            .font(.caption.monospacedDigit())
-                            .foregroundColor(.secondary)
-                            .frame(width: 16, alignment: .trailing)
-                        Circle()
-                            .fill(diffsplitterStatusColor(raw))
-                            .frame(width: 10, height: 10)
-                        Text(diffsplitterStatusTitle(raw))
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.vertical, 2)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(diffsplitterStatusTitle(raw))
-                    .accessibilityValue(L10n.f("Priority %d", index + 1))
-                }
-                .onMove(perform: vm.moveDiffsplitterStatusPriority)
-            }
-            .frame(height: CGFloat(vm.diffsplitterStatusPriority.count) * 28)
-            .listStyle(.bordered)
-            .modifier(DiffsplitterPriorityListScrollModifier())
-
-            Button(L10n.t("Reset to Default")) {
-                vm.resetDiffsplitterStatusPriority()
-            }
-            .disabled(vm.diffsplitterStatusPriority == PersistentVariables.defaultDiffsplitterStatusPriority)
+            DiffsplitterStatusPriorityEditor(
+                order: $vm.diffsplitterStatusPriority,
+                onMove: vm.moveDiffsplitterStatusPriority
+            )
         }
 #endif
         
@@ -391,19 +367,21 @@ private struct GeneralPanelView: View {
                 .foregroundColor(.secondary)
         }
         
-        section(header: "Upgrades") {
-            Picker("Upgrade Channel", selection: $vm.upgradeChannel) {
-                Text("Release").tag("Release")
-                Text("Internal").tag("Internal")
-            }
-            if vm.upgradeChannel == "Internal" {
-                Text("Internal builds contain experimental features and are not notarised by Apple.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
+        if !DebugVariables.areUpdatesDisabled {
+            section(header: "Upgrades") {
+                Picker("Upgrade Channel", selection: $vm.upgradeChannel) {
+                    Text("Release").tag("Release")
+                    Text("Internal").tag("Internal")
+                }
+                if vm.upgradeChannel == "Internal" {
+                    Text("Internal builds contain experimental features and are not notarised by Apple.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
 
-            Toggle("Hide Automatic Notices", isOn: $vm.hideUpgradeAlerts)
-            Toggle("Delete Backup on Startup", isOn: $vm.deleteBackupOnStartup)
+                Toggle("Hide Automatic Notices", isOn: $vm.hideUpgradeAlerts)
+                Toggle("Delete Backup on Startup", isOn: $vm.deleteBackupOnStartup)
+            }
         }
 #endif
 
@@ -467,40 +445,8 @@ private struct GeneralPanelView: View {
         .accessibilityLabel(L10n.t("Reset to Default"))
     }
 
-#if os(macOS)
-    private func diffsplitterStatusTitle(_ raw: String) -> String {
-        switch DiffsplitterEngine.DirEntryStatus(rawValue: raw) {
-        case .added: return L10n.t("Added")
-        case .removed: return L10n.t("Removed")
-        case .modified: return L10n.t("Modified")
-        case .binary: return L10n.t("Binary")
-        case .identical, .none: return raw
-        }
-    }
-
-    private func diffsplitterStatusColor(_ raw: String) -> Color {
-        switch DiffsplitterEngine.DirEntryStatus(rawValue: raw) {
-        case .added: return .green
-        case .removed: return .red
-        case .modified: return .orange
-        case .binary: return .purple
-        case .identical, .none: return .secondary
-        }
-    }
-#endif
 }
 
-#if os(macOS)
-private struct DiffsplitterPriorityListScrollModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(macOS 13.0, *) {
-            content.scrollDisabled(true)
-        } else {
-            content
-        }
-    }
-}
-#endif
 
 #if os(macOS)
 private struct EntityTrackerPanelView: View {

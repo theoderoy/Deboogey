@@ -16,10 +16,10 @@ struct WhatsNewView: View {
     private let entries: [WhatsNewEntry] = [
         WhatsNewEntry(
             scope: .unified,
-            icon: "info.circle",
-            color: .blue,
-            title: "Improvements",
-            description: "Added audible feedback for Apple System Tools completions/failures, and made 'Deboogey' window spawning more reliable."
+            icon: "hand.wave",
+            color: .accentColor,
+            title: "PlaceholderText1",
+            description: "PlaceholderText2"
         )
     ]
 
@@ -115,28 +115,10 @@ private struct ContinueButton: View {
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
         }
-        .continueButtonStyle(tint: color)
+        .deboogeyProminentButtonStyle(tint: color)
     }
 }
 
-private extension View {
-    @ViewBuilder
-    func continueButtonStyle(tint color: Color) -> some View {
-        if #available(macOS 26.0, *) {
-            self
-                .buttonStyle(.glassProminent)
-                .buttonBorderShape(.capsule)
-                .controlSize(.large)
-                .tint(color)
-        } else {
-            self
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle)
-                .controlSize(.large)
-                .tint(color)
-        }
-    }
-}
 
 private struct FeatureRow: View {
     let entry: WhatsNewEntry
