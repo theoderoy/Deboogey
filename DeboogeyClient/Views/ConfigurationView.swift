@@ -101,6 +101,231 @@ private struct GeneralPanelView: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 #endif
+
+            Toggle(isOn: $vm.playDiffsplitterDoneSound) {
+                Text(L10n.t("Play a sound when Diffsplitter finishes a comparison"))
+            }
+            Text(L10n.t("Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration."))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            if vm.playDiffsplitterDoneSound {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(L10n.t("Minimum Duration"))
+                        Spacer()
+                        Text(
+                            DiffsplitterCompletionFeedback.durationLabel(
+                                for: vm.diffsplitterNotifyMinimumSeconds
+                            )
+                        )
+                        .monospacedDigit()
+                        .foregroundColor(.secondary)
+                    }
+                    HStack(spacing: 8) {
+                        diffsplitterSliderResetButton(
+                            isDefault: Int(vm.diffsplitterNotifyMinimumSeconds.rounded())
+                                == Int(DiffsplitterCompletionFeedback.defaultMinimumSeconds.rounded())
+                        ) {
+                            vm.diffsplitterNotifyMinimumSeconds =
+                                DiffsplitterCompletionFeedback.defaultMinimumSeconds
+                        }
+                        Slider(
+                            value: Binding(
+                                get: {
+                                    DiffsplitterCompletionFeedback.sliderIndex(
+                                        forSeconds: vm.diffsplitterNotifyMinimumSeconds
+                                    )
+                                },
+                                set: {
+                                    vm.diffsplitterNotifyMinimumSeconds =
+                                        DiffsplitterCompletionFeedback.seconds(forSliderIndex: $0)
+                                }
+                            ),
+                            in: DiffsplitterCompletionFeedback.sliderIndexRange,
+                            step: 1
+                        )
+                    }
+                }
+            }
+        }
+
+        section(header: "Diffsplitter") {
+            Picker(
+                L10n.t("Offload Large Dumps to Temporary Storage"),
+                selection: $vm.diffsplitterPreferDiskTempForLargeFiles
+            ) {
+                Text(L10n.t("Session Disk Space")).tag(true)
+                Text(L10n.t("Memory (RAM)")).tag(false)
+            }
+            Text(L10n.t("Choose where Diffsplitter stores large dumps while you inspect them. Storing on disk demands less horsepower, while memory (RAM) can be faster on powerful machines."))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        
+        section() {
+            Toggle(isOn: $vm.diffsplitterIncludeHiddenFiles) {
+                Text(L10n.t("Include Hidden Files"))
+            }
+            Text(L10n.t("When off, Diffsplitter skips hidden files while walking folders."))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+
+        section {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(L10n.t("Hex Dump Window"))
+                    Spacer()
+                    Text(L10n.f("%d lines", Int(vm.diffsplitterHexWindowLines.rounded())))
+                        .monospacedDigit()
+                        .foregroundColor(.secondary)
+                }
+                HStack(spacing: 8) {
+                    diffsplitterSliderResetButton(
+                        isDefault: Int(vm.diffsplitterHexWindowLines.rounded())
+                            == DiffsplitterSettings.defaultHexWindowLines
+                    ) {
+                        vm.diffsplitterHexWindowLines = Double(DiffsplitterSettings.defaultHexWindowLines)
+                    }
+                    Slider(
+                        value: $vm.diffsplitterHexWindowLines,
+                        in: Double(DiffsplitterSettings.hexWindowLinesRange.lowerBound)
+                            ... Double(DiffsplitterSettings.hexWindowLinesRange.upperBound)
+                    )
+                }
+            }
+            Text(L10n.t("How many hex lines stay in memory for the visible dump window."))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(L10n.t("Binary Size Threshold"))
+                    Spacer()
+                    Text(L10n.f("%d MB", Int(vm.diffsplitterMaxTextMegabytes.rounded())))
+                        .monospacedDigit()
+                        .foregroundColor(.secondary)
+                }
+                HStack(spacing: 8) {
+                    diffsplitterSliderResetButton(
+                        isDefault: Int(vm.diffsplitterMaxTextMegabytes.rounded())
+                            == DiffsplitterSettings.defaultMaxTextMegabytes
+                    ) {
+                        vm.diffsplitterMaxTextMegabytes = Double(DiffsplitterSettings.defaultMaxTextMegabytes)
+                    }
+                    Slider(
+                        value: $vm.diffsplitterMaxTextMegabytes,
+                        in: Double(DiffsplitterSettings.maxTextMegabytesRange.lowerBound)
+                            ... Double(DiffsplitterSettings.maxTextMegabytesRange.upperBound)
+                    )
+                }
+            }
+            Text(L10n.t("Files larger than this are treated as binary instead of text."))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(L10n.t("Archive Nest Depth"))
+                    Spacer()
+                    Text(L10n.f("%d levels", Int(vm.diffsplitterMaxNestDepth.rounded())))
+                        .monospacedDigit()
+                        .foregroundColor(.secondary)
+                }
+                HStack(spacing: 8) {
+                    diffsplitterSliderResetButton(
+                        isDefault: Int(vm.diffsplitterMaxNestDepth.rounded())
+                            == DiffsplitterSettings.defaultMaxNestDepth
+                    ) {
+                        vm.diffsplitterMaxNestDepth = Double(DiffsplitterSettings.defaultMaxNestDepth)
+                    }
+                    Slider(
+                        value: $vm.diffsplitterMaxNestDepth,
+                        in: Double(DiffsplitterSettings.maxNestDepthRange.lowerBound)
+                            ... Double(DiffsplitterSettings.maxNestDepthRange.upperBound),
+                        step: 1
+                    )
+                }
+            }
+            Text(L10n.t("Maximum nested archive depth Diffsplitter will expand."))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(L10n.t("Archive Entry Limit"))
+                    Spacer()
+                    Text(L10n.f("%d entries", Int(vm.diffsplitterMaxEntries.rounded())))
+                        .monospacedDigit()
+                        .foregroundColor(.secondary)
+                }
+                HStack(spacing: 8) {
+                    diffsplitterSliderResetButton(
+                        isDefault: Int(vm.diffsplitterMaxEntries.rounded())
+                            == DiffsplitterSettings.defaultMaxEntries
+                    ) {
+                        vm.diffsplitterMaxEntries = Double(DiffsplitterSettings.defaultMaxEntries)
+                    }
+                    Slider(
+                        value: Binding(
+                            get: {
+                                Double(
+                                    DiffsplitterSettings.maxEntriesStopIndex(
+                                        for: Int(vm.diffsplitterMaxEntries.rounded())
+                                    )
+                                )
+                            },
+                            set: { index in
+                                vm.diffsplitterMaxEntries = Double(
+                                    DiffsplitterSettings.maxEntriesStop(atIndex: Int(index.rounded()))
+                                )
+                            }
+                        ),
+                        in: DiffsplitterSettings.maxEntriesStopIndexRange,
+                        step: 1
+                    )
+                }
+            }
+            Text(L10n.t("Maximum files Diffsplitter will index from folders and archives."))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+
+        section {
+            Text(L10n.t("Folder Status Dot Priority"))
+            Text(L10n.t("Drag to reorder. Items nearer the top win when a folder contains mixed changes."))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            List {
+                ForEach(Array(vm.diffsplitterStatusPriority.enumerated()), id: \.element) { index, raw in
+                    HStack(spacing: 10) {
+                        Text("\(index + 1)")
+                            .font(.caption.monospacedDigit())
+                            .foregroundColor(.secondary)
+                            .frame(width: 16, alignment: .trailing)
+                        Circle()
+                            .fill(diffsplitterStatusColor(raw))
+                            .frame(width: 10, height: 10)
+                        Text(diffsplitterStatusTitle(raw))
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 2)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(diffsplitterStatusTitle(raw))
+                    .accessibilityValue(L10n.f("Priority %d", index + 1))
+                }
+                .onMove(perform: vm.moveDiffsplitterStatusPriority)
+            }
+            .frame(height: CGFloat(vm.diffsplitterStatusPriority.count) * 28)
+            .listStyle(.bordered)
+            .modifier(DiffsplitterPriorityListScrollModifier())
+
+            Button(L10n.t("Reset to Default")) {
+                vm.resetDiffsplitterStatusPriority()
+            }
+            .disabled(vm.diffsplitterStatusPriority == PersistentVariables.defaultDiffsplitterStatusPriority)
         }
         
 #if !DEBOOGEY_MCE
@@ -211,6 +436,49 @@ private struct GeneralPanelView: View {
             }
         }
     }
+
+    private func diffsplitterSliderResetButton(
+        isDefault: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: "arrow.counterclockwise")
+        }
+        .buttonStyle(.borderless)
+        .disabled(isDefault)
+        .help(L10n.t("Reset to Default"))
+        .accessibilityLabel(L10n.t("Reset to Default"))
+    }
+
+    private func diffsplitterStatusTitle(_ raw: String) -> String {
+        switch DiffsplitterEngine.DirEntryStatus(rawValue: raw) {
+        case .added: return L10n.t("Added")
+        case .removed: return L10n.t("Removed")
+        case .modified: return L10n.t("Modified")
+        case .binary: return L10n.t("Binary")
+        case .identical, .none: return raw
+        }
+    }
+
+    private func diffsplitterStatusColor(_ raw: String) -> Color {
+        switch DiffsplitterEngine.DirEntryStatus(rawValue: raw) {
+        case .added: return .green
+        case .removed: return .red
+        case .modified: return .orange
+        case .binary: return .purple
+        case .identical, .none: return .secondary
+        }
+    }
+}
+
+private struct DiffsplitterPriorityListScrollModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 13.0, *) {
+            content.scrollDisabled(true)
+        } else {
+            content
+        }
+    }
 }
 
 private struct EntityTrackerPanelView: View {
@@ -276,7 +544,7 @@ private struct EntityTrackerPanelView: View {
 #endif
                 if DebugVariables.isMarketplaceCandidateEditionBuild
                     || vm.entityTrackerAutoDeleteScope == "all" {
-                    Picker("File and indexing entries", selection: $vm.entityTrackerAutoDeleteLoupeActivities) {
+                    Picker("File, compare, and indexing entries", selection: $vm.entityTrackerAutoDeleteLoupeActivities) {
                         Text("Remove these entries").tag(true)
                         Text("Leave these entries out").tag(false)
                     }
@@ -325,7 +593,7 @@ private struct EntityTrackerPanelView: View {
             : L10n.t(
                 vm.entityTrackerAutoDeleteLoupeActivities
                     ? "Clears the entire Entity Tracker log"
-                    : "Clears the Entity Tracker log except file and indexing entries"
+                    : "Clears the Entity Tracker log except file, compare, and indexing entries"
             )
         let when = vm.entityTrackerAutoDeleteTrigger == "login"
             ? L10n.t("once per login session.")
@@ -621,6 +889,42 @@ final class ConfigurationViewModel: ObservableObject {
         didSet { vars.playToolCycleSound = playToolCycleSound }
     }
 
+    @Published var playDiffsplitterDoneSound: Bool {
+        didSet { vars.playDiffsplitterDoneSound = playDiffsplitterDoneSound }
+    }
+
+    @Published var diffsplitterNotifyMinimumSeconds: Double {
+        didSet { vars.diffsplitterNotifyMinimumSeconds = diffsplitterNotifyMinimumSeconds }
+    }
+
+    @Published var diffsplitterStatusPriority: [String] {
+        didSet { vars.diffsplitterStatusPriority = diffsplitterStatusPriority }
+    }
+
+    @Published var diffsplitterIncludeHiddenFiles: Bool {
+        didSet { vars.diffsplitterIncludeHiddenFiles = diffsplitterIncludeHiddenFiles }
+    }
+
+    @Published var diffsplitterPreferDiskTempForLargeFiles: Bool {
+        didSet { vars.diffsplitterPreferDiskTempForLargeFiles = diffsplitterPreferDiskTempForLargeFiles }
+    }
+
+    @Published var diffsplitterHexWindowLines: Double {
+        didSet { vars.diffsplitterHexWindowLines = diffsplitterHexWindowLines }
+    }
+
+    @Published var diffsplitterMaxTextMegabytes: Double {
+        didSet { vars.diffsplitterMaxTextMegabytes = diffsplitterMaxTextMegabytes }
+    }
+
+    @Published var diffsplitterMaxNestDepth: Double {
+        didSet { vars.diffsplitterMaxNestDepth = diffsplitterMaxNestDepth }
+    }
+
+    @Published var diffsplitterMaxEntries: Double {
+        didSet { vars.diffsplitterMaxEntries = diffsplitterMaxEntries }
+    }
+
     private let vars: PersistentVariables
     
     init(initialSelection: Panel? = .general, vars: PersistentVariables = PersistentVariables()) {
@@ -639,6 +943,25 @@ final class ConfigurationViewModel: ObservableObject {
         self.entityTrackerAutoDeleteLoupeActivities = vars.entityTrackerAutoDeleteLoupeActivities
         self.playIndexingDoneSound = vars.playIndexingDoneSound
         self.playToolCycleSound = vars.playToolCycleSound
+        self.playDiffsplitterDoneSound = vars.playDiffsplitterDoneSound
+        self.diffsplitterNotifyMinimumSeconds = vars.diffsplitterNotifyMinimumSeconds
+        self.diffsplitterStatusPriority = vars.diffsplitterStatusPriority
+        self.diffsplitterIncludeHiddenFiles = vars.diffsplitterIncludeHiddenFiles
+        self.diffsplitterPreferDiskTempForLargeFiles = vars.diffsplitterPreferDiskTempForLargeFiles
+        self.diffsplitterHexWindowLines = vars.diffsplitterHexWindowLines
+        self.diffsplitterMaxTextMegabytes = vars.diffsplitterMaxTextMegabytes
+        self.diffsplitterMaxNestDepth = vars.diffsplitterMaxNestDepth
+        self.diffsplitterMaxEntries = vars.diffsplitterMaxEntries
+    }
+
+    func moveDiffsplitterStatusPriority(from source: IndexSet, to destination: Int) {
+        var order = diffsplitterStatusPriority
+        order.move(fromOffsets: source, toOffset: destination)
+        diffsplitterStatusPriority = order
+    }
+
+    func resetDiffsplitterStatusPriority() {
+        diffsplitterStatusPriority = PersistentVariables.defaultDiffsplitterStatusPriority
     }
     
     func goBack() {

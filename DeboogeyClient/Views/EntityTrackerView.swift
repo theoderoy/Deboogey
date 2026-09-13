@@ -52,7 +52,7 @@ struct EntityTrackerView: View {
     private var visibleEntities: [TrackedEntity] {
         tracker.entities.filter {
 #if DEBOOGEY_MCE
-            $0.source == .loupeMachine || $0.source == .deboogeyCDM
+            $0.source == .loupeMachine || $0.source == .deboogeyCDM || $0.source == .diffsplitter
 #else
             true
 #endif
@@ -79,6 +79,8 @@ struct EntityTrackerView: View {
                     leftTarget = $0.deboogeyCDMDomain ?? ""
                 case .loupeMachine:
                     leftTarget = $0.loupeApplicationIdentifier ?? $0.loupeActivityTarget ?? ""
+                case .diffsplitter:
+                    leftTarget = $0.diffsplitterActivityTarget ?? ""
                 }
                 
                 switch $1.source {
@@ -88,6 +90,8 @@ struct EntityTrackerView: View {
                     rightTarget = $1.deboogeyCDMDomain ?? ""
                 case .loupeMachine:
                     rightTarget = $1.loupeApplicationIdentifier ?? $1.loupeActivityTarget ?? ""
+                case .diffsplitter:
+                    rightTarget = $1.diffsplitterActivityTarget ?? ""
                 }
                 
                 return leftTarget < rightTarget
@@ -127,8 +131,8 @@ struct EntityTrackerView: View {
             Text(
                 L10n.t(
                     DebugVariables.isMarketplaceCandidateEditionBuild
-                        ? "Modifications made via Cocoa Debug Menu and Loupe Machine will appear here."
-                        : "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, and Loupe Machine will appear here."
+                        ? "Modifications made via Cocoa Debug Menu, Loupe Machine, and Diffsplitter will appear here."
+                        : "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, Loupe Machine, and Diffsplitter will appear here."
                 )
             )
                 .font(.caption)
@@ -213,6 +217,8 @@ struct EntityTrackerView: View {
                 } else {
                     seenLoupeTargets.insert(target)
                 }
+            case .diffsplitter:
+                continue
             }
         }
         return result
@@ -377,6 +383,7 @@ private struct AppIconImage: View {
         case .wsOverlay: return entity.source.systemImage
         case .deboogeyCDM:   return entity.deboogeyCDMDomain == "global" ? "globe" : entity.source.systemImage
         case .loupeMachine: return entity.source.systemImage
+        case .diffsplitter: return entity.source.systemImage
         }
     }
 
@@ -388,7 +395,7 @@ private struct AppIconImage: View {
             domain = entity.loupeActivity == .applicationIndexed
                 ? entity.loupeIndexedApplicationIdentifier
                 : entity.loupeApplicationIdentifier
-        case .wsOverlay: domain = nil
+        case .wsOverlay, .diffsplitter: domain = nil
         }
         guard let domain,
               domain != "global" else { return }

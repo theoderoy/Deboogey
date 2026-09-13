@@ -24,6 +24,38 @@
 				<string>theoderoy.Deboogey.LoupeMachine</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>dsplt</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>Diffsplitter Document</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>theoderoy.Deboogey.Diffsplitter</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>dspltx</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>DiffsplitterX Document</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>theoderoy.Deboogey.DiffsplitterX</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleDisplayName</key>
 	<string>$(APP_BUNDLE_DISPLAY_NAME)</string>
@@ -70,6 +102,44 @@
 				</array>
 				<key>public.mime-type</key>
 				<string>application/vnd.deboogey.loupe-machine+json</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Diffsplitter Document</string>
+			<key>UTTypeIdentifier</key>
+			<string>theoderoy.Deboogey.Diffsplitter</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>dsplt</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/vnd.deboogey.diffsplitter+json</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>DiffsplitterX Document</string>
+			<key>UTTypeIdentifier</key>
+			<string>theoderoy.Deboogey.DiffsplitterX</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>dspltx</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/vnd.deboogey.diffsplitterx+json</string>
 			</dict>
 		</dict>
 	</array>

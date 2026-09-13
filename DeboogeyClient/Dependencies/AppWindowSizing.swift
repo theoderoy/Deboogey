@@ -22,6 +22,7 @@ struct AppWindowSize {
 enum AppWindowSizing {
     static let root = AppWindowSize(width: 620, height: 520)
     static let loupeMachine = AppWindowSize(width: 960, height: 720)
+    static let diffsplitter = AppWindowSize(width: 960, height: 720)
 
     enum Configuration {
         static let sidebarWidth: CGFloat = 200

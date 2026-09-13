@@ -122,7 +122,7 @@ struct LoupeApplicationData {
             .appendingPathComponent(source.lastPathComponent)
     }
 
-    private static func requiresPrivileges(_ error: Error) -> Bool {
+    nonisolated private static func requiresPrivileges(_ error: Error) -> Bool {
         let error = error as NSError
         if error.domain == NSCocoaErrorDomain,
            [NSFileWriteNoPermissionError, NSFileWriteVolumeReadOnlyError].contains(error.code) {

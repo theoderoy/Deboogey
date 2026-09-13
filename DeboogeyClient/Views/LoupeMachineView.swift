@@ -25,11 +25,19 @@ final class LoupeMachineCommandRouter: ObservableObject {
 
     func register(_ actions: LoupeMachineCommandActions, for window: NSWindow) {
         actionsByWindow[ObjectIdentifier(window)] = actions
-        if NSApp.keyWindow === window { canSave = actions.canSave }
+        if NSApp.keyWindow === window {
+            canSave = actions.canSave
+            if canSave { DiffsplitterCommandRouter.shared.resignActiveSave() }
+        }
     }
 
     func activate(_ window: NSWindow) {
         canSave = actionsByWindow[ObjectIdentifier(window)]?.canSave == true
+        DiffsplitterCommandRouter.shared.resignActiveSave()
+    }
+
+    func resignActiveSave() {
+        canSave = false
     }
 
     func unregister(_ window: NSWindow) {

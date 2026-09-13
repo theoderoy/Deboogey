@@ -25,6 +25,12 @@ struct LegacyWindowLauncherCommands: Commands {
                 Label(L10n.t("Loupe Machine"), systemImage: "scope")
             }
 
+            Button {
+                DiffsplitterNavigation.openLegacy(documentAt: nil)
+            } label: {
+                Label(L10n.t("Diffsplitter"), systemImage: "square.split.2x1")
+            }
+
             if let openCocoaDebugMenu {
                 Button(action: openCocoaDebugMenu) {
                     Label(L10n.t("Cocoa Debug Menu"), systemImage: "wrench.and.screwdriver")
@@ -56,6 +62,10 @@ struct WindowLauncherCommands: Commands {
 
             Button(L10n.t("Loupe Machine"), systemImage: "scope") {
                 LoupeMachineNavigation.open(documentAt: nil, using: openWindow)
+            }
+
+            Button(L10n.t("Diffsplitter"), systemImage: "square.split.2x1") {
+                DiffsplitterNavigation.open(documentAt: nil, using: openWindow)
             }
 
             if includesCocoaDebugMenu {

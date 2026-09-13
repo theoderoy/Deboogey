@@ -31,7 +31,7 @@ enum DeboogeySDLauncherError: LocalizedError {
     }
 }
 
-struct DeboogeySDLauncher {
+nonisolated struct DeboogeySDLauncher {
     static func runOverlayHelper(arguments: [String]) throws -> String {
         if !Thread.isMainThread {
             return try DispatchQueue.main.sync { try DeboogeySDLauncher.runOverlayHelper(arguments: arguments) }

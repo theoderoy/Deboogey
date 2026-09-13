@@ -147,6 +147,12 @@ struct RootView: View {
                         DeboogeyLoupeLegacyWindowLauncher()
                     }
 
+                    if #available(macOS 13.0, *) {
+                        DeboogeyDiffsplitterWindowLauncher()
+                    } else {
+                        DeboogeyDiffsplitterLegacyWindowLauncher()
+                    }
+
                     LauncherButton(
                         title: "Cocoa Debug Menu",
                         icon: "wrench.and.screwdriver",
@@ -331,6 +337,12 @@ struct RootView: View {
                         DeboogeyLoupeWindowLauncher()
                     } else {
                         DeboogeyLoupeLegacyWindowLauncher()
+                    }
+
+                    if #available(macOS 13.0, *) {
+                        DeboogeyDiffsplitterWindowLauncher()
+                    } else {
+                        DeboogeyDiffsplitterLegacyWindowLauncher()
                     }
 
                     if #available(macOS 13.0, *) {
@@ -867,6 +879,106 @@ private struct DeboogeyLoupeLegacyWindowLauncher: View {
         DeboogeyLoupeLauncherMenu(
             openDocument: LoupeMachineNavigation.chooseDocumentLegacy,
             createDocument: { LoupeMachineNavigation.openLegacy(documentAt: nil) }
+        )
+    }
+}
+
+private struct DeboogeyDiffsplitterLauncherMenu: View {
+    let openDocument: () -> Void
+    let createDocument: () -> Void
+    @AppStorage("theoderoy.Deboogey.Diffsplitter.hasShownEducation")
+    private var hasShownEducation = false
+    @State private var showingEducation = false
+    @State private var showingActions = false
+    @State private var pendingAction: Action = .open
+
+    private enum Action {
+        case open
+        case create
+    }
+
+    var body: some View {
+        LauncherButton(
+            title: "Diffsplitter",
+            icon: "square.split.2x1",
+            color: .accentColor
+        ) {
+            showingActions = true
+        }
+        .popover(isPresented: $showingActions, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 0) {
+                Button {
+                    request(.open)
+                } label: {
+                    Label(L10n.t("Open Diffsplitter Document"), systemImage: "doc.text")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(12)
+                .padding(.horizontal, 4)
+
+                Divider()
+
+                Button {
+                    request(.create)
+                } label: {
+                    Label(L10n.t("Create New Document…"), systemImage: "plus.app")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(12)
+                .padding(.horizontal, 4)
+            }
+            .frame(minWidth: 280)
+        }
+        .sheet(isPresented: $showingEducation) {
+            DiffsplitterEducationView {
+                hasShownEducation = true
+                showingEducation = false
+                DispatchQueue.main.async {
+                    perform(pendingAction)
+                }
+            }
+        }
+    }
+
+    private func request(_ action: Action) {
+        showingActions = false
+        pendingAction = action
+        if hasShownEducation {
+            perform(action)
+        } else {
+            showingEducation = true
+        }
+    }
+
+    private func perform(_ action: Action) {
+        switch action {
+        case .open: openDocument()
+        case .create: createDocument()
+        }
+    }
+}
+
+@available(macOS 13.0, *)
+private struct DeboogeyDiffsplitterWindowLauncher: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        DeboogeyDiffsplitterLauncherMenu(
+            openDocument: { DiffsplitterNavigation.chooseDocument(using: openWindow) },
+            createDocument: { DiffsplitterNavigation.open(documentAt: nil, using: openWindow) }
+        )
+    }
+}
+
+private struct DeboogeyDiffsplitterLegacyWindowLauncher: View {
+    var body: some View {
+        DeboogeyDiffsplitterLauncherMenu(
+            openDocument: DiffsplitterNavigation.chooseDocumentLegacy,
+            createDocument: { DiffsplitterNavigation.openLegacy(documentAt: nil) }
         )
     }
 }

@@ -81,56 +81,63 @@ private struct UpgradeCommands: Commands {
     }
 }
 
-@available(macOS 13.0, *)
-private struct LoupeMachineCommands: Commands {
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some Commands {
-        LoupeMachineCommandSet(
-            createDocument: { LoupeMachineNavigation.open(documentAt: nil, using: openWindow) },
-            openDocument: { LoupeMachineNavigation.chooseDocument(using: openWindow) }
-        )
-    }
-}
-
 private struct LoupeMachineLegacyCommands: Commands {
     var body: some Commands {
-        LoupeMachineCommandSet(
-            createDocument: { LoupeMachineNavigation.openLegacy(documentAt: nil) },
-            openDocument: LoupeMachineNavigation.chooseDocumentLegacy
+        DocumentToolCommandSet(
+            createLoupeDocument: { LoupeMachineNavigation.openLegacy(documentAt: nil) },
+            openLoupeDocument: LoupeMachineNavigation.chooseDocumentLegacy,
+            createDiffsplitterDocument: { DiffsplitterNavigation.openLegacy(documentAt: nil) },
+            openDiffsplitterDocument: DiffsplitterNavigation.chooseDocumentLegacy,
+            openMain: DeboogeyWindowController.openMain
         )
     }
 }
 
-private struct LoupeMachineCommandSet: Commands {
-    let createDocument: () -> Void
-    let openDocument: () -> Void
-    @ObservedObject private var router = LoupeMachineCommandRouter.shared
+private struct DocumentToolCommandSet: Commands {
+    let createLoupeDocument: () -> Void
+    let openLoupeDocument: () -> Void
+    let createDiffsplitterDocument: () -> Void
+    let openDiffsplitterDocument: () -> Void
+    let openMain: () -> Void
+    @ObservedObject private var saveBridge = DocumentSaveDispatcherBridge.shared
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
-            Button(L10n.t("New Window"), action: DeboogeyWindowController.openMain)
+            Button(L10n.t("New Window"), action: openMain)
                 .keyboardShortcut("n", modifiers: [.command, .shift])
 
             Button(L10n.t("New Loupe Machine Document")) {
-                createDocument()
+                createLoupeDocument()
             }
             .keyboardShortcut("n", modifiers: .command)
 
             Button(L10n.t("Open Loupe Machine Document…")) {
-                openDocument()
+                openLoupeDocument()
             }
             .keyboardShortcut("o", modifiers: .command)
 
+            Button(L10n.t("New Diffsplitter Document")) {
+                createDiffsplitterDocument()
+            }
+
+            Button(L10n.t("Open Diffsplitter Document…")) {
+                openDiffsplitterDocument()
+            }
+
             Divider()
 
-            Button(L10n.t("Save")) { router.save(saveAs: false) }
+            Button(L10n.t("Save")) { DocumentSaveDispatcher.save(saveAs: false) }
                 .keyboardShortcut("s", modifiers: .command)
-                .disabled(!router.canSave)
+                .disabled(!saveBridge.canSave)
 
-            Button(L10n.t("Save As…")) { router.save(saveAs: true) }
+            Button(L10n.t("Save As…")) { DocumentSaveDispatcher.save(saveAs: true) }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
-                .disabled(!router.canSave)
+                .disabled(!saveBridge.canSave)
+
+            Button(L10n.t("Export DiffsplitterX Document…")) {
+                DocumentSaveDispatcher.exportDiffsplitterX()
+            }
+            .disabled(!saveBridge.canExportDiffsplitterX)
         }
     }
 }
@@ -148,6 +155,7 @@ private struct SceneSwitcher: Scene {
 
         if #available(macOS 13.0, *) {
             DeboogeyLoupeScene()
+            DeboogeyDiffsplitterScene()
             DeboogeyCDMLauncherScene()
             EntityTrackerScene()
         }
@@ -174,12 +182,34 @@ private struct DeboogeyLoupeScene: Scene {
             }
             .environment(\.locale, L10n.locale)
         }
-        .commands {
-            LoupeMachineCommands()
-        }
+        .commandsRemoved()
         .defaultSize(
             width: AppWindowSizing.loupeMachine.defaultSize.width,
             height: AppWindowSizing.loupeMachine.defaultSize.height
+        )
+        .windowResizability(.contentMinSize)
+    }
+}
+
+@available(macOS 13.0, *)
+private struct DeboogeyDiffsplitterScene: Scene {
+    var body: some Scene {
+        WindowGroup(
+            L10n.t("Diffsplitter"),
+            id: DiffsplitterNavigation.windowID,
+            for: DiffsplitterWindowRequest.self
+        ) { request in
+            Group {
+                if let request = request.wrappedValue {
+                    DiffsplitterView(request: request)
+                }
+            }
+            .environment(\.locale, L10n.locale)
+        }
+        .commandsRemoved()
+        .defaultSize(
+            width: AppWindowSizing.diffsplitter.defaultSize.width,
+            height: AppWindowSizing.diffsplitter.defaultSize.height
         )
         .windowResizability(.contentMinSize)
     }
@@ -308,34 +338,25 @@ struct Root: App {
         }
         .commands {
             AboutCommands()
-            if !DebugVariables.isMarketplaceCandidateEditionBuild {
-                UpgradeCommands()
-            }
-            if #available(macOS 13.0, *) {
-                WindowLauncherCommands(
-                    openMain: DeboogeyWindowController.openMain,
-                    includesCocoaDebugMenu: true,
-                    includesSkyLightDiagnostics: !DebugVariables.isMarketplaceCandidateEditionBuild,
-                    skyLightDiagnosticsDisabled: sipSatisfied
-                )
-            } else {
-                LoupeMachineLegacyCommands()
-                LegacyWindowLauncherCommands(
-                    openMain: DeboogeyWindowController.openMain,
-                    openCocoaDebugMenu: {
-                        DeboogeyWindowController.open(.cocoaDebugMenu, sipSatisfied: sipSatisfied)
+#if !DEBOOGEY_MCE
+            UpgradeCommands()
+#endif
+            LoupeMachineLegacyCommands()
+            LegacyWindowLauncherCommands(
+                openMain: DeboogeyWindowController.openMain,
+                openCocoaDebugMenu: {
+                    DeboogeyWindowController.open(.cocoaDebugMenu, sipSatisfied: sipSatisfied)
+                },
+                openSkyLightDiagnostics: DebugVariables.isMarketplaceCandidateEditionBuild
+                    ? nil
+                    : {
+                        DeboogeyWindowController.open(
+                            .skyLightDiagnostics,
+                            sipSatisfied: sipSatisfied
+                        )
                     },
-                    openSkyLightDiagnostics: DebugVariables.isMarketplaceCandidateEditionBuild
-                        ? nil
-                        : {
-                            DeboogeyWindowController.open(
-                                .skyLightDiagnostics,
-                                sipSatisfied: sipSatisfied
-                            )
-                        },
-                    skyLightDiagnosticsDisabled: sipSatisfied
-                )
-            }
+                skyLightDiagnosticsDisabled: sipSatisfied
+            )
         }
 
         SceneSwitcher(sipSatisfied: sipSatisfied)
@@ -343,22 +364,30 @@ struct Root: App {
 }
 
 @available(macOS 13.0, *)
-private struct LoupeMachineExternalDocumentHandler: ViewModifier {
+private struct ExternalDocumentHandler: ViewModifier {
     @Environment(\.openWindow) private var openWindow
 
     func body(content: Content) -> some View {
         content.onOpenURL { url in
-            guard url.pathExtension.lowercased() == "loum" else { return }
-            LoupeMachineNavigation.open(documentAt: url, using: openWindow)
+            let ext = url.pathExtension.lowercased()
+            if ext == "loum" {
+                LoupeMachineNavigation.open(documentAt: url, using: openWindow)
+            } else if ext == "dsplt" || ext == "dspltx" {
+                DiffsplitterNavigation.open(documentAt: url, using: openWindow)
+            }
         }
     }
 }
 
-private struct LoupeMachineLegacyExternalDocumentHandler: ViewModifier {
+private struct LegacyExternalDocumentHandler: ViewModifier {
     func body(content: Content) -> some View {
         content.onOpenURL { url in
-            guard url.pathExtension.lowercased() == "loum" else { return }
-            LoupeMachineNavigation.openLegacy(documentAt: url)
+            let ext = url.pathExtension.lowercased()
+            if ext == "loum" {
+                LoupeMachineNavigation.openLegacy(documentAt: url)
+            } else if ext == "dsplt" || ext == "dspltx" {
+                DiffsplitterNavigation.openLegacy(documentAt: url)
+            }
         }
     }
 }
@@ -367,9 +396,9 @@ private struct RootContentView: View {
     @ViewBuilder
     var body: some View {
         if #available(macOS 13.0, *) {
-            RootView().modifier(LoupeMachineExternalDocumentHandler())
+            RootView().modifier(ExternalDocumentHandler())
         } else {
-            RootView().modifier(LoupeMachineLegacyExternalDocumentHandler())
+            RootView().modifier(LegacyExternalDocumentHandler())
         }
     }
 }

@@ -7,7 +7,7 @@
 
 import AppKit
 
-enum ToolCycleFeedback {
+nonisolated enum ToolCycleFeedback {
     private static let preferenceKey = "theoderoy.Deboogey.Tools.playCycleSound"
     private static let soundVolume: Float = 0.3
 
@@ -45,13 +45,12 @@ enum ToolCycleFeedback {
         }
 
         if !waitUntilFinished {
-            let fireAndForget = {
-                _ = prepareAndStart()
-            }
             if Thread.isMainThread {
-                fireAndForget()
+                _ = prepareAndStart()
             } else {
-                DispatchQueue.main.async(execute: fireAndForget)
+                DispatchQueue.main.async {
+                    _ = prepareAndStart()
+                }
             }
             return
         }
@@ -60,7 +59,9 @@ enum ToolCycleFeedback {
         if Thread.isMainThread {
             started = prepareAndStart()
         } else {
-            started = DispatchQueue.main.sync(execute: prepareAndStart)
+            started = DispatchQueue.main.sync {
+                prepareAndStart()
+            }
         }
 
         guard let (sound, duration) = started else { return }

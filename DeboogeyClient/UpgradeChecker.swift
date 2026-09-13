@@ -22,7 +22,7 @@ class UpgradeChecker: ObservableObject {
     private var downloadProgressObservation: NSKeyValueObservation?
     private init() {}
 
-    struct AppVersion: Comparable, CustomStringConvertible {
+    nonisolated struct AppVersion: Comparable, CustomStringConvertible {
         enum Channel: String { case release = "Release"; case `internal` = "Internal"; case unknown = "Unknown" }
         let channel: Channel; let major: Int; let minor: Int; let patch: Int; let buildNumber: Int; let originalString: String
         var description: String { return originalString }

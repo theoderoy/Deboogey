@@ -19,6 +19,7 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
         case deboogeyCDM
         case wsOverlay
         case loupeMachine
+        case diffsplitter
 
         init(from decoder: Decoder) throws {
             let container = try decoder.singleValueContainer()
@@ -31,6 +32,8 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
                 self = .wsOverlay
             case Self.loupeMachine.rawValue:
                 self = .loupeMachine
+            case Self.diffsplitter.rawValue:
+                self = .diffsplitter
             default:
                 throw DecodingError.dataCorruptedError(
                     in: container,
@@ -44,6 +47,7 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
             case .deboogeyCDM:   return L10n.t("Cocoa Debug Menu")
             case .wsOverlay: return L10n.t("SkyLight Diagnostics")
             case .loupeMachine: return L10n.t("Loupe Machine")
+            case .diffsplitter: return L10n.t("Diffsplitter")
             }
         }
 
@@ -52,6 +56,7 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
             case .deboogeyCDM:   return "wrench.and.screwdriver"
             case .wsOverlay: return "macwindow"
             case .loupeMachine: return "scope"
+            case .diffsplitter: return "square.split.2x1"
             }
         }
 
@@ -68,6 +73,22 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
             case .documentCreated: return L10n.t(".loum file was created — %@")
             case .documentModified: return L10n.t(".loum file was modified — %@")
             case .applicationIndexed: return L10n.t("%@ was completely indexed")
+            }
+        }
+    }
+
+    enum DiffsplitterActivity: String {
+        case comparisonFinished = "__dspltComparisonFinished"
+        case documentCreated = "__dspltDocumentCreated"
+        case documentModified = "__dspltDocumentModified"
+        case documentExported = "__dspltxDocumentExported"
+
+        var summaryFormat: String {
+            switch self {
+            case .comparisonFinished: return L10n.t("%@ finished comparing")
+            case .documentCreated: return L10n.t(".dsplt file was created — %@")
+            case .documentModified: return L10n.t(".dsplt file was modified — %@")
+            case .documentExported: return L10n.t(".dspltx file was exported — %@")
             }
         }
     }
@@ -113,6 +134,15 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
         return arguments.count > 2 ? arguments[2] : loupeActivityTarget
     }
 
+    var diffsplitterActivity: DiffsplitterActivity? {
+        guard source == .diffsplitter, let marker = arguments.first else { return nil }
+        return DiffsplitterActivity(rawValue: marker)
+    }
+
+    var diffsplitterActivityTarget: String? {
+        diffsplitterActivity != nil && arguments.count > 1 ? arguments[1] : nil
+    }
+
     var summary: String {
         switch source {
         case .deboogeyCDM:
@@ -126,6 +156,11 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
                 return String(format: activity.summaryFormat, loupeActivityTarget ?? "?")
             }
             return "\(loupeFlagName ?? "?") — \(loupeApplicationIdentifier ?? "?")"
+        case .diffsplitter:
+            if let activity = diffsplitterActivity {
+                return String(format: activity.summaryFormat, diffsplitterActivityTarget ?? "?")
+            }
+            return diffsplitterActivityTarget ?? "?"
         }
     }
 
@@ -178,7 +213,9 @@ final class EntityTracker: ObservableObject {
         if includingLoupeActivities {
             entities.removeAll()
         } else {
-            entities.removeAll { $0.loupeActivity == nil }
+            entities.removeAll {
+                $0.loupeActivity == nil && $0.diffsplitterActivity == nil
+            }
         }
         save()
     }

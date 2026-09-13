@@ -18,9 +18,9 @@ enum IndexCompletionFeedback {
     ) {
         guard defaults.bool(forKey: preferenceKey) else { return }
 
-        let soundURL = bundle.url(forResource: "IndexingDone", withExtension: "aif")
+        let soundURL = bundle.url(forResource: "ProcessDone", withExtension: "aif")
             ?? bundle.url(
-                forResource: "IndexingDone",
+                forResource: "ProcessDone",
                 withExtension: "aif",
                 subdirectory: "Resources"
             )

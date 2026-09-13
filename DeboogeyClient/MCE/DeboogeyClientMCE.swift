@@ -85,7 +85,7 @@ private struct MCEAboutCommands: Commands {
 }
 
 private struct MCELegacyCommands: Commands {
-    @ObservedObject private var router = LoupeMachineCommandRouter.shared
+    @ObservedObject private var saveBridge = DocumentSaveDispatcherBridge.shared
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
@@ -104,14 +104,26 @@ private struct MCELegacyCommands: Commands {
             }
             .keyboardShortcut("o", modifiers: .command)
 
+            Button(L10n.t("New Diffsplitter Document")) {
+                DiffsplitterNavigation.openLegacy(documentAt: nil)
+            }
+
+            Button(L10n.t("Open Diffsplitter Document…")) {
+                DiffsplitterNavigation.chooseDocumentLegacy()
+            }
+
             Divider()
 
-            Button(L10n.t("Save")) { router.save(saveAs: false) }
+            Button(L10n.t("Save")) { DocumentSaveDispatcher.save(saveAs: false) }
                 .keyboardShortcut("s", modifiers: .command)
-                .disabled(!router.canSave)
-            Button(L10n.t("Save As…")) { router.save(saveAs: true) }
+                .disabled(!saveBridge.canSave)
+            Button(L10n.t("Save As…")) { DocumentSaveDispatcher.save(saveAs: true) }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
-                .disabled(!router.canSave)
+                .disabled(!saveBridge.canSave)
+            Button(L10n.t("Export DiffsplitterX Document…")) {
+                DocumentSaveDispatcher.exportDiffsplitterX()
+            }
+            .disabled(!saveBridge.canExportDiffsplitterX)
         }
     }
 }
@@ -119,7 +131,7 @@ private struct MCELegacyCommands: Commands {
 @available(macOS 13.0, *)
 private struct MCELoupeCommands: Commands {
     @Environment(\.openWindow) private var openWindow
-    @ObservedObject private var router = LoupeMachineCommandRouter.shared
+    @ObservedObject private var saveBridge = DocumentSaveDispatcherBridge.shared
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
@@ -138,14 +150,26 @@ private struct MCELoupeCommands: Commands {
             }
             .keyboardShortcut("o", modifiers: .command)
 
+            Button(L10n.t("New Diffsplitter Document")) {
+                DiffsplitterNavigation.open(documentAt: nil, using: openWindow)
+            }
+
+            Button(L10n.t("Open Diffsplitter Document…")) {
+                DiffsplitterNavigation.chooseDocument(using: openWindow)
+            }
+
             Divider()
 
-            Button(L10n.t("Save")) { router.save(saveAs: false) }
+            Button(L10n.t("Save")) { DocumentSaveDispatcher.save(saveAs: false) }
                 .keyboardShortcut("s", modifiers: .command)
-                .disabled(!router.canSave)
-            Button(L10n.t("Save As…")) { router.save(saveAs: true) }
+                .disabled(!saveBridge.canSave)
+            Button(L10n.t("Save As…")) { DocumentSaveDispatcher.save(saveAs: true) }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
-                .disabled(!router.canSave)
+                .disabled(!saveBridge.canSave)
+            Button(L10n.t("Export DiffsplitterX Document…")) {
+                DocumentSaveDispatcher.exportDiffsplitterX()
+            }
+            .disabled(!saveBridge.canExportDiffsplitterX)
         }
     }
 }
@@ -171,6 +195,30 @@ private struct MCELoupeScene: Scene {
         .defaultSize(
             width: AppWindowSizing.loupeMachine.defaultSize.width,
             height: AppWindowSizing.loupeMachine.defaultSize.height
+        )
+        .windowResizability(.contentMinSize)
+    }
+}
+
+@available(macOS 13.0, *)
+private struct MCEDiffsplitterScene: Scene {
+    var body: some Scene {
+        WindowGroup(
+            L10n.t("Diffsplitter"),
+            id: DiffsplitterNavigation.windowID,
+            for: DiffsplitterWindowRequest.self
+        ) { request in
+            Group {
+                if let request = request.wrappedValue {
+                    DiffsplitterView(request: request)
+                }
+            }
+            .environment(\.locale, L10n.locale)
+        }
+        .commandsRemoved()
+        .defaultSize(
+            width: AppWindowSizing.diffsplitter.defaultSize.width,
+            height: AppWindowSizing.diffsplitter.defaultSize.height
         )
         .windowResizability(.contentMinSize)
     }
@@ -223,8 +271,12 @@ private struct MCEExternalDocumentHandler: ViewModifier {
 
     func body(content: Content) -> some View {
         content.onOpenURL { url in
-            guard url.pathExtension.lowercased() == "loum" else { return }
-            LoupeMachineNavigation.open(documentAt: url, using: openWindow)
+            let ext = url.pathExtension.lowercased()
+            if ext == "loum" {
+                LoupeMachineNavigation.open(documentAt: url, using: openWindow)
+            } else if ext == "dsplt" || ext == "dspltx" {
+                DiffsplitterNavigation.open(documentAt: url, using: openWindow)
+            }
         }
     }
 }
@@ -232,8 +284,12 @@ private struct MCEExternalDocumentHandler: ViewModifier {
 private struct MCELegacyExternalDocumentHandler: ViewModifier {
     func body(content: Content) -> some View {
         content.onOpenURL { url in
-            guard url.pathExtension.lowercased() == "loum" else { return }
-            LoupeMachineNavigation.openLegacy(documentAt: url)
+            let ext = url.pathExtension.lowercased()
+            if ext == "loum" {
+                LoupeMachineNavigation.openLegacy(documentAt: url)
+            } else if ext == "dsplt" || ext == "dspltx" {
+                DiffsplitterNavigation.openLegacy(documentAt: url)
+            }
         }
     }
 }
@@ -284,6 +340,7 @@ struct DeboogeyClientMCE: App {
 
         if #available(macOS 13.0, *) {
             MCELoupeScene()
+            MCEDiffsplitterScene()
             MCEEntityTrackerScene()
         }
     }
