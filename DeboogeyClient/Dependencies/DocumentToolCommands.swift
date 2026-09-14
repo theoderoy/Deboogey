@@ -63,6 +63,7 @@ struct ExternalDocumentHandler: ViewModifier {
 
     func body(content: Content) -> some View {
         content.onOpenURL { url in
+            _ = url.startAccessingSecurityScopedResource()
             let ext = url.pathExtension.lowercased()
             if ext == "loum" {
                 openLoupe(url)

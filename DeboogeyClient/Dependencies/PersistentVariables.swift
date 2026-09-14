@@ -31,6 +31,7 @@ public final class PersistentVariables: ObservableObject {
         static let diffsplitterIncludeHiddenFiles = DiffsplitterSettings.Keys.includeHiddenFiles
         static let diffsplitterPreferDiskTempForLargeFiles = DiffsplitterSettings.Keys.preferDiskTempForLargeFiles
         static let diffsplitterHexWindowLines = DiffsplitterSettings.Keys.hexWindowLines
+        static let diffsplitterLargeFileHexConversionEnabled = DiffsplitterSettings.Keys.largeFileHexConversionEnabled
         static let diffsplitterMaxTextMegabytes = DiffsplitterSettings.Keys.maxTextMegabytes
         static let diffsplitterMaxNestDepth = DiffsplitterSettings.Keys.maxNestDepth
         static let diffsplitterMaxEntries = DiffsplitterSettings.Keys.maxEntries
@@ -89,6 +90,7 @@ public final class PersistentVariables: ObservableObject {
         Keys.diffsplitterIncludeHiddenFiles: DiffsplitterSettings.defaultIncludeHiddenFiles,
         Keys.diffsplitterPreferDiskTempForLargeFiles: DiffsplitterSettings.defaultPreferDiskTempForLargeFiles,
         Keys.diffsplitterHexWindowLines: DiffsplitterSettings.defaultHexWindowLines,
+        Keys.diffsplitterLargeFileHexConversionEnabled: DiffsplitterSettings.defaultLargeFileHexConversionEnabled,
         Keys.diffsplitterMaxTextMegabytes: DiffsplitterSettings.defaultMaxTextMegabytes,
         Keys.diffsplitterMaxNestDepth: DiffsplitterSettings.defaultMaxNestDepth,
         Keys.diffsplitterMaxEntries: DiffsplitterSettings.defaultMaxEntries,
@@ -204,6 +206,15 @@ public final class PersistentVariables: ObservableObject {
         }
     }
 
+    @Published public var diffsplitterLargeFileHexConversionEnabled: Bool {
+        didSet {
+            defaults.set(
+                diffsplitterLargeFileHexConversionEnabled,
+                forKey: Keys.diffsplitterLargeFileHexConversionEnabled
+            )
+        }
+    }
+
     @Published public var diffsplitterMaxTextMegabytes: Double {
         didSet {
             let clamped = Self.clampedContinuous(
@@ -277,6 +288,9 @@ public final class PersistentVariables: ObservableObject {
             defaults: self.defaults
         )
         self.diffsplitterHexWindowLines = Double(DiffsplitterSettings.hexWindowLines(defaults: self.defaults))
+        self.diffsplitterLargeFileHexConversionEnabled = DiffsplitterSettings.largeFileHexConversionEnabled(
+            defaults: self.defaults
+        )
         self.diffsplitterMaxTextMegabytes = Double(DiffsplitterSettings.maxTextMegabytes(defaults: self.defaults))
         self.diffsplitterMaxNestDepth = Double(DiffsplitterSettings.maxNestDepth(defaults: self.defaults))
         self.diffsplitterMaxEntries = Double(DiffsplitterSettings.maxEntries(defaults: self.defaults))

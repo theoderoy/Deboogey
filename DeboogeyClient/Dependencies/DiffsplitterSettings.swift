@@ -12,6 +12,7 @@ nonisolated enum DiffsplitterSettings {
         static let includeHiddenFiles = "theoderoy.Deboogey.Diffsplitter.includeHiddenFiles"
         static let preferDiskTempForLargeFiles = "theoderoy.Deboogey.Diffsplitter.preferDiskTempForLargeFiles"
         static let hexWindowLines = "theoderoy.Deboogey.Diffsplitter.hexWindowLines"
+        static let largeFileHexConversionEnabled = "theoderoy.Deboogey.Diffsplitter.largeFileHexConversionEnabled"
         static let maxTextMegabytes = "theoderoy.Deboogey.Diffsplitter.maxTextMegabytes"
         static let maxNestDepth = "theoderoy.Deboogey.Diffsplitter.maxNestDepth"
         static let maxEntries = "theoderoy.Deboogey.Diffsplitter.maxEntries"
@@ -21,6 +22,7 @@ nonisolated enum DiffsplitterSettings {
     static let defaultPreferDiskTempForLargeFiles = true
     static let defaultHexWindowLines = 96
     static let hexWindowLinesRange = 32...192
+    static let defaultLargeFileHexConversionEnabled = false
     static let defaultMaxTextMegabytes = 5
     static let maxTextMegabytesRange = 1...64
     static let defaultMaxNestDepth = 8
@@ -47,6 +49,13 @@ nonisolated enum DiffsplitterSettings {
             return defaultPreferDiskTempForLargeFiles
         }
         return defaults.bool(forKey: Keys.preferDiskTempForLargeFiles)
+    }
+
+    static func largeFileHexConversionEnabled(defaults: UserDefaults = .standard) -> Bool {
+        if defaults.object(forKey: Keys.largeFileHexConversionEnabled) == nil {
+            return defaultLargeFileHexConversionEnabled
+        }
+        return defaults.bool(forKey: Keys.largeFileHexConversionEnabled)
     }
 
     static func hexWindowLines(defaults: UserDefaults = .standard) -> Int {

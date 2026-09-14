@@ -215,9 +215,16 @@ private struct GeneralPanelView: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
+            Toggle(isOn: $vm.diffsplitterLargeFileHexConversionEnabled) {
+                Text(L10n.t("Large File Hex Conversion"))
+            }
+            Text(L10n.t("When on, oversized files that are not content-detected binaries open as a windowed hex dump instead of text. Binary status is only for recognised binary content and is unaffected."))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text(L10n.t("Binary Size Threshold"))
+                    Text(L10n.t("Large File Size Threshold"))
                     Spacer()
                     Text(L10n.f("%d MB", Int(vm.diffsplitterMaxTextMegabytes.rounded())))
                         .monospacedDigit()
@@ -230,16 +237,20 @@ private struct GeneralPanelView: View {
                     ) {
                         vm.diffsplitterMaxTextMegabytes = Double(DiffsplitterSettings.defaultMaxTextMegabytes)
                     }
+                    .disabled(!vm.diffsplitterLargeFileHexConversionEnabled)
                     Slider(
                         value: $vm.diffsplitterMaxTextMegabytes,
                         in: Double(DiffsplitterSettings.maxTextMegabytesRange.lowerBound)
                             ... Double(DiffsplitterSettings.maxTextMegabytesRange.upperBound)
                     )
+                    .disabled(!vm.diffsplitterLargeFileHexConversionEnabled)
                 }
             }
-            Text(L10n.t("Files larger than this are treated as binary instead of text."))
+            .opacity(vm.diffsplitterLargeFileHexConversionEnabled ? 1 : 0.45)
+            Text(L10n.t("Files larger than this use windowed hex conversion when Large File Hex Conversion is on."))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+                .opacity(vm.diffsplitterLargeFileHexConversionEnabled ? 1 : 0.45)
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
@@ -896,6 +907,10 @@ final class ConfigurationViewModel: ObservableObject {
         didSet { vars.diffsplitterHexWindowLines = diffsplitterHexWindowLines }
     }
 
+    @Published var diffsplitterLargeFileHexConversionEnabled: Bool {
+        didSet { vars.diffsplitterLargeFileHexConversionEnabled = diffsplitterLargeFileHexConversionEnabled }
+    }
+
     @Published var diffsplitterMaxTextMegabytes: Double {
         didSet { vars.diffsplitterMaxTextMegabytes = diffsplitterMaxTextMegabytes }
     }
@@ -941,6 +956,7 @@ final class ConfigurationViewModel: ObservableObject {
         self.diffsplitterIncludeHiddenFiles = vars.diffsplitterIncludeHiddenFiles
         self.diffsplitterPreferDiskTempForLargeFiles = vars.diffsplitterPreferDiskTempForLargeFiles
         self.diffsplitterHexWindowLines = vars.diffsplitterHexWindowLines
+        self.diffsplitterLargeFileHexConversionEnabled = vars.diffsplitterLargeFileHexConversionEnabled
         self.diffsplitterMaxTextMegabytes = vars.diffsplitterMaxTextMegabytes
         self.diffsplitterMaxNestDepth = vars.diffsplitterMaxNestDepth
         self.diffsplitterMaxEntries = vars.diffsplitterMaxEntries

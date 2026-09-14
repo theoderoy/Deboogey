@@ -15,218 +15,29 @@ import UserNotifications
 import Combine
 
 nonisolated protocol DiffsplitterContainerBackend: Sendable {
-    func attachDiskImage(_ image: URL, mountPoint: URL) throws
-    func detachDiskImage(at mountPoint: URL)
     func expandPkg(package: URL, into destination: URL) throws
     func expandXip(archive: URL, into destination: URL) throws
-    func runProcess(
-        executable: String,
-        arguments: [String],
-        currentDirectory: URL?
-    ) throws -> String
-    func runProcessData(
-        executable: String,
-        arguments: [String],
-        currentDirectory: URL?
-    ) throws -> Data
+    func openDiskImage(_ image: URL) throws -> DiffsplitterDiskFS.Volume
 }
+
 nonisolated enum DiffsplitterContainerServices {
-    static var backend: DiffsplitterContainerBackend = DiffsplitterMacContainerBackend()
+    static var backend: DiffsplitterContainerBackend = DiffsplitterNativeContainerBackend()
 }
-nonisolated struct DiffsplitterUnsupportedContainerBackend: DiffsplitterContainerBackend {
-    private func unsupported(_ feature: String) -> Error {
-        DiffsplitterContainer.ContainerError.expandFailed("\(feature) is not available on this platform")
-    }
-    func attachDiskImage(_ image: URL, mountPoint: URL) throws {
-        throw unsupported("Disk image mounting")
-    }
-    func detachDiskImage(at mountPoint: URL) {}
+
+nonisolated struct DiffsplitterNativeContainerBackend: DiffsplitterContainerBackend {
     func expandPkg(package: URL, into destination: URL) throws {
-        throw unsupported("PKG expansion")
+        try DiffsplitterPKG.expand(package: package, into: destination)
     }
+
     func expandXip(archive: URL, into destination: URL) throws {
-        throw unsupported("XIP expansion")
+        try DiffsplitterXIP.expand(archive: archive, into: destination)
     }
-    func runProcess(
-        executable: String,
-        arguments: [String],
-        currentDirectory: URL?
-    ) throws -> String {
-        throw unsupported(executable)
-    }
-    func runProcessData(
-        executable: String,
-        arguments: [String],
-        currentDirectory: URL?
-    ) throws -> Data {
-        throw unsupported(executable)
+
+    func openDiskImage(_ image: URL) throws -> DiffsplitterDiskFS.Volume {
+        try DiffsplitterDiskFS.open(image: image)
     }
 }
-#if os(macOS)
-nonisolated struct DiffsplitterMacContainerBackend: DiffsplitterContainerBackend {
-    func attachDiskImage(_ image: URL, mountPoint: URL) throws {
-        let diskutilArgs = [
-            "image", "attach",
-            "--readOnly",
-            "--nobrowse",
-            "--mountPoint", mountPoint.path,
-            image.path
-        ]
-        do {
-            _ = try runProcess(executable: "/usr/sbin/diskutil", arguments: diskutilArgs, currentDirectory: nil)
-            return
-        } catch let error as DiffsplitterContainer.ContainerError {
-            let detail = error.processDetail.lowercased()
-            let missingSubcommand =
-                detail.contains("unknown")
-                || detail.contains("invalid")
-                || detail.contains("unrecognized")
-                || detail.contains("usage:")
-                || detail.contains("overview:")
-            if !missingSubcommand {
-                throw error
-            }
-        }
-        _ = try runProcess(
-            executable: "/usr/bin/hdiutil",
-            arguments: [
-                "attach",
-                image.path,
-                "-readonly",
-                "-nobrowse",
-                "-mountpoint",
-                mountPoint.path
-            ],
-            currentDirectory: nil
-        )
-    }
-    func detachDiskImage(at mountPoint: URL) {
-        if (try? runProcess(
-            executable: "/usr/sbin/diskutil",
-            arguments: ["eject", "force", mountPoint.path],
-            currentDirectory: nil
-        )) != nil {
-            return
-        }
-        _ = try? runProcess(
-            executable: "/usr/bin/hdiutil",
-            arguments: ["detach", mountPoint.path, "-force"],
-            currentDirectory: nil
-        )
-    }
-    func expandPkg(package: URL, into destination: URL) throws {
-        do {
-            _ = try runProcess(
-                executable: "/usr/sbin/pkgutil",
-                arguments: ["--expand", package.path, destination.path],
-                currentDirectory: nil
-            )
-        } catch {
-            do {
-                _ = try runProcess(
-                    executable: "/usr/bin/xar",
-                    arguments: ["-xf", package.path, "-C", destination.path],
-                    currentDirectory: nil
-                )
-            } catch {
-                throw DiffsplitterContainer.ContainerError.expandFailed(error.localizedDescription)
-            }
-        }
-    }
-    func expandXip(archive: URL, into destination: URL) throws {
-        let localCopy = destination.appendingPathComponent(archive.lastPathComponent)
-        do {
-            try FileManager.default.copyItem(at: archive, to: localCopy)
-            _ = try runProcess(
-                executable: "/usr/bin/xip",
-                arguments: ["--expand", localCopy.path],
-                currentDirectory: destination
-            )
-            try? FileManager.default.removeItem(at: localCopy)
-        } catch {
-            do {
-                _ = try runProcess(
-                    executable: "/usr/bin/xar",
-                    arguments: ["-xf", archive.path, "-C", destination.path],
-                    currentDirectory: nil
-                )
-            } catch {
-                throw DiffsplitterContainer.ContainerError.expandFailed(error.localizedDescription)
-            }
-        }
-    }
-    func runProcess(
-        executable: String,
-        arguments: [String],
-        currentDirectory: URL?
-    ) throws -> String {
-        let data = try runProcessData(
-            executable: executable,
-            arguments: arguments,
-            currentDirectory: currentDirectory
-        )
-        return String(data: data, encoding: .utf8) ?? ""
-    }
-    func runProcessData(
-        executable: String,
-        arguments: [String],
-        currentDirectory: URL?
-    ) throws -> Data {
-        try Task.checkCancellation()
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: executable)
-        process.arguments = arguments
-        if let currentDirectory {
-            process.currentDirectoryURL = currentDirectory
-        }
-        let stdout = Pipe()
-        let stderr = Pipe()
-        process.standardOutput = stdout
-        process.standardError = stderr
-        try process.run()
-        let group = DispatchGroup()
-        var outData = Data()
-        var errData = Data()
-        let dataLock = NSLock()
-        group.enter()
-        DispatchQueue.global(qos: .userInitiated).async {
-            let chunk = stdout.fileHandleForReading.readDataToEndOfFile()
-            dataLock.lock()
-            outData = chunk
-            dataLock.unlock()
-            group.leave()
-        }
-        group.enter()
-        DispatchQueue.global(qos: .userInitiated).async {
-            let chunk = stderr.fileHandleForReading.readDataToEndOfFile()
-            dataLock.lock()
-            errData = chunk
-            dataLock.unlock()
-            group.leave()
-        }
-        while process.isRunning {
-            if Task.isCancelled {
-                process.terminate()
-                _ = group.wait(timeout: .now() + 2)
-                throw CancellationError()
-            }
-            Thread.sleep(forTimeInterval: 0.05)
-        }
-        group.wait()
-        if Task.isCancelled {
-            throw CancellationError()
-        }
-        let errText = (String(data: errData, encoding: .utf8) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard process.terminationStatus == 0 else {
-            let detail = errText.isEmpty ? "exit \(process.terminationStatus)" : errText
-            throw DiffsplitterContainer.ContainerError.expandFailed(detail)
-        }
-        return outData
-    }
-}
-#else
-typealias DiffsplitterMacContainerBackend = DiffsplitterUnsupportedContainerBackend
-#endif
+
 nonisolated enum DiffsplitterZip {
     struct Entry: Sendable, Equatable {
         let name: String
@@ -633,228 +444,6 @@ nonisolated enum DiffsplitterZip {
     }
     private static func readUInt64LE(_ data: Data, _ offset: Int) -> UInt64 {
         UInt64(readUInt32LE(data, offset)) | (UInt64(readUInt32LE(data, offset + 4)) << 32)
-    }
-}
-nonisolated enum DiffsplitterAEA {
-    static let magic = Data("AEA1".utf8)
-    private static let prologueProbeBytes = 256 * 1024
-    static func isAEAExtension(of url: URL) -> Bool {
-        url.pathExtension.lowercased() == "aea"
-    }
-    static func looksLike(_ data: Data) -> Bool {
-        data.count >= 4 && data.starts(with: magic)
-    }
-    static func looksLikeFile(at url: URL) -> Bool {
-        guard let handle = try? FileHandle(forReadingFrom: url) else { return false }
-        defer { try? handle.close() }
-        guard let header = try? handle.read(upToCount: 4), header.count == 4 else { return false }
-        return header == magic
-    }
-    static func summarize(at url: URL) throws -> [String] {
-        let attrs = try FileManager.default.attributesOfItem(atPath: url.path)
-        let size = (attrs[.size] as? NSNumber)?.intValue ?? 0
-        let handle = try FileHandle(forReadingFrom: url)
-        defer { try? handle.close() }
-        let probe = try handle.read(upToCount: min(prologueProbeBytes, max(size, 0))) ?? Data()
-        var lines: [String] = [
-            "format: AEA",
-            "path: \(url.lastPathComponent)",
-            "size: \(size)"
-        ]
-        if looksLike(probe) {
-            lines.append("magic: AEA1")
-        } else {
-            lines.append("magic: unknown")
-        }
-        if let id = try? archiveIdentifier(at: url), !id.isEmpty {
-            lines.append("id: \(id)")
-        }
-        let authKeys = authDataKeys(in: probe)
-        if !authKeys.isEmpty {
-            lines.append("auth-data-keys:")
-            for key in authKeys.sorted() {
-                lines.append("  \(key)")
-            }
-        }
-        lines.append("prologue-sha256: \(sha256Hex(probe))")
-        lines.append("prologue-bytes: \(probe.count)")
-        return lines
-    }
-    static func summarize(_ data: Data) throws -> [String] {
-        let temp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("Diffsplitter-aea-summary-\(UUID().uuidString)")
-        try data.write(to: temp, options: .atomic)
-        defer { try? FileManager.default.removeItem(at: temp) }
-        return try summarize(at: temp)
-    }
-    static func normalizeKeyValue(_ raw: String) -> String? {
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        let lower = trimmed.lowercased()
-        if lower.hasPrefix("base64:") || lower.hasPrefix("hex:") {
-            return trimmed
-        }
-        if trimmed.range(of: #"^[A-Za-z0-9+/=_-]+$"#, options: .regularExpression) != nil {
-            return "base64:\(trimmed)"
-        }
-        if trimmed.range(of: #"^[0-9A-Fa-f]+$"#, options: .regularExpression) != nil,
-           trimmed.count % 2 == 0 {
-            return "hex:\(trimmed)"
-        }
-        return "base64:\(trimmed)"
-    }
-    static func resolveIpswExecutable() -> URL? {
-        let candidates = [
-            "/opt/homebrew/bin/ipsw",
-            "/usr/local/bin/ipsw"
-        ]
-        for path in candidates {
-            if FileManager.default.isExecutableFile(atPath: path) {
-                return URL(fileURLWithPath: path)
-            }
-        }
-        if let path = which("ipsw") {
-            return URL(fileURLWithPath: path)
-        }
-        return nil
-    }
-    static func unwrapKeyWithIpsw(at url: URL) throws -> String? {
-        guard let ipsw = resolveIpswExecutable() else { return nil }
-        let output: String
-        do {
-            output = try DiffsplitterContainer.runProcess(
-                executable: ipsw.path,
-                arguments: ["fw", "aea", "--key", url.path]
-            )
-        } catch {
-            do {
-                output = try DiffsplitterContainer.runProcess(
-                    executable: ipsw.path,
-                    arguments: ["fw", "aea", url.path, "--key"]
-                )
-            } catch {
-                return nil
-            }
-        }
-        return parseKey(fromIpswOutput: output)
-    }
-    static func decrypt(
-        input: URL,
-        output: URL,
-        keyValue: String?
-    ) throws {
-        try FileManager.default.createDirectory(
-            at: output.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try? FileManager.default.removeItem(at: output)
-        if let keyValue, let normalized = normalizeKeyValue(keyValue) {
-            try runAEADecrypt(input: input, output: output, extraArguments: [
-                "-key-value", normalized
-            ])
-            return
-        }
-        do {
-            try runAEADecrypt(input: input, output: output, extraArguments: ["-keychain"])
-            return
-        } catch {
-        }
-        if let unwrapped = try unwrapKeyWithIpsw(at: input),
-           let normalized = normalizeKeyValue(unwrapped) {
-            try runAEADecrypt(input: input, output: output, extraArguments: [
-                "-key-value", normalized
-            ])
-            return
-        }
-        throw DiffsplitterContainer.ContainerError.aeaKeyRequired
-    }
-    static func decryptedOutputURL(for input: URL, in directory: URL) -> URL {
-        var name = input.lastPathComponent
-        if name.lowercased().hasSuffix(".aea") {
-            name = String(name.dropLast(4))
-        }
-        if name.isEmpty { name = "aea-payload" }
-        return directory.appendingPathComponent(name)
-    }
-    private static func runAEADecrypt(
-        input: URL,
-        output: URL,
-        extraArguments: [String]
-    ) throws {
-        var args = [
-            "decrypt",
-            "-i", input.path,
-            "-o", output.path
-        ]
-        args.append(contentsOf: extraArguments)
-        do {
-            _ = try DiffsplitterContainer.runProcess(
-                executable: "/usr/bin/aea",
-                arguments: args
-            )
-        } catch let error as DiffsplitterContainer.ContainerError {
-            throw DiffsplitterContainer.ContainerError.aeaDecryptFailed(error.processDetail)
-        } catch {
-            throw DiffsplitterContainer.ContainerError.aeaDecryptFailed(error.localizedDescription)
-        }
-        guard FileManager.default.fileExists(atPath: output.path) else {
-            throw DiffsplitterContainer.ContainerError.aeaDecryptFailed("aea produced no output")
-        }
-    }
-    private static func archiveIdentifier(at url: URL) throws -> String {
-        let raw = try DiffsplitterContainer.runProcess(
-            executable: "/usr/bin/aea",
-            arguments: ["id", "-i", url.path]
-        )
-        return raw.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-    private static func authDataKeys(in probe: Data) -> [String] {
-        guard let ascii = String(data: probe, encoding: .ascii) ?? String(data: probe, encoding: .isoLatin1) else {
-            return []
-        }
-        var keys: Set<String> = []
-        let pattern = #"com\.apple\.[A-Za-z0-9._-]{3,80}"#
-        if let regex = try? NSRegularExpression(pattern: pattern) {
-            let range = NSRange(ascii.startIndex..<ascii.endIndex, in: ascii)
-            regex.enumerateMatches(in: ascii, range: range) { match, _, _ in
-                guard let match, let swiftRange = Range(match.range, in: ascii) else { return }
-                keys.insert(String(ascii[swiftRange]))
-            }
-        }
-        return Array(keys)
-    }
-    static func parseKey(fromIpswOutput output: String) -> String? {
-        let lines = output
-            .split(whereSeparator: \.isNewline)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-        for line in lines.reversed() {
-            let lower = line.lowercased()
-            if lower.hasPrefix("base64:") || lower.hasPrefix("hex:") {
-                return String(line)
-            }
-            if line.count >= 16,
-               line.range(of: #"^[A-Za-z0-9+/=_-]+$"#, options: .regularExpression) != nil,
-               !line.contains(" "),
-               !lower.contains("error"),
-               !lower.contains("usage") {
-                return line
-            }
-        }
-        return nil
-    }
-    private static func which(_ name: String) -> String? {
-        guard let pathEnv = ProcessInfo.processInfo.environment["PATH"] else { return nil }
-        for dir in pathEnv.split(separator: ":") {
-            let candidate = URL(fileURLWithPath: String(dir)).appendingPathComponent(name).path
-            if FileManager.default.isExecutableFile(atPath: candidate) {
-                return candidate
-            }
-        }
-        return nil
-    }
-    private static func sha256Hex(_ data: Data) -> String {
-        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 }
 nonisolated enum DiffsplitterImage4 {
@@ -1679,6 +1268,19 @@ nonisolated enum DiffsplitterContent {
                     )
                 )
             }
+            if DiffsplitterSettings.largeFileHexConversionEnabled(),
+               fileSize > DiffsplitterSettings.maxTextBytes() {
+                return Presentation(
+                    prefersHexDump: true,
+                    content: DiffsplitterEngine.TextContent(
+                        lines: [
+                            "format: hex",
+                            "size: \(fileSize)"
+                        ],
+                        encodingName: hexEncodingName
+                    )
+                )
+            }
         }
 
         let data = try Data(contentsOf: resolvedURL, options: [.mappedIfSafe])
@@ -1799,10 +1401,18 @@ nonisolated struct DiffsplitterZipMember: Sendable, Equatable {
     let crc32: UInt32
     let uncompressedSize: Int
 }
+
+nonisolated struct DiffsplitterDiskMember: Sendable, Equatable {
+    let imageURL: URL
+    let memberPath: String
+    let uncompressedSize: Int
+}
+
 nonisolated final class DiffsplitterContainerSession: @unchecked Sendable {
     private let root: URL
-    private var mountPoints: [URL] = []
+    private var openVolumes: [String: DiffsplitterDiskFS.Volume] = [:]
     private var zipMembersByStubPath: [String: DiffsplitterZipMember] = [:]
+    private var diskMembersByStubPath: [String: DiffsplitterDiskMember] = [:]
     private var inspectMaterializationDirs: [URL] = []
     private var inspectMemoryByStubPath: [String: Data] = [:]
     private let lock = NSRecursiveLock()
@@ -1852,6 +1462,7 @@ nonisolated final class DiffsplitterContainerSession: @unchecked Sendable {
         )
         zipMembersByStubPath[stubURL.path] = member
         let meta = StubSidecar(
+            kind: .zip,
             archivePath: archive.path,
             memberPath: memberPath,
             crc32: crc32,
@@ -1861,11 +1472,69 @@ nonisolated final class DiffsplitterContainerSession: @unchecked Sendable {
         try metaData.write(to: Self.sidecarURL(forStub: stubURL), options: .atomic)
         return stubURL
     }
+    func registerDiskMemberStub(
+        relativePath: String,
+        image: URL,
+        memberPath: String,
+        uncompressedSize: Int
+    ) throws -> URL {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !closed else { throw DiffsplitterContainer.ContainerError.unreadable }
+        let stubRoot = root.appendingPathComponent("dmg-stubs", isDirectory: true)
+        let stubURL = stubRoot.appendingPathComponent(relativePath)
+        try FileManager.default.createDirectory(
+            at: stubURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        if !FileManager.default.fileExists(atPath: stubURL.path) {
+            FileManager.default.createFile(atPath: stubURL.path, contents: Data())
+        }
+        let member = DiffsplitterDiskMember(
+            imageURL: image,
+            memberPath: memberPath,
+            uncompressedSize: uncompressedSize
+        )
+        diskMembersByStubPath[stubURL.path] = member
+        let meta = StubSidecar(
+            kind: .dmg,
+            archivePath: image.path,
+            memberPath: memberPath,
+            crc32: 0,
+            uncompressedSize: uncompressedSize
+        )
+        let metaData = try JSONEncoder().encode(meta)
+        try metaData.write(to: Self.sidecarURL(forStub: stubURL), options: .atomic)
+        return stubURL
+    }
+    fileprivate enum StubKind: String, Codable {
+        case zip
+        case dmg
+    }
     fileprivate struct StubSidecar: Codable {
+        var kind: StubKind
         let archivePath: String
         let memberPath: String
         let crc32: UInt32
         let uncompressedSize: Int
+        enum CodingKeys: String, CodingKey {
+            case kind, archivePath, memberPath, crc32, uncompressedSize
+        }
+        init(kind: StubKind, archivePath: String, memberPath: String, crc32: UInt32, uncompressedSize: Int) {
+            self.kind = kind
+            self.archivePath = archivePath
+            self.memberPath = memberPath
+            self.crc32 = crc32
+            self.uncompressedSize = uncompressedSize
+        }
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            kind = try c.decodeIfPresent(StubKind.self, forKey: .kind) ?? .zip
+            archivePath = try c.decode(String.self, forKey: .archivePath)
+            memberPath = try c.decode(String.self, forKey: .memberPath)
+            crc32 = try c.decode(UInt32.self, forKey: .crc32)
+            uncompressedSize = try c.decode(Int.self, forKey: .uncompressedSize)
+        }
     }
     fileprivate static func sidecarURL(forStub url: URL) -> URL {
         url.appendingPathExtension("dsmeta")
@@ -1874,6 +1543,30 @@ nonisolated final class DiffsplitterContainerSession: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         return zipMembersByStubPath[url.path]
+    }
+    func diskMember(forStubURL url: URL) -> DiffsplitterDiskMember? {
+        lock.lock()
+        defer { lock.unlock() }
+        return diskMembersByStubPath[url.path]
+    }
+    func volume(forImage image: URL) throws -> DiffsplitterDiskFS.Volume {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !closed else { throw DiffsplitterContainer.ContainerError.unreadable }
+        if let existing = openVolumes[image.path] {
+            return existing
+        }
+        do {
+            let volume = try DiffsplitterContainerServices.backend.openDiskImage(image)
+            openVolumes[image.path] = volume
+            return volume
+        } catch let error as DiffsplitterDiskFS.DiskFSError {
+            throw DiffsplitterContainer.ContainerError.mountFailed(error.localizedDescription)
+        } catch let error as DiffsplitterUDIFDisk.UDIFError {
+            throw DiffsplitterContainer.ContainerError.mountFailed(error.localizedDescription)
+        } catch {
+            throw DiffsplitterContainer.ContainerError.mountFailed(error.localizedDescription)
+        }
     }
     func unloadInspectMaterializations() {
         lock.lock()
@@ -1905,6 +1598,13 @@ nonisolated final class DiffsplitterContainerSession: @unchecked Sendable {
             return cached
         }
         lock.unlock()
+        if let disk = diskMember(forStubURL: url) ?? DiffsplitterContainer.diskStubMetadata(at: url) {
+            let data = try materializeDiskMemberData(disk)
+            lock.lock()
+            inspectMemoryByStubPath[url.path] = data
+            lock.unlock()
+            return data
+        }
         guard let member = zipMember(forStubURL: url) ?? DiffsplitterContainer.zipStubMetadata(at: url) else {
             throw DiffsplitterContainer.ContainerError.unreadable
         }
@@ -1923,7 +1623,10 @@ nonisolated final class DiffsplitterContainerSession: @unchecked Sendable {
         forStubURL url: URL,
         progress: DiffsplitterContent.MaterializeProgress? = nil
     ) throws -> URL {
-        try materializeZipMember(
+        if diskMember(forStubURL: url) != nil || DiffsplitterContainer.diskStubMetadata(at: url) != nil {
+            return try materializeDiskMember(forStubURL: url, durable: true, progress: progress)
+        }
+        return try materializeZipMember(
             forStubURL: url,
             durable: true,
             progress: progress
@@ -1934,6 +1637,9 @@ nonisolated final class DiffsplitterContainerSession: @unchecked Sendable {
         durable: Bool,
         progress: DiffsplitterContent.MaterializeProgress?
     ) throws -> URL {
+        if diskMember(forStubURL: url) != nil || DiffsplitterContainer.diskStubMetadata(at: url) != nil {
+            return try materializeDiskMember(forStubURL: url, durable: durable, progress: progress)
+        }
         guard let member = zipMember(forStubURL: url) ?? DiffsplitterContainer.zipStubMetadata(at: url) else {
             throw DiffsplitterContainer.ContainerError.unreadable
         }
@@ -1954,31 +1660,44 @@ nonisolated final class DiffsplitterContainerSession: @unchecked Sendable {
         )
         return outURL
     }
-    func attachDiskImage(_ image: URL, mountPoint: URL) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        guard !closed else { throw DiffsplitterContainer.ContainerError.unreadable }
-        try? FileManager.default.removeItem(at: mountPoint)
-        try FileManager.default.createDirectory(at: mountPoint, withIntermediateDirectories: true)
-        do {
-            try DiffsplitterContainer.attachDiskImage(image, mountPoint: mountPoint)
-        } catch let error as DiffsplitterContainer.ContainerError {
-            throw DiffsplitterContainer.ContainerError.mountFailed(error.processDetail)
-        } catch {
-            throw DiffsplitterContainer.ContainerError.mountFailed(error.localizedDescription)
+    private func materializeDiskMember(
+        forStubURL url: URL,
+        durable: Bool,
+        progress: DiffsplitterContent.MaterializeProgress?
+    ) throws -> URL {
+        guard let member = diskMember(forStubURL: url) ?? DiffsplitterContainer.diskStubMetadata(at: url) else {
+            throw DiffsplitterContainer.ContainerError.unreadable
         }
-        mountPoints.append(mountPoint)
+        progress?(0, max(member.uncompressedSize, 1))
+        let data = try materializeDiskMemberData(member)
+        progress?(data.count, data.count)
+        let outDir = try makeWorkDirectory(named: durable ? "dmg-expand" : "dmg-member")
+        if !durable {
+            lock.lock()
+            inspectMaterializationDirs.append(outDir)
+            lock.unlock()
+        }
+        let safeName = (member.memberPath as NSString).lastPathComponent
+        let outURL = outDir.appendingPathComponent(safeName.isEmpty ? "member" : safeName)
+        try data.write(to: outURL, options: .atomic)
+        return outURL
+    }
+    private func materializeDiskMemberData(_ member: DiffsplitterDiskMember) throws -> Data {
+        let volume = try volume(forImage: member.imageURL)
+        do {
+            return try volume.readFile(path: member.memberPath)
+        } catch let error as DiffsplitterDiskFS.DiskFSError {
+            throw DiffsplitterContainer.ContainerError.expandFailed(error.localizedDescription)
+        }
     }
     func close() {
         lock.lock()
         defer { lock.unlock() }
         guard !closed else { return }
         closed = true
-        for mount in mountPoints.reversed() {
-            DiffsplitterContainer.detachDiskImage(at: mount)
-        }
-        mountPoints.removeAll()
+        openVolumes.removeAll()
         zipMembersByStubPath.removeAll()
+        diskMembersByStubPath.removeAll()
         inspectMaterializationDirs.removeAll()
         inspectMemoryByStubPath.removeAll()
         try? FileManager.default.removeItem(at: root)
@@ -2155,17 +1874,13 @@ nonisolated enum DiffsplitterContainer {
                 deferNestedContainers: true
             )
         case .dmg:
-            let mountPoint = try session.makeWorkDirectory(named: "dmg-mnt")
-            try session.attachDiskImage(resolved, mountPoint: mountPoint)
-            try walkDirectory(
-                at: mountPoint,
+            try expandDiskVirtually(
+                image: resolved,
                 pathPrefix: pathPrefix,
-                depth: depth + 1,
                 session: session,
                 into: &map,
                 expectedTotal: &expectedTotal,
-                progress: progress,
-                deferNestedContainers: true
+                progress: progress
             )
         case .aea:
             try expandAEA(
@@ -2188,7 +1903,7 @@ nonisolated enum DiffsplitterContainer {
         session: DiffsplitterContainerSession,
         progress: (@Sendable (Int, Int?) -> Void)?
     ) throws -> URL {
-        if zipStubMetadata(at: url) != nil {
+        if zipStubMetadata(at: url) != nil || diskStubMetadata(at: url) != nil {
             return try session.materializeZipMemberForExpansion(
                 forStubURL: url,
                 progress: progress
@@ -2294,12 +2009,9 @@ nonisolated enum DiffsplitterContainer {
                 return
             }
             do {
-                let mountPoint = try session.makeWorkDirectory(named: "dmg-mnt")
-                try session.attachDiskImage(url, mountPoint: mountPoint)
-                try walkDirectory(
-                    at: mountPoint,
+                try expandDiskVirtually(
+                    image: url,
                     pathPrefix: pathPrefix,
-                    depth: depth + 1,
                     session: session,
                     into: &map,
                     expectedTotal: &expectedTotal,
@@ -2427,17 +2139,13 @@ nonisolated enum DiffsplitterContainer {
                 deferNestedContainers: deferNestedContainers
             )
         case .dmg:
-            let mountPoint = try session.makeWorkDirectory(named: "aea-dmg-mnt")
-            try session.attachDiskImage(decrypted, mountPoint: mountPoint)
-            try walkDirectory(
-                at: mountPoint,
+            try expandDiskVirtually(
+                image: decrypted,
                 pathPrefix: pathPrefix,
-                depth: depth + 1,
                 session: session,
                 into: &map,
                 expectedTotal: &expectedTotal,
-                progress: progress,
-                deferNestedContainers: true
+                progress: progress
             )
         case .aea:
             try addLeaf(
@@ -2575,10 +2283,47 @@ nonisolated enum DiffsplitterContainer {
             }
         }
     }
+    private static func expandDiskVirtually(
+        image: URL,
+        pathPrefix: String,
+        session: DiffsplitterContainerSession,
+        into map: inout [String: URL],
+        expectedTotal: inout Int?,
+        progress: (@Sendable (Int, Int?) -> Void)?
+    ) throws {
+        progress?(map.count, -1)
+        let volume = try session.volume(forImage: image)
+        let entries: [DiffsplitterDiskFS.Entry]
+        do {
+            entries = try volume.listEntries(maxEntries: maxEntries)
+        } catch let error as DiffsplitterDiskFS.DiskFSError {
+            throw ContainerError.mountFailed(error.localizedDescription)
+        }
+        expectedTotal = (expectedTotal ?? map.count) + entries.filter { !$0.isDirectory }.count
+        progress?(map.count, expectedTotal)
+        for entry in entries where !entry.isDirectory {
+            try Task.checkCancellation()
+            let fullRelative = pathPrefix.isEmpty ? entry.path : "\(pathPrefix)/\(entry.path)"
+            let stub = try session.registerDiskMemberStub(
+                relativePath: fullRelative,
+                image: image,
+                memberPath: entry.path,
+                uncompressedSize: Int(min(entry.size, UInt64(Int.max)))
+            )
+            try addLeaf(
+                stub,
+                relativePath: fullRelative,
+                into: &map,
+                expectedTotal: expectedTotal,
+                progress: progress
+            )
+        }
+    }
     static func zipStubMetadata(at url: URL) -> DiffsplitterZipMember? {
         let metaURL = DiffsplitterContainerSession.sidecarURL(forStub: url)
         guard let data = try? Data(contentsOf: metaURL),
-              let meta = try? JSONDecoder().decode(DiffsplitterContainerSession.StubSidecar.self, from: data) else {
+              let meta = try? JSONDecoder().decode(DiffsplitterContainerSession.StubSidecar.self, from: data),
+              meta.kind == .zip else {
             return nil
         }
         return DiffsplitterZipMember(
@@ -2588,12 +2333,25 @@ nonisolated enum DiffsplitterContainer {
             uncompressedSize: meta.uncompressedSize
         )
     }
+    static func diskStubMetadata(at url: URL) -> DiffsplitterDiskMember? {
+        let metaURL = DiffsplitterContainerSession.sidecarURL(forStub: url)
+        guard let data = try? Data(contentsOf: metaURL),
+              let meta = try? JSONDecoder().decode(DiffsplitterContainerSession.StubSidecar.self, from: data),
+              meta.kind == .dmg else {
+            return nil
+        }
+        return DiffsplitterDiskMember(
+            imageURL: URL(fileURLWithPath: meta.archivePath),
+            memberPath: meta.memberPath,
+            uncompressedSize: meta.uncompressedSize
+        )
+    }
     static func resolvedFileURL(
         for url: URL,
         session: DiffsplitterContainerSession?,
         progress: DiffsplitterContent.MaterializeProgress? = nil
     ) throws -> URL {
-        if zipStubMetadata(at: url) == nil {
+        if zipStubMetadata(at: url) == nil && diskStubMetadata(at: url) == nil {
             return url
         }
         if let session {
@@ -2602,16 +2360,25 @@ nonisolated enum DiffsplitterContainer {
         let temp = FileManager.default.temporaryDirectory
             .appendingPathComponent("Diffsplitter-materialize-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)
-        guard let member = zipStubMetadata(at: url) else { return url }
-        let outURL = temp.appendingPathComponent((member.memberPath as NSString).lastPathComponent)
-        try extractZipMember(
-            archive: member.archiveURL,
-            memberPath: member.memberPath,
-            to: outURL,
-            expectedBytes: member.uncompressedSize,
-            progress: progress
-        )
-        return outURL
+        if let member = zipStubMetadata(at: url) {
+            let outURL = temp.appendingPathComponent((member.memberPath as NSString).lastPathComponent)
+            try extractZipMember(
+                archive: member.archiveURL,
+                memberPath: member.memberPath,
+                to: outURL,
+                expectedBytes: member.uncompressedSize,
+                progress: progress
+            )
+            return outURL
+        }
+        if let disk = diskStubMetadata(at: url) {
+            let volume = try DiffsplitterContainerServices.backend.openDiskImage(disk.imageURL)
+            let data = try volume.readFile(path: disk.memberPath)
+            let outURL = temp.appendingPathComponent((disk.memberPath as NSString).lastPathComponent)
+            try data.write(to: outURL, options: .atomic)
+            return outURL
+        }
+        return url
     }
     static func extractZipMember(
         archive: URL,
@@ -2629,7 +2396,7 @@ nonisolated enum DiffsplitterContainer {
                 progress: progress
             )
         } catch let error as DiffsplitterZip.ZipError {
-            throw ContainerError.processFailed(error.localizedDescription)
+            throw ContainerError.expandFailed(error.localizedDescription)
         }
     }
     static func extractZipMemberToMemory(
@@ -2646,7 +2413,7 @@ nonisolated enum DiffsplitterContainer {
                 progress: progress
             )
         } catch let error as DiffsplitterZip.ZipError {
-            throw ContainerError.processFailed(error.localizedDescription)
+            throw ContainerError.expandFailed(error.localizedDescription)
         }
     }
     static func resolveBinaryDumpSource(
@@ -2655,7 +2422,7 @@ nonisolated enum DiffsplitterContainer {
         preferDiskTemp: Bool,
         progress: DiffsplitterContent.MaterializeProgress? = nil
     ) throws -> DiffsplitterBinaryDump.ByteSource {
-        guard zipStubMetadata(at: url) != nil else {
+        guard zipStubMetadata(at: url) != nil || diskStubMetadata(at: url) != nil else {
             return .file(url)
         }
         if preferDiskTemp {
@@ -2666,56 +2433,49 @@ nonisolated enum DiffsplitterContainer {
             let data = try session.materializeZipMemberToMemory(forStubURL: url, progress: progress)
             return .memory(DiffsplitterBinaryDump.MemoryBuffer(data))
         }
-        guard let member = zipStubMetadata(at: url) else {
-            return .file(url)
+        if let member = zipStubMetadata(at: url) {
+            let data = try extractZipMemberToMemory(
+                archive: member.archiveURL,
+                memberPath: member.memberPath,
+                expectedBytes: member.uncompressedSize,
+                progress: progress
+            )
+            return .memory(DiffsplitterBinaryDump.MemoryBuffer(data))
         }
-        let data = try extractZipMemberToMemory(
-            archive: member.archiveURL,
-            memberPath: member.memberPath,
-            expectedBytes: member.uncompressedSize,
-            progress: progress
-        )
-        return .memory(DiffsplitterBinaryDump.MemoryBuffer(data))
-    }
-    static func attachDiskImage(_ image: URL, mountPoint: URL) throws {
-        try DiffsplitterContainerServices.backend.attachDiskImage(image, mountPoint: mountPoint)
-    }
-    static func detachDiskImage(at mountPoint: URL) {
-        DiffsplitterContainerServices.backend.detachDiskImage(at: mountPoint)
+        if let disk = diskStubMetadata(at: url) {
+            let volume = try DiffsplitterContainerServices.backend.openDiskImage(disk.imageURL)
+            let data = try volume.readFile(path: disk.memberPath)
+            return .memory(DiffsplitterBinaryDump.MemoryBuffer(data))
+        }
+        return .file(url)
     }
     private static func runPkgExpand(package: URL, into destination: URL) throws {
-        try DiffsplitterContainerServices.backend.expandPkg(package: package, into: destination)
+        do {
+            try DiffsplitterContainerServices.backend.expandPkg(package: package, into: destination)
+        } catch let error as DiffsplitterPKG.PKGError {
+            throw ContainerError.expandFailed(error.localizedDescription)
+        } catch let error as DiffsplitterXAR.XARError {
+            throw ContainerError.expandFailed(error.localizedDescription)
+        } catch let error as ContainerError {
+            throw error
+        } catch {
+            throw ContainerError.expandFailed(error.localizedDescription)
+        }
     }
     private static func runXipExpand(archive: URL, into destination: URL) throws {
-        try DiffsplitterContainerServices.backend.expandXip(archive: archive, into: destination)
-    }
-    @discardableResult
-    static func runProcess(
-        executable: String,
-        arguments: [String],
-        currentDirectory: URL? = nil
-    ) throws -> String {
-        try DiffsplitterContainerServices.backend.runProcess(
-            executable: executable,
-            arguments: arguments,
-            currentDirectory: currentDirectory
-        )
-    }
-    static func runProcessData(
-        executable: String,
-        arguments: [String],
-        currentDirectory: URL? = nil
-    ) throws -> Data {
-        try DiffsplitterContainerServices.backend.runProcessData(
-            executable: executable,
-            arguments: arguments,
-            currentDirectory: currentDirectory
-        )
+        do {
+            try DiffsplitterContainerServices.backend.expandXip(archive: archive, into: destination)
+        } catch let error as DiffsplitterXIP.XIPError {
+            throw ContainerError.expandFailed(error.localizedDescription)
+        } catch let error as ContainerError {
+            throw error
+        } catch {
+            throw ContainerError.expandFailed(error.localizedDescription)
+        }
     }
 }
 
 nonisolated enum DiffsplitterEngine {
-    static var maxTextBytes: Int { DiffsplitterSettings.maxTextBytes() }
     static let maxConcurrentFileStatus = 8
     static let maxAlignLines = 200_000
     static let maxEditDistance = 4_096
@@ -3482,9 +3242,6 @@ nonisolated enum DiffsplitterEngine {
                 || DiffsplitterAEA.isAEAExtension(of: URL(fileURLWithPath: rightZip.memberPath)) {
                 return .modified
             }
-            if leftZip.uncompressedSize > maxTextBytes || rightZip.uncompressedSize > maxTextBytes {
-                return .binary
-            }
             return .modified
         }
         return try fileStatusBytes(left: left, right: right)
@@ -3511,24 +3268,29 @@ nonisolated enum DiffsplitterEngine {
         }
         let leftSize = try fileSize(at: left)
         let rightSize = try fileSize(at: right)
+        if leftSize == 0 && rightSize == 0 { return .identical }
         if leftSize != rightSize {
-            if leftSize > maxTextBytes || rightSize > maxTextBytes {
+            if looksBinaryFile(at: left, size: leftSize) || looksBinaryFile(at: right, size: rightSize) {
                 return .binary
             }
             return .modified
         }
         if leftSize == 0 { return .identical }
-        if leftSize > maxTextBytes {
-            let leftFP = try fingerprint(at: left, size: leftSize)
-            let rightFP = try fingerprint(at: right, size: rightSize)
-            return leftFP == rightFP ? .identical : .binary
-        }
         let leftFP = try fingerprint(at: left, size: leftSize)
         let rightFP = try fingerprint(at: right, size: rightSize)
         if leftFP == rightFP { return .identical }
-        let head = try readChunk(at: left, offset: 0, maxLength: min(8_192, leftSize))
-        if DiffsplitterBinaryHeuristic.looksBinary(head) { return .binary }
+        if looksBinaryFile(at: left, size: leftSize) || looksBinaryFile(at: right, size: rightSize) {
+            return .binary
+        }
         return .modified
+    }
+    private static func looksBinaryFile(at url: URL, size: Int) -> Bool {
+        guard size > 0 else { return false }
+        let sampleLength = min(DiffsplitterBinaryHeuristic.sampleLimit, size)
+        guard let head = try? readChunk(at: url, offset: 0, maxLength: sampleLength) else {
+            return false
+        }
+        return DiffsplitterBinaryHeuristic.looksBinary(head)
     }
     private static func fileSize(at url: URL) throws -> Int {
         let values = try url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
@@ -3557,11 +3319,17 @@ nonisolated enum DiffsplitterEngine {
         return Data(hasher.finalize())
     }
     private static func readChunk(at url: URL, offset: Int, maxLength: Int) throws -> Data {
-        let handle = try FileHandle(forReadingFrom: url)
-        defer { try? handle.close() }
-        try handle.seek(toOffset: UInt64(offset))
-        let data = try handle.read(upToCount: maxLength) ?? Data()
-        return data
+        do {
+            let handle = try FileHandle(forReadingFrom: url)
+            defer { try? handle.close() }
+            try handle.seek(toOffset: UInt64(offset))
+            return try handle.read(upToCount: maxLength) ?? Data()
+        } catch {
+            guard offset == 0 else { throw error }
+            let data = try Data(contentsOf: url, options: [.mappedIfSafe])
+            if maxLength >= data.count { return data }
+            return Data(data.prefix(maxLength))
+        }
     }
 }
 
@@ -4195,6 +3963,7 @@ final class DiffsplitterSession: ObservableObject {
     @Published var rightURL: URL?
     @Published var leftAccessing = false
     @Published var rightAccessing = false
+    @Published var documentAccessing = false
     @Published var leftSession: DiffsplitterContainerSession?
     @Published var rightSession: DiffsplitterContainerSession?
     @Published var leftFileMap: [String: URL] = [:]
@@ -4288,19 +4057,38 @@ final class DiffsplitterSession: ObservableObject {
         if isEmbeddedDocument {
             exitEmbeddedDocumentMode(clearRows: true)
         }
-        let accessed = url.startAccessingSecurityScopedResource()
+        let scoped = Self.preparedSecurityScopedURL(url)
+        let accessed = scoped.startAccessingSecurityScopedResource()
         switch side {
         case .left:
             stopAccess(for: .left)
-            leftURL = url
+            leftURL = scoped
             leftAccessing = accessed
         case .right:
             stopAccess(for: .right)
-            rightURL = url
+            rightURL = scoped
             rightAccessing = accessed
         }
         setupError = nil
         recompare()
+    }
+    private static func preparedSecurityScopedURL(_ url: URL) -> URL {
+#if DEBOOGEY_MCE
+        var stale = false
+        if let bookmark = try? url.bookmarkData(
+            options: [.withSecurityScope],
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        ), let resolved = try? URL(
+            resolvingBookmarkData: bookmark,
+            options: [.withSecurityScope, .withoutUI],
+            relativeTo: nil,
+            bookmarkDataIsStale: &stale
+        ), !stale {
+            return resolved
+        }
+#endif
+        return url
     }
     func stopAccess(for side: Side) {
         switch side {
@@ -4315,6 +4103,18 @@ final class DiffsplitterSession: ObservableObject {
             }
             rightAccessing = false
         }
+    }
+    private func startDocumentAccess(at url: URL) {
+        stopDocumentAccess()
+        let scoped = Self.preparedSecurityScopedURL(url)
+        documentAccessing = scoped.startAccessingSecurityScopedResource()
+        documentURL = scoped
+    }
+    private func stopDocumentAccess() {
+        if documentAccessing, let documentURL {
+            documentURL.stopAccessingSecurityScopedResource()
+        }
+        documentAccessing = false
     }
     func swapSides() {
         if isEmbeddedDocument {
@@ -4422,6 +4222,7 @@ final class DiffsplitterSession: ObservableObject {
         embeddedLeftName = nil
         embeddedRightName = nil
         if !keepingDocument {
+            stopDocumentAccess()
             documentURL = nil
             savedDocumentData = nil
         }
@@ -5815,23 +5616,26 @@ final class DiffsplitterSession: ObservableObject {
             return
         }
         do {
-            let document = try DiffsplitterDocument.read(from: url)
-            documentURL = url
+            startDocumentAccess(at: url)
+            guard let documentURL else {
+                documentError = L10n.t("The selected item could not be read.")
+                return
+            }
+            let document = try DiffsplitterDocument.read(from: documentURL)
             savedDocumentData = try document.encoded()
             ignoreWhitespace = document.ignoreWhitespace
             selectedRelativePath = document.selectedRelativePath
             let left = resolveSideURL(
                 path: document.leftPath,
                 bookmark: document.leftBookmark,
-                relativeTo: url
+                relativeTo: documentURL
             )
             let right = resolveSideURL(
                 path: document.rightPath,
                 bookmark: document.rightBookmark,
-                relativeTo: url
+                relativeTo: documentURL
             )
             clearSession(keepingDocument: true)
-            documentURL = url
             savedDocumentData = try? document.encoded()
             ignoreWhitespace = document.ignoreWhitespace
             selectedRelativePath = document.selectedRelativePath
@@ -5841,11 +5645,19 @@ final class DiffsplitterSession: ObservableObject {
                 setupError = L10n.t("Could not restore one or both sides. Choose the missing items again.")
             }
         } catch {
+            stopDocumentAccess()
+            documentURL = nil
             documentError = error.localizedDescription
         }
     }
     func openDiffsplitterXDocument(at url: URL) {
         documentTransferTask?.cancel()
+        startDocumentAccess(at: url)
+        guard let documentURL else {
+            documentError = L10n.t("The selected item could not be read.")
+            return
+        }
+        let scopedURL = documentURL
         documentTransferProgress = DiffsplitterIndexProgress(
             fractionCompleted: 0,
             status: L10n.t("Importing DiffsplitterX Document…")
@@ -5861,14 +5673,13 @@ final class DiffsplitterSession: ObservableObject {
                 await Task.yield()
                 try Task.checkCancellation()
                 let payload = try await Task.detached(priority: .userInitiated) {
-                    let document = try DiffsplitterXDocument.read(from: url)
+                    let document = try DiffsplitterXDocument.read(from: scopedURL)
                     return (document, document.alignedRows())
                 }.value
                 try Task.checkCancellation()
                 let document = payload.0
                 let alignedRows = payload.1
-                self.clearSession(keepingDocument: false)
-                self.documentURL = url
+                self.clearSession(keepingDocument: true)
                 self.savedDocumentData = nil
                 self.isEmbeddedDocument = true
                 self.embeddedLeftName = document.leftName
@@ -5893,6 +5704,8 @@ final class DiffsplitterSession: ObservableObject {
                 return
             } catch {
                 if !Task.isCancelled {
+                    self.stopDocumentAccess()
+                    self.documentURL = nil
                     self.documentError = error.localizedDescription
                 }
             }
@@ -5947,7 +5760,7 @@ final class DiffsplitterSession: ObservableObject {
             let document = currentDocument(relativeTo: url)
             let data = try document.encoded()
             try data.write(to: url, options: .atomic)
-            documentURL = url
+            startDocumentAccess(at: url)
             savedDocumentData = data
             EntityTracker.shared.record(
                 source: .diffsplitter,

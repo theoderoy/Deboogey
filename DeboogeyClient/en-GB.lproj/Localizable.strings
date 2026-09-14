@@ -115,6 +115,7 @@
 "Disassembled" = "Disassembled";
 "Display Scale" = "Display Scale";
 "Distribution" = "Distribution";
+"Don't Save" = "Don't Save";
 "Don’t Save" = "Don’t Save";
 "Downloading upgrade" = "Downloading upgrade";
 "Drag to reorder. Items nearer the top win when a folder contains mixed changes." = "Drag to reorder. Items nearer the top win when a folder contains mixed changes.";
@@ -150,6 +151,7 @@
 "File and indexing entries" = "File and indexing entries";
 "File, compare, and indexing entries" = "File, compare, and indexing entries";
 "Files larger than this are treated as binary instead of text." = "Files larger than this are treated as binary instead of text.";
+"Files larger than this use windowed hex conversion when Large File Hex Conversion is on." = "Files larger than this use windowed hex conversion when Large File Hex Conversion is on.";
 "Flag category" = "Flag category";
 "Flags" = "Flags";
 "Folder Status Dot Priority" = "Folder Status Dot Priority";
@@ -196,6 +198,8 @@
 "Invalid arguments. First argument must be 'enable' or 'disable'" = "Invalid arguments. First argument must be 'enable' or 'disable'";
 "Invalid arguments. Unknown flag: %@" = "Invalid arguments. Unknown flag: %@";
 "Keep Local Changes" = "Keep Local Changes";
+"Large File Hex Conversion" = "Large File Hex Conversion";
+"Large File Size Threshold" = "Large File Size Threshold";
 "Learn More" = "Learn More";
 "Leave these entries out" = "Leave these entries out";
 "Left" = "Left";
@@ -208,16 +212,12 @@
 "Local values have changed" = "Local values have changed";
 "Log actions" = "Log actions";
 "Loupe Machine" = "Loupe Machine";
-"Don't Save" = "Don't Save";
-"Open a Loupe Machine document before saving." = "Open a Loupe Machine document before saving.";
-"Open an existing Loupe Machine document to browse and edit its change set." = "Open an existing Loupe Machine document to browse and edit its change set.";
-"Open Document" = "Open Document";
-"Loupe View" = "Loupe View";
 "Loupe Machine Document Error" = "Loupe Machine Document Error";
 "Loupe Machine applied %d value(s) successfully." = "Loupe Machine applied %d value(s) successfully.";
 "Loupe Machine lets you select an application, discover binary preference flags, inspect and edit them, and prepare a change set to apply elsewhere." = "Loupe Machine lets you select an application, discover binary preference flags, inspect and edit them, and prepare a change set to apply elsewhere.";
 "Loupe Machine lets you select an application, discover its system-modifiable flags, and inspect or edit them." = "Loupe Machine lets you select an application, discover its system-modifiable flags, and inspect or edit them.";
 "Loupe Machine will apply %d value(s) to the selected application." = "Loupe Machine will apply %d value(s) to the selected application.";
+"Loupe View" = "Loupe View";
 "Maintenance" = "Maintenance";
 "Marketplace Candidate Edition" = "Marketplace Candidate Edition";
 "Mask: %@" = "Mask: %@";
@@ -260,8 +260,11 @@
 "On Login" = "On Login";
 "Open Diffsplitter Document" = "Open Diffsplitter Document";
 "Open Diffsplitter Document…" = "Open Diffsplitter Document…";
+"Open Document" = "Open Document";
 "Open Loupe Machine Document" = "Open Loupe Machine Document";
 "Open Loupe Machine Document…" = "Open Loupe Machine Document…";
+"Open a Loupe Machine document before saving." = "Open a Loupe Machine document before saving.";
+"Open an existing Loupe Machine document to browse and edit its change set." = "Open an existing Loupe Machine document to browse and edit its change set.";
 "Other" = "Other";
 "PRESET" = "PRESET";
 "Parameters pose this build type as %@." = "Parameters pose this build type as %@.";
@@ -379,6 +382,7 @@
 "Version" = "Version";
 "What's changed in %@" = "What's changed in %@";
 "When off, Diffsplitter skips hidden files while walking folders." = "When off, Diffsplitter skips hidden files while walking folders.";
+"When on, oversized files that are not content-detected binaries open as a windowed hex dump instead of text. Binary status is only for recognised binary content and is unaffected." = "When on, oversized files that are not content-detected binaries open as a windowed hex dump instead of text. Binary status is only for recognised binary content and is unaffected.";
 "Window %@–%@ of %@ (%d lines in memory)" = "Window %@–%@ of %@ (%d lines in memory)";
 "Writing DiffsplitterX Document…" = "Writing DiffsplitterX Document…";
 "You might need to manually code-sign after upgrading." = "You might need to manually code-sign after upgrading.";
