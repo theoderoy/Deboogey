@@ -20,7 +20,7 @@ final class LoupeMachineWindowController: NSWindowController {
         let window = ToolDocumentWindowHosting.makeWindow(
             title: L10n.t("Loupe Machine"),
             sizing: AppWindowSizing.loupeMachine,
-            bridgeToolbars: false,
+            bridgeToolbars: true,
             rootView: LoupeMachineView(request: request)
         )
         super.init(window: window)

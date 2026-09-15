@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-#if os(macOS)
 struct DiffsplitterStatusPriorityEditor: View {
     @Binding var order: [String]
     var onMove: ((IndexSet, Int) -> Void)?
@@ -41,7 +40,9 @@ struct DiffsplitterStatusPriorityEditor: View {
                 }
             }
             .frame(height: CGFloat(order.count) * 28)
+#if os(macOS)
             .listStyle(.bordered)
+#endif
             .modifier(DeboogeyPriorityListScrollModifier())
 
             Button(L10n.t("Reset to Default")) {
@@ -51,4 +52,3 @@ struct DiffsplitterStatusPriorityEditor: View {
         }
     }
 }
-#endif

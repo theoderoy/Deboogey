@@ -262,8 +262,34 @@ struct DeboogeyClientMCE: App {
 
 #elseif os(iOS)
 
+import Metal
+import UIKit
+
+enum MCEIOSFeatureSupport {
+    enum DiffsplitterBlocker {
+        case phone
+        case chip
+    }
+
+    static var diffsplitter: Bool {
+        diffsplitterBlocker == nil
+    }
+
+    static var diffsplitterBlocker: DiffsplitterBlocker? {
+        guard UIDevice.current.userInterfaceIdiom == .pad else { return .phone }
+        #if targetEnvironment(simulator)
+        return nil
+        #else
+        guard let device = MTLCreateSystemDefaultDevice(),
+              device.supportsFamily(.apple7) else { return .chip }
+        return nil
+        #endif
+    }
+}
+
 enum MCEIOSRoute: Hashable {
     case loupe(LoupeMachineWindowRequest)
+    case diffsplitter(DiffsplitterWindowRequest)
 }
 
 @main
@@ -273,6 +299,9 @@ struct DeboogeyClientMCE: App {
     init() {
         PersistentVariables.registerDefaults()
         EntityTracker.shared.performConfiguredAutoRemoval()
+        if MCEIOSFeatureSupport.diffsplitter {
+            DiffsplitterContinuedProcessing.registerAtLaunch()
+        }
     }
 
     var body: some Scene {
@@ -283,6 +312,12 @@ struct DeboogeyClientMCE: App {
                         switch route {
                         case .loupe(let request):
                             LoupeMachineView(request: request)
+                        case .diffsplitter(let request):
+                            if MCEIOSFeatureSupport.diffsplitter {
+                                DiffsplitterView(request: request)
+                            } else {
+                                EmptyView()
+                            }
                         }
                     }
             }
@@ -291,9 +326,19 @@ struct DeboogeyClientMCE: App {
                 path.append(route)
             }
             .onOpenURL { url in
-                guard url.pathExtension.lowercased() == "loum" else { return }
+                let ext = url.pathExtension.lowercased()
+                let route: MCEIOSRoute?
+                switch ext {
+                case "loum":
+                    route = .loupe(LoupeMachineWindowRequest(action: .open, documentURL: url))
+                case "dsplt", "dspltx":
+                    guard MCEIOSFeatureSupport.diffsplitter else { return }
+                    route = .diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: url))
+                default:
+                    return
+                }
                 _ = url.startAccessingSecurityScopedResource()
-                path.append(MCEIOSRoute.loupe(LoupeMachineWindowRequest(action: .open, documentURL: url)))
+                if let route { path.append(route) }
             }
         }
     }

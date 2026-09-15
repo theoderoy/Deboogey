@@ -203,9 +203,16 @@ struct LoupeMachineView: View {
     @State private var reconciliation: Reconciliation?
     @State private var unlockAllCategories = false
 #if os(iOS)
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var showsSidebar = true
     @State private var isExportingDocument = false
     @State private var exportDocument: LoupeMachineExportDocument?
     @State private var exportCompletion: ((Bool) -> Void)?
+
+    private var usesColumnLayout: Bool {
+        horizontalSizeClass == .regular
+    }
 #endif
 #if os(macOS)
     @State private var inspection: DeboogeyLoupeInspection?
@@ -227,23 +234,38 @@ struct LoupeMachineView: View {
             }
         }
 #if os(iOS)
-        .navigationBarBackButtonHidden(selectedFlagID != nil)
+        .navigationBarBackButtonHidden(true)
         .navigationTitle(sourceApplicationDisplayName ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if selectedFlagID != nil {
-                ToolbarItem(placement: .topBarLeading) {
+            ToolbarItem(placement: .topBarLeading) {
+                if !usesColumnLayout && selectedFlagID != nil {
                     Button {
                         selectedFlagID = nil
                     } label: {
                         Label(L10n.t("Flags"), systemImage: "chevron.backward")
                     }
+                } else {
+                    Button {
+                        if hasUnsavedDocumentChanges {
+                            showDiscardConfirmation = true
+                        } else {
+                            dismiss()
+                        }
+                    } label: {
+                        Label(L10n.t("Back"), systemImage: "chevron.backward")
+                    }
+                }
+            }
+            if usesColumnLayout {
+                ToolbarItem(placement: .topBarLeading) {
+                    sidebarVisibilityButton
                 }
             }
             if hasFlags {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        saveDocument(forceSaveAs: true)
+                        saveDocument(forceSaveAs: false)
                     } label: {
                         Label(L10n.t("Save Change Set"), systemImage: "square.and.arrow.down")
                     }
@@ -251,6 +273,10 @@ struct LoupeMachineView: View {
                     .disabled(!hasUnsavedDocumentChanges)
                 }
             }
+        }
+        .onChange(of: horizontalSizeClass) { _, _ in
+            guard usesColumnLayout, hasFlags, selectedFlagID == nil else { return }
+            selectedFlagID = flagStore.names.first
         }
         .fileImporter(
             isPresented: $isOpeningDocument,
@@ -273,18 +299,19 @@ struct LoupeMachineView: View {
         ) { result in
             handleDocumentExport(result)
         }
-        .confirmationDialog(
+        .alert(
             L10n.t("Save changes to this Loupe Machine document?"),
-            isPresented: $showDiscardConfirmation,
-            titleVisibility: .visible
+            isPresented: $showDiscardConfirmation
         ) {
-            Button(L10n.t("Save Change Set")) {
-                saveDocument(forceSaveAs: true)
+            Button(L10n.t("Save")) {
+                saveDocument(forceSaveAs: false)
             }
             Button(L10n.t("Don't Save"), role: .destructive) {
-                resetSession()
+                dismiss()
             }
             Button(L10n.t("Cancel"), role: .cancel) {}
+        } message: {
+            Text(L10n.t("Your unapplied drafted value changes will be lost if you don’t save them."))
         }
 #else
         .fileImporter(
@@ -345,37 +372,7 @@ struct LoupeMachineView: View {
 
     private var importView: some View {
 #if os(iOS)
-        VStack(spacing: 24) {
-            Spacer(minLength: 16)
-            Image("LoupeMachineIdent")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 88, height: 88)
-            Text(L10n.t("Loupe View"))
-                .font(.largeTitle.weight(.semibold))
-            Text(L10n.t("Open an existing Loupe Machine document to browse and edit its change set."))
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
-            Button {
-                isOpeningDocument = true
-            } label: {
-                Text(L10n.t("Open Document"))
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .padding(.horizontal, 24)
-            if let importError {
-                Text(importError)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-            }
-            Spacer()
-        }
+        Color.clear
 #else
         ZStack {
             LoupeMachineRippleEffect()
@@ -407,11 +404,24 @@ struct LoupeMachineView: View {
     @ViewBuilder
     private var flagBrowser: some View {
 #if os(iOS)
-        Group {
-            if selectedFlagID != nil {
+        if usesColumnLayout {
+            HStack(spacing: 0) {
+                if showsSidebar {
+                    flagSidebar
+                        .frame(minWidth: 240, idealWidth: 300, maxWidth: 340)
+                        .frame(maxHeight: .infinity)
+                    Divider()
+                }
                 flagDetail
-            } else {
-                flagSidebar
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        } else {
+            Group {
+                if selectedFlagID != nil {
+                    flagDetail
+                } else {
+                    flagSidebar
+                }
             }
         }
 #else
@@ -434,6 +444,25 @@ struct LoupeMachineView: View {
     }
 
     private var flagSidebar: some View {
+#if os(iOS)
+        LoupeFlagSidebar(
+            store: flagStore,
+            drafts: draftStore,
+            selection: $selectedFlagID,
+            unlockAllCategories: unlockAllCategories,
+            usesColumnLayout: usesColumnLayout
+        )
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if isInspecting {
+                VStack(spacing: 0) {
+                    Divider()
+                    ProgressView(L10n.t("Inspecting flags…"))
+                        .padding()
+                }
+                .background(.bar)
+            }
+        }
+#else
         VStack(spacing: 0) {
             LoupeFlagSidebar(
                 store: flagStore,
@@ -447,10 +476,20 @@ struct LoupeMachineView: View {
                     .padding()
             }
         }
-#if os(macOS)
         .navigationTitle(L10n.t("Flags"))
 #endif
     }
+
+#if os(iOS)
+    private var sidebarVisibilityButton: some View {
+        Button {
+            showsSidebar.toggle()
+        } label: {
+            Label(L10n.t("Show Sidebar"), systemImage: "sidebar.left")
+        }
+        .labelStyle(.iconOnly)
+    }
+#endif
 
     @ViewBuilder
     private var flagDetail: some View {
@@ -493,7 +532,7 @@ struct LoupeMachineView: View {
     private func applyCurrentlyViewed() {}
     private func applyAllPending() {
 #if os(iOS)
-        saveDocument(forceSaveAs: true)
+        saveDocument(forceSaveAs: false)
 #else
         saveDocument(forceSaveAs: documentURL == nil)
 #endif
@@ -687,7 +726,7 @@ struct LoupeMachineView: View {
         draftStore.replace(with: drafts)
         hasFlags = !flagStore.isEmpty
 #if os(iOS)
-        selectedFlagID = nil
+        selectedFlagID = usesColumnLayout ? flagStore.names.first : nil
 #else
         selectedFlagID = flagStore.names.first
 #endif
@@ -719,7 +758,21 @@ struct LoupeMachineView: View {
         completion: @escaping (Bool) -> Void = { _ in }
     ) {
 #if os(iOS)
-        _ = forceSaveAs
+        if !forceSaveAs {
+            if let documentURL, documentURL.pathExtension.lowercased() == "loum" {
+                writeDocument(to: documentURL, completion: completion)
+            } else {
+                let preferredName = documentURL?.lastPathComponent ?? L10n.t("Untitled.loum")
+                let name = preferredName.lowercased().hasSuffix(".loum")
+                    ? preferredName
+                    : "\(preferredName).loum"
+                writeDocument(
+                    to: DeboogeyAppDocuments.uniqueURL(preferredFilename: name),
+                    completion: completion
+                )
+            }
+            return
+        }
         presentDocumentExporter(completion: completion)
 #else
         if !forceSaveAs, let documentURL {
@@ -1241,6 +1294,26 @@ private enum LoupeFlagCategory: Int, CaseIterable, Identifiable {
 }
 
 #if os(macOS)
+private struct LoupeFlagSearchableModifier: ViewModifier {
+    @Binding var text: String
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(macOS 13.0, *) {
+            content.searchable(
+                text: $text,
+                placement: .toolbar,
+                prompt: L10n.t("Search Flags")
+            )
+        } else {
+            content.searchable(
+                text: $text,
+                prompt: L10n.t("Search Flags")
+            )
+        }
+    }
+}
+
 private struct LoupeCategoryPicker: NSViewRepresentable {
     @Binding var selection: LoupeFlagCategory
     var unlockAllCategories: Bool
@@ -1312,40 +1385,6 @@ private struct LoupeCategoryPicker: NSViewRepresentable {
     }
 }
 
-private struct LoupeFlagSearchField: NSViewRepresentable {
-    @Binding var text: String
-
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
-
-    func makeNSView(context: Context) -> NSSearchField {
-        let searchField = NSSearchField()
-        searchField.placeholderString = L10n.t("Search Flags")
-        searchField.sendsSearchStringImmediately = true
-        searchField.sendsWholeSearchString = false
-        searchField.delegate = context.coordinator
-        searchField.setAccessibilityLabel(L10n.t("Search Flags"))
-        return searchField
-    }
-
-    func updateNSView(_ searchField: NSSearchField, context: Context) {
-        context.coordinator.parent = self
-        if searchField.stringValue != text {
-            searchField.stringValue = text
-        }
-    }
-
-    final class Coordinator: NSObject, NSSearchFieldDelegate {
-        var parent: LoupeFlagSearchField
-
-        init(_ parent: LoupeFlagSearchField) { self.parent = parent }
-
-        func controlTextDidChange(_ notification: Notification) {
-            guard let searchField = notification.object as? NSSearchField else { return }
-            parent.text = searchField.stringValue
-        }
-    }
-}
-
 #endif
 
 private struct LoupeFlagSidebar: View {
@@ -1353,6 +1392,9 @@ private struct LoupeFlagSidebar: View {
     @ObservedObject var drafts: LoupeDraftStore
     @Binding var selection: String?
     var unlockAllCategories: Bool
+#if os(iOS)
+    var usesColumnLayout: Bool = false
+#endif
     @State private var category: LoupeFlagCategory = .all
     @State private var searchText = ""
 
@@ -1367,72 +1409,49 @@ private struct LoupeFlagSidebar: View {
         let rowNames = names
         let dirtyIDs = drafts.dirtyIDs
         let countLabel = itemCountLabel
-        List {
-            Section {
-                Picker(L10n.t("Flag category"), selection: $category) {
-                    ForEach(visibleCases) { option in
-                        Image(systemName: option.systemImage)
-                            .accessibilityLabel(option.title)
-                            .tag(option)
+        Group {
+            if usesColumnLayout {
+                List(selection: $selection) {
+                    iosFlagSection(rowNames: rowNames, countLabel: countLabel) { name in
+                        flagRow(name: name, dirtyIDs: dirtyIDs, showsChevron: false)
+                            .tag(name)
                     }
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-
-                if rowNames.isEmpty {
-                    emptyFlagList
-                        .listRowBackground(Color.clear)
-                } else {
-                    ForEach(rowNames, id: \.self) { name in
+            } else {
+                List {
+                    iosFlagSection(rowNames: rowNames, countLabel: countLabel) { name in
                         Button {
                             selection = name
                         } label: {
-                            HStack {
-                                Text(name)
-                                    .font(.system(.body, design: .monospaced))
-                                    .foregroundStyle(.primary)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                                Spacer(minLength: 8)
-                                if dirtyIDs.contains(name) {
-                                    Image(systemName: "exclamationmark.circle.fill")
-                                        .foregroundStyle(.red)
-                                        .accessibilityLabel(L10n.t("Pending change"))
-                                }
-                                Image(systemName: "chevron.right")
-                                    .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .contentShape(Rectangle())
+                            flagRow(name: name, dirtyIDs: dirtyIDs, showsChevron: true)
                         }
                         .buttonStyle(.plain)
                     }
                 }
-            } footer: {
-                Text(countLabel)
             }
         }
         .listStyle(.insetGrouped)
         .contentMargins(.top, 0)
         .searchable(text: $searchText, prompt: L10n.t("Search Flags"))
-        .onAppear(perform: clampCategoryIfNeeded)
-        .onChange(of: unlockAllCategories) { _, _ in clampCategoryIfNeeded() }
-        .onChange(of: category) { _, _ in clearSelectionIfNotVisible() }
-        .onChange(of: searchText) { _, _ in clearSelectionIfNotVisible() }
-        .onChange(of: store.revision) { _, _ in clearSelectionIfNotVisible() }
+        .onAppear {
+            clampCategoryIfNeeded()
+            refreshSelectionForVisibleFlags()
+        }
+        .onChange(of: unlockAllCategories) { _, _ in
+            clampCategoryIfNeeded()
+            refreshSelectionForVisibleFlags()
+        }
+        .onChange(of: category) { _, _ in refreshSelectionForVisibleFlags() }
+        .onChange(of: searchText) { _, _ in refreshSelectionForVisibleFlags() }
+        .onChange(of: store.revision) { _, _ in refreshSelectionForVisibleFlags() }
+        .onChange(of: usesColumnLayout) { _, _ in refreshSelectionForVisibleFlags() }
 #else
         VStack(spacing: 0) {
-            LoupeFlagSearchField(text: $searchText)
-                .frame(height: 28)
-                .padding(.horizontal, 8)
-                .padding(.top, 8)
-                .padding(.bottom, 6)
-
             LoupeCategoryPicker(selection: $category, unlockAllCategories: unlockAllCategories)
                 .frame(maxWidth: .infinity)
                 .frame(height: 38)
                 .padding(.horizontal, 8)
+                .padding(.top, 8)
 
             Divider()
 
@@ -1452,6 +1471,7 @@ private struct LoupeFlagSidebar: View {
                 .padding(.vertical, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .modifier(LoupeFlagSearchableModifier(text: $searchText))
         .onAppear {
             clampCategoryIfNeeded()
             selectVisibleFlagIfNeeded()
@@ -1532,6 +1552,71 @@ private struct LoupeFlagSidebar: View {
     }
 
 #if os(iOS)
+    @ViewBuilder
+    private func iosFlagSection<Row: View>(
+        rowNames: [String],
+        countLabel: String,
+        @ViewBuilder row: @escaping (String) -> Row
+    ) -> some View {
+        Section {
+            categoryPicker
+
+            if rowNames.isEmpty {
+                emptyFlagList
+                    .listRowBackground(Color.clear)
+            } else {
+                ForEach(rowNames, id: \.self) { name in
+                    row(name)
+                }
+            }
+        } footer: {
+            Text(countLabel)
+        }
+    }
+
+    private var categoryPicker: some View {
+        Picker(L10n.t("Flag category"), selection: $category) {
+            ForEach(visibleCases) { option in
+                Image(systemName: option.systemImage)
+                    .accessibilityLabel(option.title)
+                    .tag(option)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+    }
+
+    private func flagRow(name: String, dirtyIDs: Set<String>, showsChevron: Bool) -> some View {
+        HStack {
+            Text(name)
+                .font(.system(.body, design: .monospaced))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: 8)
+            if dirtyIDs.contains(name) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundStyle(.red)
+                    .accessibilityLabel(L10n.t("Pending change"))
+            }
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .contentShape(Rectangle())
+    }
+
+    private func refreshSelectionForVisibleFlags() {
+        if usesColumnLayout {
+            selectVisibleFlagIfNeeded()
+        } else {
+            clearSelectionIfNotVisible()
+        }
+    }
+
     private func clearSelectionIfNotVisible() {
         guard let selection, !names.contains(selection) else { return }
         self.selection = nil

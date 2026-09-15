@@ -8,13 +8,16 @@
 import SwiftUI
 
 struct LoupeMachineEducationView: View {
+    var title: String = L10n.t("Loupe Machine")
+    var explanation: String? = nil
     let onDismiss: () -> Void
 
-    private var explanation: String {
+    private var resolvedExplanation: String {
+        if let explanation { return explanation }
 #if DEBOOGEY_MCE
-        L10n.t("Loupe Machine lets you select an application, discover binary preference flags, inspect and edit them, and prepare a change set to apply elsewhere.")
+        return L10n.t("Loupe Machine lets you select an application, discover binary preference flags, inspect and edit them, and prepare a change set to apply elsewhere.")
 #else
-        L10n.t("Loupe Machine lets you select an application, discover its system-modifiable flags, and inspect or edit them.")
+        return L10n.t("Loupe Machine lets you select an application, discover its system-modifiable flags, and inspect or edit them.")
 #endif
     }
 
@@ -26,11 +29,11 @@ struct LoupeMachineEducationView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 128, height: 128)
 
-                Text(L10n.t("Loupe Machine"))
+                Text(title)
                     .font(.title2)
                     .fontWeight(.medium)
 
-                Text(explanation)
+                Text(resolvedExplanation)
                     .padding(.horizontal, 40)
                     .padding(.top, 20)
             }
@@ -40,7 +43,12 @@ struct LoupeMachineEducationView: View {
                 .padding(.horizontal, 40)
                 .padding(.bottom, 40)
         }
+#if os(macOS)
         .frame(width: 500)
+#else
+        .frame(maxWidth: 500)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+#endif
     }
 }
 
@@ -52,10 +60,7 @@ private struct ActionButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.headline)
-                .padding(8)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
+                .deboogeyOnboardingButtonLabel()
         }
         .deboogeyProminentButtonStyle(tint: color)
     }

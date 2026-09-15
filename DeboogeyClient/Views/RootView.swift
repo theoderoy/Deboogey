@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 #if os(macOS)
 import AppKit
 #endif
@@ -104,9 +105,7 @@ struct LauncherButton: View {
             } icon: {
                 Image(systemName: icon)
             }
-            .font(.headline)
-            .frame(width: 220)
-            .contentShape(Rectangle())
+            .deboogeyStandardButtonLabel()
         }
         .deboogeyButtonStyle(tint: color, prominent: prominent)
     }
@@ -116,46 +115,25 @@ struct RootView: View {
 #if DEBOOGEY_MCE
 #if os(iOS)
     @Environment(\.mceIOSNavigate) private var navigate
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingSettings = false
+    @State private var showingDiffsplitterUnavailable = false
 
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer(minLength: 24)
-
-            Image("DeboogeyIdent")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 96, height: 96)
-
-            Text(appName ?? "Deboogey")
-                .font(.largeTitle.weight(.bold))
-                .multilineTextAlignment(.center)
-
-            VStack(spacing: 12) {
-                Button {
-                    navigate(.loupe(LoupeMachineWindowRequest(action: .open, documentURL: nil)))
-                } label: {
-                    Label(L10n.t("Loupe View"), systemImage: "scope")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .contentShape(Rectangle())
+        VStack {
+            if horizontalSizeClass == .compact {
+                VStack(spacing: 24) {
+                    branding
+                    actions
                 }
-                .deboogeyButtonStyle(tint: .accentColor, prominent: true)
-
-                Button {
-                    showingSettings = true
-                } label: {
-                    Label(L10n.t("Settings"), systemImage: "gear")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .contentShape(Rectangle())
+            } else {
+                HStack {
+                    branding
+                    actions
                 }
-                .deboogeyButtonStyle(tint: .gray)
             }
-            .padding(.horizontal, 24)
-
-            Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sheet(isPresented: $showingSettings) {
             NavigationStack {
                 ConfigurationRootView()
@@ -171,6 +149,70 @@ struct RootView: View {
                     }
             }
         }
+        .alert(
+            L10n.t("Diffsplitter is unavailable on this device."),
+            isPresented: $showingDiffsplitterUnavailable
+        ) {
+            Button(L10n.t("OK"), role: .cancel) {}
+        } message: {
+            Text(L10n.t(diffsplitterUnavailableMessage))
+        }
+    }
+
+    private var branding: some View {
+        VStack(spacing: 8) {
+            Image("DeboogeyIdent")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 120, height: 120)
+
+            Text(appName ?? "Deboogey")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+        }
+    }
+
+    private var actions: some View {
+        VStack(spacing: 12) {
+            if MCEIOSFeatureSupport.diffsplitter {
+                DeboogeyDiffsplitterIOSLauncher(navigate: navigate)
+            } else if MCEIOSFeatureSupport.diffsplitterBlocker == .chip {
+                HStack {
+                    LauncherButton(
+                        title: "Diffsplitter",
+                        icon: "square.split.2x1",
+                        color: .accentColor,
+                        prominent: true
+                    ) { }
+                    .disabled(true)
+
+                    Button {
+                        showingDiffsplitterUnavailable = true
+                    } label: {
+                        Image(systemName: "questionmark.circle")
+                            .font(.title2)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L10n.t("Why is Diffsplitter unavailable?"))
+                }
+            }
+
+            DeboogeyLoupeIOSLauncher(navigate: navigate)
+
+            LauncherButton(
+                title: "Settings",
+                icon: "gear",
+                color: .gray
+            ) {
+                showingSettings = true
+            }
+        }
+        .padding()
+    }
+
+    private var diffsplitterUnavailableMessage: String {
+        "Diffsplitter requires an Apple A14 or M1 chip, or later."
     }
 #else
     @StateObject private var vars = PersistentVariables()
@@ -216,7 +258,7 @@ struct RootView: View {
                     }
 
                     Divider()
-                        .frame(width: 220)
+                        .frame(width: DeboogeyButtonMetrics.standardWidth)
 
                     if #available(macOS 13.0, *) {
                         EntityTrackerWindowLauncher()
@@ -503,7 +545,7 @@ struct RootView: View {
                     }
                     
                     Divider()
-                        .frame(width: 220)
+                        .frame(width: DeboogeyButtonMetrics.standardWidth)
                     
                     if #available(macOS 13.0, *) {
                         EntityTrackerWindowLauncher()
@@ -838,7 +880,6 @@ struct RootView: View {
 #endif
 }
 
-#if os(macOS)
 private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
     let title: String
     let icon: String
@@ -949,6 +990,113 @@ private struct DeboogeyLoupeLauncherMenu: View {
     }
 }
 
+private struct DeboogeyDiffsplitterLauncherMenu: View {
+    let openDocument: () -> Void
+    let createDocument: () -> Void
+    var prominent: Bool = false
+    @AppStorage("theoderoy.Deboogey.Diffsplitter.hasShownEducation")
+    private var hasShownEducation = false
+
+    var body: some View {
+        DeboogeyDocumentToolLauncherMenu(
+            title: "Diffsplitter",
+            icon: "square.split.2x1",
+            prominent: prominent,
+            openLabel: "Open Diffsplitter Document",
+            openIcon: "doc.text",
+            openDocument: openDocument,
+            createDocument: createDocument,
+            hasShownEducation: $hasShownEducation
+        ) { onContinue in
+            DiffsplitterEducationView(onDismiss: onContinue)
+        }
+    }
+}
+
+#if os(iOS)
+private extension View {
+    func mceDocumentImporter(
+        isPresented: Binding<Bool>,
+        contentTypes: [UTType],
+        onOpen: @escaping (URL) -> Void
+    ) -> some View {
+        fileImporter(
+            isPresented: isPresented,
+            allowedContentTypes: contentTypes,
+            allowsMultipleSelection: false
+        ) { result in
+            guard case .success(let urls) = result, let url = urls.first else { return }
+            _ = url.startAccessingSecurityScopedResource()
+            onOpen(url)
+        }
+    }
+}
+
+private struct DeboogeyLoupeIOSLauncher: View {
+    let navigate: (MCEIOSRoute) -> Void
+    @AppStorage("theoderoy.Deboogey.LoupeMachine.hasShownEducation")
+    private var hasShownEducation = false
+    @State private var showingEducation = false
+    @State private var isOpeningDocument = false
+
+    var body: some View {
+        LauncherButton(
+            title: "Loupe View",
+            icon: "loupe",
+            color: .accentColor,
+            prominent: true
+        ) {
+            requestOpen()
+        }
+        .sheet(isPresented: $showingEducation) {
+            LoupeMachineEducationView {
+                hasShownEducation = true
+                showingEducation = false
+                DispatchQueue.main.async {
+                    isOpeningDocument = true
+                }
+            }
+        }
+        .mceDocumentImporter(
+            isPresented: $isOpeningDocument,
+            contentTypes: [.loupeMachineDocument]
+        ) { url in
+            navigate(.loupe(LoupeMachineWindowRequest(action: .open, documentURL: url)))
+        }
+    }
+
+    private func requestOpen() {
+        if hasShownEducation && !DebugVariables.alwaysShowLMEducation {
+            isOpeningDocument = true
+        } else {
+            showingEducation = true
+        }
+    }
+}
+
+private struct DeboogeyDiffsplitterIOSLauncher: View {
+    let navigate: (MCEIOSRoute) -> Void
+    @State private var isOpeningDocument = false
+
+    var body: some View {
+        DeboogeyDiffsplitterLauncherMenu(
+            openDocument: { isOpeningDocument = true },
+            createDocument: {
+                navigate(.diffsplitter(DiffsplitterWindowRequest(action: .create, documentURL: nil)))
+            },
+            prominent: true
+        )
+        .mceDocumentImporter(
+            isPresented: $isOpeningDocument,
+            contentTypes: [.diffsplitterDocument, .diffsplitterXDocument]
+        ) { url in
+            navigate(.diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: url)))
+        }
+    }
+}
+#endif
+
+#if os(macOS)
 @available(macOS 13.0, *)
 private struct DeboogeyLoupeWindowLauncher: View {
     @Environment(\.openWindow) private var openWindow
@@ -967,28 +1115,6 @@ private struct DeboogeyLoupeLegacyWindowLauncher: View {
             openDocument: LoupeMachineNavigation.chooseDocumentLegacy,
             createDocument: { LoupeMachineNavigation.openLegacy(documentAt: nil) }
         )
-    }
-}
-
-private struct DeboogeyDiffsplitterLauncherMenu: View {
-    let openDocument: () -> Void
-    let createDocument: () -> Void
-    @AppStorage("theoderoy.Deboogey.Diffsplitter.hasShownEducation")
-    private var hasShownEducation = false
-
-    var body: some View {
-        DeboogeyDocumentToolLauncherMenu(
-            title: "Diffsplitter",
-            icon: "square.split.2x1",
-            prominent: false,
-            openLabel: "Open Diffsplitter Document",
-            openIcon: "doc.text",
-            openDocument: openDocument,
-            createDocument: createDocument,
-            hasShownEducation: $hasShownEducation
-        ) { onContinue in
-            DiffsplitterEducationView(onDismiss: onContinue)
-        }
     }
 }
 
@@ -1057,7 +1183,6 @@ private struct ModernSettingsLauncher: View {
         }
     }
 }
-
 #endif
 
 #Preview {

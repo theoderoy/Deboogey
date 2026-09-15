@@ -8,6 +8,8 @@
 import Foundation
 #if canImport(AppKit)
 import AppKit
+#elseif canImport(UIKit)
+import UIKit
 #endif
 import Combine
 
@@ -25,8 +27,9 @@ public final class PersistentVariables: ObservableObject {
         static let entityTrackerAutoDeleteLoupeActivities = "theoderoy.Deboogey.EntityTracker.autoDeleteLoupeActivities"
         static let playIndexingDoneSound = "theoderoy.Deboogey.Indexing.playCompletionSound"
         static let playToolCycleSound = "theoderoy.Deboogey.Tools.playCycleSound"
-        static let playDiffsplitterDoneSound = "theoderoy.Deboogey.Diffsplitter.playCompletionSound"
-        static let diffsplitterNotifyMinimumSeconds = "theoderoy.Deboogey.Diffsplitter.completionMinimumSeconds"
+        static let playDiffsplitterDoneSound = DiffsplitterCompletionFeedback.soundPreferenceKey
+        static let diffsplitterNotifyWhenBackgrounded = DiffsplitterCompletionFeedback.notifyWhenBackgroundedKey
+        static let diffsplitterNotifyMinimumSeconds = DiffsplitterCompletionFeedback.minimumSecondsKey
         static let diffsplitterStatusPriority = "theoderoy.Deboogey.Diffsplitter.statusPriority"
         static let diffsplitterIncludeHiddenFiles = DiffsplitterSettings.Keys.includeHiddenFiles
         static let diffsplitterPreferDiskTempForLargeFiles = DiffsplitterSettings.Keys.preferDiskTempForLargeFiles
@@ -85,6 +88,7 @@ public final class PersistentVariables: ObservableObject {
         Keys.playIndexingDoneSound: true,
         Keys.playToolCycleSound: true,
         Keys.playDiffsplitterDoneSound: true,
+        Keys.diffsplitterNotifyWhenBackgrounded: true,
         Keys.diffsplitterNotifyMinimumSeconds: DiffsplitterCompletionFeedback.defaultMinimumSeconds,
         Keys.diffsplitterStatusPriority: defaultDiffsplitterStatusPriority,
         Keys.diffsplitterIncludeHiddenFiles: DiffsplitterSettings.defaultIncludeHiddenFiles,
@@ -152,6 +156,10 @@ public final class PersistentVariables: ObservableObject {
 
     @Published public var playDiffsplitterDoneSound: Bool {
         didSet { defaults.set(playDiffsplitterDoneSound, forKey: Keys.playDiffsplitterDoneSound) }
+    }
+
+    @Published public var diffsplitterNotifyWhenBackgrounded: Bool {
+        didSet { defaults.set(diffsplitterNotifyWhenBackgrounded, forKey: Keys.diffsplitterNotifyWhenBackgrounded) }
     }
 
     @Published public var diffsplitterNotifyMinimumSeconds: Double {
@@ -279,6 +287,7 @@ public final class PersistentVariables: ObservableObject {
         self.playIndexingDoneSound = self.defaults.bool(forKey: Keys.playIndexingDoneSound)
         self.playToolCycleSound = self.defaults.bool(forKey: Keys.playToolCycleSound)
         self.playDiffsplitterDoneSound = self.defaults.bool(forKey: Keys.playDiffsplitterDoneSound)
+        self.diffsplitterNotifyWhenBackgrounded = self.defaults.bool(forKey: Keys.diffsplitterNotifyWhenBackgrounded)
         self.diffsplitterNotifyMinimumSeconds = DiffsplitterCompletionFeedback.preferredMinimumSeconds(
             defaults: self.defaults
         )
@@ -302,6 +311,48 @@ public final class PersistentVariables: ObservableObject {
         diffsplitterStatusPriority = Self.defaultDiffsplitterStatusPriority
     }
 
+    public func resetPreferenceValues() {
+        for key in Self.registeredDefaults.keys {
+            defaults.removeObject(forKey: key)
+        }
+        defaults.synchronize()
+        reloadFromDefaults()
+    }
+
+    private func reloadFromDefaults() {
+        pesterMeWithSipping = defaults.bool(forKey: Keys.pesterMeWithSipping)
+        showNetworkNotices = defaults.bool(forKey: Keys.showNetworkNotices)
+        upgradeChannel = defaults.string(forKey: Keys.upgradeChannel) ?? "Release"
+        hideUpgradeAlerts = defaults.bool(forKey: Keys.hideUpgradeAlerts)
+        deleteBackupOnStartup = defaults.bool(forKey: Keys.deleteBackupOnStartup)
+        hasShownWhatsNew = defaults.bool(forKey: Keys.hasShownWhatsNew)
+        entityTrackerAutoDeleteEnabled = defaults.bool(forKey: Keys.entityTrackerAutoDeleteEnabled)
+        entityTrackerAutoDeleteScope = defaults.string(forKey: Keys.entityTrackerAutoDeleteScope) ?? "ephemerals"
+        entityTrackerAutoDeleteTrigger = defaults.string(forKey: Keys.entityTrackerAutoDeleteTrigger) ?? "login"
+        entityTrackerAutoDeleteLoupeActivities = defaults.bool(forKey: Keys.entityTrackerAutoDeleteLoupeActivities)
+        playIndexingDoneSound = defaults.bool(forKey: Keys.playIndexingDoneSound)
+        playToolCycleSound = defaults.bool(forKey: Keys.playToolCycleSound)
+        playDiffsplitterDoneSound = defaults.bool(forKey: Keys.playDiffsplitterDoneSound)
+        diffsplitterNotifyWhenBackgrounded = defaults.bool(forKey: Keys.diffsplitterNotifyWhenBackgrounded)
+        diffsplitterNotifyMinimumSeconds = DiffsplitterCompletionFeedback.preferredMinimumSeconds(
+            defaults: defaults
+        )
+        diffsplitterStatusPriority = Self.loadDiffsplitterStatusPriority(from: defaults)
+        diffsplitterIncludeHiddenFiles = DiffsplitterSettings.includeHiddenFiles(defaults: defaults)
+        diffsplitterPreferDiskTempForLargeFiles = DiffsplitterSettings.preferDiskTempForLargeFiles(
+            defaults: defaults
+        )
+        diffsplitterHexWindowLines = Double(DiffsplitterSettings.hexWindowLines(defaults: defaults))
+        diffsplitterLargeFileHexConversionEnabled = DiffsplitterSettings.largeFileHexConversionEnabled(
+            defaults: defaults
+        )
+        diffsplitterMaxTextMegabytes = Double(DiffsplitterSettings.maxTextMegabytes(defaults: defaults))
+        diffsplitterMaxNestDepth = Double(DiffsplitterSettings.maxNestDepth(defaults: defaults))
+        diffsplitterMaxEntries = Double(DiffsplitterSettings.maxEntries(defaults: defaults))
+        showCLTNotices = defaults.bool(forKey: Keys.showCLTNotices)
+        showLoupeApplyVerification = defaults.bool(forKey: Keys.showLoupeApplyVerification)
+    }
+
     private static func clamped(_ value: Double, range: ClosedRange<Int>) -> Double {
         min(max(value.rounded(), Double(range.lowerBound)), Double(range.upperBound))
     }
@@ -314,9 +365,19 @@ public final class PersistentVariables: ObservableObject {
         guard let bundleID = Bundle.main.bundleIdentifier else { return }
         defaults.removePersistentDomain(forName: bundleID)
         defaults.synchronize()
+        Self.gracefullyTerminateAfterPersistentStorageDeletion()
+    }
 
+    private static func gracefullyTerminateAfterPersistentStorageDeletion() {
 #if canImport(AppKit)
         NSApp.terminate(nil)
+#elseif canImport(UIKit)
+        DispatchQueue.main.async {
+            UIApplication.shared.perform(#selector(NSXPCConnection.suspend))
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                exit(EXIT_SUCCESS)
+            }
+        }
 #endif
     }
 }

@@ -1097,20 +1097,6 @@
 					Dependencies/DeboogeyLoupeLauncher.swift,
 					Dependencies/DeboogeySDLauncher.swift,
 					Dependencies/DeboogeyWindowController.swift,
-					Dependencies/Diffsplitter.swift,
-					Dependencies/DiffsplitterAEA.swift,
-					Dependencies/DiffsplitterCPIO.swift,
-					Dependencies/DiffsplitterDiskFS.swift,
-					Dependencies/DiffsplitterAPFS.swift,
-					Dependencies/DiffsplitterAPFSTypes.swift,
-					Dependencies/DiffsplitterAPFSBTree.swift,
-					Dependencies/DiffsplitterAPFSOmap.swift,
-					Dependencies/DiffsplitterAPFSFsTree.swift,
-					Dependencies/DiffsplitterPKG.swift,
-					Dependencies/DiffsplitterPBZX.swift,
-					Dependencies/DiffsplitterUDIF.swift,
-					Dependencies/DiffsplitterXAR.swift,
-					Dependencies/DiffsplitterXIP.swift,
 					Dependencies/LoupeMachineWindowController.swift,
 					Dependencies/WindowLauncherCommands.swift,
 					NetworkMonitor.swift,
@@ -1118,10 +1104,8 @@
 					UpgradeChecker.swift,
 					Views/DeboogeyCDMLauncherView.swift,
 					Views/DeboogeySDLauncherView.swift,
-					Views/DiffsplitterView.swift,
 					Views/EducationPlayerView.swift,
 					Views/EntityTrackerView.swift,
-					Views/LoupeMachineEducationView.swift,
 				);
 				"EXCLUDED_SOURCE_FILE_NAMES[sdk=iphonesimulator*]" = (
 					DeboogeyCDMHelper/main.swift,
@@ -1131,20 +1115,6 @@
 					Dependencies/DeboogeyLoupeLauncher.swift,
 					Dependencies/DeboogeySDLauncher.swift,
 					Dependencies/DeboogeyWindowController.swift,
-					Dependencies/Diffsplitter.swift,
-					Dependencies/DiffsplitterAEA.swift,
-					Dependencies/DiffsplitterCPIO.swift,
-					Dependencies/DiffsplitterDiskFS.swift,
-					Dependencies/DiffsplitterAPFS.swift,
-					Dependencies/DiffsplitterAPFSTypes.swift,
-					Dependencies/DiffsplitterAPFSBTree.swift,
-					Dependencies/DiffsplitterAPFSOmap.swift,
-					Dependencies/DiffsplitterAPFSFsTree.swift,
-					Dependencies/DiffsplitterPKG.swift,
-					Dependencies/DiffsplitterPBZX.swift,
-					Dependencies/DiffsplitterUDIF.swift,
-					Dependencies/DiffsplitterXAR.swift,
-					Dependencies/DiffsplitterXIP.swift,
 					Dependencies/LoupeMachineWindowController.swift,
 					Dependencies/WindowLauncherCommands.swift,
 					NetworkMonitor.swift,
@@ -1152,10 +1122,8 @@
 					UpgradeChecker.swift,
 					Views/DeboogeyCDMLauncherView.swift,
 					Views/DeboogeySDLauncherView.swift,
-					Views/DiffsplitterView.swift,
 					Views/EducationPlayerView.swift,
 					Views/EntityTrackerView.swift,
-					Views/LoupeMachineEducationView.swift,
 				);
 				GENERATE_INFOPLIST_FILE = NO;
 				"INFOPLIST_FILE[sdk=iphoneos*]" = "Config/DeboogeyClientMCE-iOS-Info.plist";
@@ -1197,7 +1165,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -1232,20 +1200,6 @@
 					Dependencies/DeboogeyLoupeLauncher.swift,
 					Dependencies/DeboogeySDLauncher.swift,
 					Dependencies/DeboogeyWindowController.swift,
-					Dependencies/Diffsplitter.swift,
-					Dependencies/DiffsplitterAEA.swift,
-					Dependencies/DiffsplitterCPIO.swift,
-					Dependencies/DiffsplitterDiskFS.swift,
-					Dependencies/DiffsplitterAPFS.swift,
-					Dependencies/DiffsplitterAPFSTypes.swift,
-					Dependencies/DiffsplitterAPFSBTree.swift,
-					Dependencies/DiffsplitterAPFSOmap.swift,
-					Dependencies/DiffsplitterAPFSFsTree.swift,
-					Dependencies/DiffsplitterPKG.swift,
-					Dependencies/DiffsplitterPBZX.swift,
-					Dependencies/DiffsplitterUDIF.swift,
-					Dependencies/DiffsplitterXAR.swift,
-					Dependencies/DiffsplitterXIP.swift,
 					Dependencies/LoupeMachineWindowController.swift,
 					Dependencies/WindowLauncherCommands.swift,
 					NetworkMonitor.swift,
@@ -1253,10 +1207,8 @@
 					UpgradeChecker.swift,
 					Views/DeboogeyCDMLauncherView.swift,
 					Views/DeboogeySDLauncherView.swift,
-					Views/DiffsplitterView.swift,
 					Views/EducationPlayerView.swift,
 					Views/EntityTrackerView.swift,
-					Views/LoupeMachineEducationView.swift,
 				);
 				"EXCLUDED_SOURCE_FILE_NAMES[sdk=iphonesimulator*]" = (
 					DeboogeyCDMHelper/main.swift,
@@ -1266,20 +1218,6 @@
 					Dependencies/DeboogeyLoupeLauncher.swift,
 					Dependencies/DeboogeySDLauncher.swift,
 					Dependencies/DeboogeyWindowController.swift,
-					Dependencies/Diffsplitter.swift,
-					Dependencies/DiffsplitterAEA.swift,
-					Dependencies/DiffsplitterCPIO.swift,
-					Dependencies/DiffsplitterDiskFS.swift,
-					Dependencies/DiffsplitterAPFS.swift,
-					Dependencies/DiffsplitterAPFSTypes.swift,
-					Dependencies/DiffsplitterAPFSBTree.swift,
-					Dependencies/DiffsplitterAPFSOmap.swift,
-					Dependencies/DiffsplitterAPFSFsTree.swift,
-					Dependencies/DiffsplitterPKG.swift,
-					Dependencies/DiffsplitterPBZX.swift,
-					Dependencies/DiffsplitterUDIF.swift,
-					Dependencies/DiffsplitterXAR.swift,
-					Dependencies/DiffsplitterXIP.swift,
 					Dependencies/LoupeMachineWindowController.swift,
 					Dependencies/WindowLauncherCommands.swift,
 					NetworkMonitor.swift,
@@ -1287,10 +1225,8 @@
 					UpgradeChecker.swift,
 					Views/DeboogeyCDMLauncherView.swift,
 					Views/DeboogeySDLauncherView.swift,
-					Views/DiffsplitterView.swift,
 					Views/EducationPlayerView.swift,
 					Views/EntityTrackerView.swift,
-					Views/LoupeMachineEducationView.swift,
 				);
 				GENERATE_INFOPLIST_FILE = NO;
 				"INFOPLIST_FILE[sdk=iphoneos*]" = "Config/DeboogeyClientMCE-iOS-Info.plist";
@@ -1332,7 +1268,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};

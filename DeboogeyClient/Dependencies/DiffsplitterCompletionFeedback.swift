@@ -6,10 +6,14 @@
 //
 
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 enum DiffsplitterCompletionFeedback {
-    private static let soundPreferenceKey = "theoderoy.Deboogey.Diffsplitter.playCompletionSound"
-    private static let minimumSecondsKey = "theoderoy.Deboogey.Diffsplitter.completionMinimumSeconds"
+    static let soundPreferenceKey = "theoderoy.Deboogey.Diffsplitter.playCompletionSound"
+    static let notifyWhenBackgroundedKey = "theoderoy.Deboogey.Diffsplitter.notifyWhenBackgrounded"
+    static let minimumSecondsKey = "theoderoy.Deboogey.Diffsplitter.completionMinimumSeconds"
     private static let completionSoundVolume: Float = 0.3
     static let selectableMinimumSeconds: [Double] = [0] + (5...30).map(Double.init)
     static let minimumSecondsRange: ClosedRange<Double> = 0...30
@@ -54,15 +58,23 @@ enum DiffsplitterCompletionFeedback {
         bundle: Bundle = .main
     ) {
         guard defaults.bool(forKey: soundPreferenceKey) else { return }
-        let minimumSeconds = preferredMinimumSeconds(defaults: defaults)
-        guard elapsed >= minimumSeconds else { return }
-#if canImport(AppKit)
+        if !shouldBypassMinimumDuration(defaults: defaults) {
+            guard elapsed >= preferredMinimumSeconds(defaults: defaults) else { return }
+        }
         _ = BundleAIFSound.play(named: "ProcessDone", bundle: bundle, volume: completionSoundVolume)
-#endif
         BannerNotificationCenter.shared.notify(
             title: L10n.t("Diffsplitter Finished"),
             body: L10n.f("%@ finished comparing", label),
             identifierPrefix: "diffsplitter-complete"
         )
+    }
+
+    private static func shouldBypassMinimumDuration(defaults: UserDefaults) -> Bool {
+#if os(iOS)
+        guard defaults.bool(forKey: notifyWhenBackgroundedKey) else { return false }
+        return UIApplication.shared.applicationState != .active
+#else
+        return false
+#endif
     }
 }

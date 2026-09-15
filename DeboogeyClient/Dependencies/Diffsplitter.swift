@@ -8,11 +8,16 @@
 import Foundation
 import CryptoKit
 import zlib
-import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 import UserNotifications
 import Combine
+#if canImport(AppKit)
+import AppKit
+#endif
+#if canImport(UIKit)
+import UIKit
+#endif
 
 nonisolated protocol DiffsplitterContainerBackend: Sendable {
     func expandPkg(package: URL, into destination: URL) throws
@@ -814,6 +819,7 @@ nonisolated enum DiffsplitterBinaryDump {
         var windowStartLine: Int
         var windowLineCount: Int
         var rows: [HexRow]
+        let embeddedRows: [HexRow]?
         var leftURL: URL? {
             if case .file(let url) = leftSource { return url }
             return nil
@@ -823,6 +829,9 @@ nonisolated enum DiffsplitterBinaryDump {
             return nil
         }
         var totalLines: Int {
+            if let embeddedRows {
+                return embeddedRows.count
+            }
             let maxBytes = max(leftByteCount, rightByteCount)
             guard maxBytes > 0 else { return 0 }
             return (maxBytes + bytesPerLine - 1) / bytesPerLine
@@ -836,6 +845,9 @@ nonisolated enum DiffsplitterBinaryDump {
             return start..<max(start, end)
         }
         var isEmbeddedSnapshot: Bool { leftSource == nil && rightSource == nil }
+        var canNavigateWindows: Bool {
+            !isEmbeddedSnapshot || totalLines > windowLineCount
+        }
     }
     static func estimate(
         leftBytes: Int,
@@ -962,44 +974,43 @@ nonisolated enum DiffsplitterBinaryDump {
             rightByteCount: rightByteCount,
             windowStartLine: clampedStart,
             windowLineCount: clampedCount,
-            rows: rows
+            rows: rows,
+            embeddedRows: nil
         )
     }
     static func pageUp(_ session: Session) throws -> Session {
-        guard !session.isEmbeddedSnapshot else { return session }
         let step = max(1, session.windowLineCount - pageOverlapLines)
-        let start = max(0, session.windowStartLine - step)
-        return try loadWindow(
-            left: session.leftSource,
-            right: session.rightSource,
-            leftByteCount: session.leftByteCount,
-            rightByteCount: session.rightByteCount,
-            startLine: start,
-            lineCount: session.windowLineCount
+        return try reloadWindow(
+            session,
+            startLine: max(0, session.windowStartLine - step)
         )
     }
     static func pageDown(_ session: Session) throws -> Session {
-        guard !session.isEmbeddedSnapshot else { return session }
         let step = max(1, session.windowLineCount - pageOverlapLines)
-        let start = min(max(0, session.totalLines - 1), session.windowStartLine + step)
-        return try loadWindow(
-            left: session.leftSource,
-            right: session.rightSource,
-            leftByteCount: session.leftByteCount,
-            rightByteCount: session.rightByteCount,
-            startLine: start,
-            lineCount: session.windowLineCount
+        return try reloadWindow(
+            session,
+            startLine: min(max(0, session.totalLines - 1), session.windowStartLine + step)
         )
     }
     static func jump(toOffsetBytes offset: Int, session: Session) throws -> Session {
-        guard !session.isEmbeddedSnapshot else { return session }
-        let line = max(0, offset) / bytesPerLine
+        try reloadWindow(session, startLine: max(0, offset) / bytesPerLine)
+    }
+    private static func reloadWindow(_ session: Session, startLine: Int) throws -> Session {
+        if let embeddedRows = session.embeddedRows {
+            return windowEmbedded(
+                embeddedRows,
+                leftByteCount: session.leftByteCount,
+                rightByteCount: session.rightByteCount,
+                startLine: startLine,
+                lineCount: session.windowLineCount
+            )
+        }
         return try loadWindow(
             left: session.leftSource,
             right: session.rightSource,
             leftByteCount: session.leftByteCount,
             rightByteCount: session.rightByteCount,
-            startLine: line,
+            startLine: startLine,
             lineCount: session.windowLineCount
         )
     }
@@ -1007,8 +1018,8 @@ nonisolated enum DiffsplitterBinaryDump {
         from session: Session,
         maxLines: Int = DiffsplitterEngine.maxAlignLines
     ) throws -> [DiffsplitterEngine.AlignedRow] {
-        if session.isEmbeddedSnapshot {
-            return alignedRows(fromHexRows: session.rows)
+        if let embeddedRows = session.embeddedRows {
+            return alignedRows(fromHexRows: Array(embeddedRows.prefix(max(0, maxLines))))
         }
         let total = min(session.totalLines, max(0, maxLines))
         guard total > 0 else { return [] }
@@ -1079,7 +1090,8 @@ nonisolated enum DiffsplitterBinaryDump {
         }
     }
     static func sessionFromEmbeddedAlignedRows(
-        _ alignedRows: [DiffsplitterEngine.AlignedRow]
+        _ alignedRows: [DiffsplitterEngine.AlignedRow],
+        windowLines: Int = DiffsplitterSettings.hexWindowLines()
     ) -> Session {
         let hexRows: [HexRow] = alignedRows.enumerated().map { index, row in
             let kind: HexRow.Kind
@@ -1102,14 +1114,38 @@ nonisolated enum DiffsplitterBinaryDump {
         }
         let lineCount = max(hexRows.count, 1)
         let byteCount = lineCount * bytesPerLine
+        return windowEmbedded(
+            hexRows,
+            leftByteCount: byteCount,
+            rightByteCount: byteCount,
+            startLine: 0,
+            lineCount: windowLines
+        )
+    }
+    static func windowEmbedded(
+        _ allRows: [HexRow],
+        leftByteCount: Int,
+        rightByteCount: Int,
+        startLine: Int,
+        lineCount: Int
+    ) -> Session {
+        let totalLines = allRows.count
+        let clampedCount = min(max(1, lineCount), maxWindowLines)
+        let clampedStart: Int = {
+            guard totalLines > 0 else { return 0 }
+            return max(0, min(startLine, totalLines - 1))
+        }()
+        let endLine = min(totalLines, clampedStart + clampedCount)
+        let windowRows = totalLines == 0 ? [] : Array(allRows[clampedStart..<endLine])
         return Session(
             leftSource: nil,
             rightSource: nil,
-            leftByteCount: byteCount,
-            rightByteCount: byteCount,
-            windowStartLine: 0,
-            windowLineCount: lineCount,
-            rows: hexRows
+            leftByteCount: leftByteCount,
+            rightByteCount: rightByteCount,
+            windowStartLine: clampedStart,
+            windowLineCount: clampedCount,
+            rows: windowRows,
+            embeddedRows: allRows
         )
     }
     static func looksLikeHexDump(_ rows: [DiffsplitterEngine.AlignedRow]) -> Bool {
@@ -3653,9 +3689,9 @@ nonisolated struct DiffsplitterWindowRequest: Codable, Hashable {
 }
 
 @MainActor
-
 enum DiffsplitterNavigation {
     static let windowID = "deboogey-diffsplitter"
+#if os(macOS)
     static func openLegacy(documentAt url: URL?) {
         DiffsplitterWindowController.open(DiffsplitterWindowRequest(
             action: url == nil ? .create : .open,
@@ -3684,9 +3720,31 @@ enum DiffsplitterNavigation {
             open: open
         )
     }
+#endif
 }
 
 enum DiffsplitterFileAccess {
+    enum AEAKeyPromptResult {
+        case decrypt(String)
+        case metadataOnly
+    }
+    enum BinaryDumpPromptResult {
+        case inspectDump
+        case metadataOnly
+        case cancel
+    }
+
+    static func copyToPasteboard(_ text: String) {
+        guard !text.isEmpty else { return }
+#if os(macOS)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+#elseif os(iOS)
+        UIPasteboard.general.string = text
+#endif
+    }
+
+#if os(macOS)
     static func chooseSideItem(
         title: String,
         completion: @escaping (URL?) -> Void
@@ -3714,7 +3772,7 @@ enum DiffsplitterFileAccess {
     ) {
         let panel = NSSavePanel()
         panel.title = title
-        panel.nameFieldStringValue = suggestedName
+        panel.nameFieldStringValue = DeboogeyAppDocuments.sanitizedFilename(suggestedName)
         panel.allowedContentTypes = contentTypes
         panel.begin { response in
             guard response == .OK, let url = panel.url else { return }
@@ -3730,84 +3788,48 @@ enum DiffsplitterFileAccess {
         suggestedName: String,
         completion: @escaping (URL?) -> Void
     ) {
-        let panel = NSSavePanel()
-        panel.title = title
-        panel.allowedContentTypes = [.diffsplitterDocument]
-        panel.nameFieldStringValue = suggestedName
-        panel.begin { response in
-            guard response == .OK, var url = panel.url else {
-                completion(nil)
-                return
-            }
-            if url.pathExtension.lowercased() != "dsplt" {
-                url = url.appendingPathExtension("dsplt")
-            }
-            completion(url)
-        }
+        presentSavePanel(
+            title: title,
+            suggestedName: suggestedName,
+            contentType: .diffsplitterDocument,
+            requiredExtension: "dsplt",
+            completion: completion
+        )
     }
     static func exportDocument(
         title: String,
         suggestedName: String,
         completion: @escaping (URL?) -> Void
     ) {
+        presentSavePanel(
+            title: title,
+            suggestedName: suggestedName,
+            contentType: .diffsplitterXDocument,
+            requiredExtension: "dspltx",
+            completion: completion
+        )
+    }
+    private static func presentSavePanel(
+        title: String,
+        suggestedName: String,
+        contentType: UTType,
+        requiredExtension: String,
+        completion: @escaping (URL?) -> Void
+    ) {
         let panel = NSSavePanel()
         panel.title = title
-        panel.allowedContentTypes = [.diffsplitterXDocument]
-        panel.nameFieldStringValue = suggestedName
+        panel.allowedContentTypes = [contentType]
+        panel.nameFieldStringValue = DeboogeyAppDocuments.sanitizedFilename(suggestedName)
         panel.begin { response in
             guard response == .OK, var url = panel.url else {
                 completion(nil)
                 return
             }
-            if url.pathExtension.lowercased() != "dspltx" {
-                url = url.appendingPathExtension("dspltx")
+            if url.pathExtension.lowercased() != requiredExtension {
+                url = url.appendingPathExtension(requiredExtension)
             }
             completion(url)
         }
-    }
-
-    enum SaveOrExportChoice {
-        case save
-        case export
-        case cancel
-    }
-    static func presentSaveOrExportChooser(
-        allowExport: Bool,
-        completion: @escaping (SaveOrExportChoice) -> Void
-    ) {
-        DispatchQueue.main.async {
-            let alert = NSAlert()
-            alert.messageText = L10n.t("Save or Export Diffsplitter Document?")
-            alert.informativeText = L10n.t(
-                "Save a Diffsplitter document to reopen the same paths later, or export a DiffsplitterX document that stores the full file differences."
-            )
-            alert.alertStyle = .informational
-            alert.addButton(withTitle: L10n.t("Save Diffsplitter Document"))
-            if allowExport {
-                alert.addButton(withTitle: L10n.t("Export DiffsplitterX Document…"))
-            }
-            alert.addButton(withTitle: L10n.t("Cancel"))
-            let finish: (NSApplication.ModalResponse) -> Void = { response in
-                switch response {
-                case .alertFirstButtonReturn:
-                    completion(.save)
-                case .alertSecondButtonReturn:
-                    completion(allowExport ? .export : .cancel)
-                default:
-                    completion(.cancel)
-                }
-            }
-            if let window = NSApp.keyWindow ?? NSApp.mainWindow {
-                alert.beginSheetModal(for: window, completionHandler: finish)
-            } else {
-                finish(alert.runModal())
-            }
-        }
-    }
-    static func copyToPasteboard(_ text: String) {
-        guard !text.isEmpty else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
     }
     static func presentMessageAlert(
         title: String,
@@ -3829,11 +3851,6 @@ enum DiffsplitterFileAccess {
                 completion()
             }
         }
-    }
-
-    enum AEAKeyPromptResult {
-        case decrypt(String)
-        case metadataOnly
     }
     static func presentAEAKeyPrompt(
         initialValue: String,
@@ -3871,12 +3888,6 @@ enum DiffsplitterFileAccess {
             }
         }
     }
-
-    enum BinaryDumpPromptResult {
-        case inspectDump
-        case metadataOnly
-        case cancel
-    }
     static func presentBinaryDumpPrompt(
         estimate: DiffsplitterBinaryDump.CostEstimate,
         completion: @escaping (BinaryDumpPromptResult) -> Void
@@ -3906,10 +3917,11 @@ enum DiffsplitterFileAccess {
             }
         }
     }
+#endif
 }
 
+#if os(macOS)
 @MainActor
-
 final class DiffsplitterWindowController: NSWindowController {
     private static var openWindows: [UUID: DiffsplitterWindowController] = [:]
     private let requestID: UUID
@@ -3945,6 +3957,7 @@ final class DiffsplitterWindowController: NSWindowController {
         }
     }
 }
+#endif
 
 @MainActor
 
@@ -3998,8 +4011,39 @@ final class DiffsplitterSession: ObservableObject {
     @Published var isPresentingAppKitAlert = false
     @Published var binaryDump: DiffsplitterBinaryDump.Session?
     @Published var binaryDumpOffsetField = "0"
+#if os(iOS)
+    struct BinaryDumpPromptState: Identifiable {
+        let id = UUID()
+        let path: String
+        let entry: DiffsplitterEngine.DirEntry
+        let estimate: DiffsplitterBinaryDump.CostEstimate
+    }
+    enum PendingExport: Identifiable {
+        case saveDocument(suggestedName: String)
+        case exportDiffsplitterX(suggestedName: String, data: Data)
+        case exportText(suggestedName: String, text: String)
+
+        var id: String {
+            switch self {
+            case .saveDocument: return "save"
+            case .exportDiffsplitterX: return "dspltx"
+            case .exportText: return "text"
+            }
+        }
+    }
+    @Published var pendingSidePick: Side?
+    @Published var isPresentingSidePicker = false
+    @Published var pendingExport: PendingExport?
+    @Published var pendingBinaryDumpPrompt: BinaryDumpPromptState?
+    private var pendingDocumentURLCompletion: ((URL?) -> Void)?
+#endif
     private var compareTask: Task<Void, Never>?
     private var documentTransferTask: Task<Void, Never>?
+#if os(iOS)
+    private var continuedProcessing: DiffsplitterContinuedProcessing.Handle?
+    private var suppressCompletionBannerForCurrentCompare = false
+#endif
+    private var compareGeneration: UInt64 = 0
     var reduceMotion = false
     var hasBothSides: Bool { leftURL != nil && rightURL != nil }
     var isReady: Bool { isEmbeddedDocument || (hasBothSides && comparisonKind != nil) }
@@ -4011,13 +4055,79 @@ final class DiffsplitterSession: ObservableObject {
     }
     var isBinaryDumpActive: Bool { binaryDump != nil }
     var isTransferringDocument: Bool { documentTransferProgress != nil }
+    @discardableResult
+    private func bumpCompareGeneration() -> UInt64 {
+        compareGeneration &+= 1
+        return compareGeneration
+    }
     func cancelAndClose() {
+        _ = bumpCompareGeneration()
         compareTask?.cancel()
         documentTransferTask?.cancel()
         documentTransferProgress = nil
+        endContinuedProcessing(success: false)
+#if os(iOS)
+        suppressCompletionBannerForCurrentCompare = false
+#endif
         closeContainerSessions()
         stopAccess(for: .left)
         stopAccess(for: .right)
+    }
+#if os(iOS)
+    @MainActor
+    private func beginContinuedProcessing(subtitle: String) async {
+        let previous = continuedProcessing
+        continuedProcessing = nil
+        previous?.finish(success: false)
+        suppressCompletionBannerForCurrentCompare = false
+
+        let generation = compareGeneration
+        let handle = await DiffsplitterContinuedProcessing.begin(
+            title: L10n.t("Diffsplitter"),
+            subtitle: subtitle,
+            onExpire: { [weak self] in
+                Task { @MainActor in
+                    self?.compareTask?.cancel()
+                }
+            }
+        )
+        guard generation == compareGeneration else {
+            handle?.finish(success: false)
+            return
+        }
+        continuedProcessing = handle
+        suppressCompletionBannerForCurrentCompare = handle != nil
+        if let handle, let progress = indexProgress ?? memberLoadProgress {
+            handle.update(progress)
+        }
+    }
+#endif
+    private func publishIndexProgress(_ progress: DiffsplitterIndexProgress) {
+        indexProgress = progress
+        publishContinuedProgress(progress)
+    }
+
+    private func publishMemberLoadProgress(_ progress: DiffsplitterIndexProgress) {
+        memberLoadProgress = progress
+        publishContinuedProgress(progress)
+    }
+
+    private func publishContinuedProgress(_ progress: DiffsplitterIndexProgress) {
+#if os(iOS)
+        continuedProcessing?.update(progress)
+#endif
+    }
+
+    private func endContinuedProcessing(success: Bool) {
+#if os(iOS)
+        continuedProcessing?.finish(success: success)
+        continuedProcessing = nil
+#endif
+    }
+
+    private func endContinuedProcessingIfCurrent(generation: UInt64, success: Bool) {
+        guard generation == compareGeneration else { return }
+        endContinuedProcessing(success: success)
     }
     func handleDocumentRequest(_ request: DiffsplitterWindowRequest) {
         switch request.action {
@@ -4029,12 +4139,33 @@ final class DiffsplitterSession: ObservableObject {
         }
     }
     func presentOpenPanel(for side: Side) {
+#if os(macOS)
         let title = side == .left ? L10n.t("Choose Left Item") : L10n.t("Choose Right Item")
         DiffsplitterFileAccess.chooseSideItem(title: title) { [weak self] url in
             guard let self, let url else { return }
             self.assign(url, to: side)
         }
+#else
+        pendingSidePick = side
+        isPresentingSidePicker = true
+#endif
     }
+#if os(iOS)
+    func handlePickedSideURL(_ url: URL?) {
+        let side = pendingSidePick
+        isPresentingSidePicker = false
+        pendingSidePick = nil
+        guard let side, let url else { return }
+        assign(url, to: side)
+    }
+
+    func handleSidePickerDismissed() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, !self.isPresentingSidePicker else { return }
+            self.pendingSidePick = nil
+        }
+    }
+#endif
     func handleDrop(_ providers: [NSItemProvider], onto side: Side) -> Bool {
         guard let provider = providers.first else { return false }
         provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { [weak self] item, _ in
@@ -4073,7 +4204,7 @@ final class DiffsplitterSession: ObservableObject {
         recompare()
     }
     private static func preparedSecurityScopedURL(_ url: URL) -> URL {
-#if DEBOOGEY_MCE
+#if os(macOS) && DEBOOGEY_MCE
         var stale = false
         if let bookmark = try? url.bookmarkData(
             options: [.withSecurityScope],
@@ -4136,7 +4267,8 @@ final class DiffsplitterSession: ObservableObject {
         embeddedLeftName = embeddedRightName
         embeddedRightName = previousLeftName
         if let dump = binaryDump {
-            let swappedRows = dump.rows.enumerated().map { index, row -> DiffsplitterBinaryDump.HexRow in
+            let sourceRows = dump.embeddedRows ?? dump.rows
+            let swappedRows = sourceRows.enumerated().map { index, row -> DiffsplitterBinaryDump.HexRow in
                 let kind: DiffsplitterBinaryDump.HexRow.Kind
                 switch row.kind {
                 case .insert: kind = .delete
@@ -4151,15 +4283,26 @@ final class DiffsplitterSession: ObservableObject {
                     kind: kind
                 )
             }
-            binaryDump = DiffsplitterBinaryDump.Session(
-                leftSource: dump.rightSource,
-                rightSource: dump.leftSource,
-                leftByteCount: dump.rightByteCount,
-                rightByteCount: dump.leftByteCount,
-                windowStartLine: dump.windowStartLine,
-                windowLineCount: dump.windowLineCount,
-                rows: swappedRows
-            )
+            if dump.embeddedRows != nil {
+                binaryDump = DiffsplitterBinaryDump.windowEmbedded(
+                    swappedRows,
+                    leftByteCount: dump.rightByteCount,
+                    rightByteCount: dump.leftByteCount,
+                    startLine: dump.windowStartLine,
+                    lineCount: dump.windowLineCount
+                )
+            } else {
+                binaryDump = DiffsplitterBinaryDump.Session(
+                    leftSource: dump.rightSource,
+                    rightSource: dump.leftSource,
+                    leftByteCount: dump.rightByteCount,
+                    rightByteCount: dump.leftByteCount,
+                    windowStartLine: dump.windowStartLine,
+                    windowLineCount: dump.windowLineCount,
+                    rows: swappedRows,
+                    embeddedRows: nil
+                )
+            }
             return
         }
         applyRows(rows.enumerated().map { index, row in
@@ -4446,12 +4589,16 @@ final class DiffsplitterSession: ObservableObject {
         guard !leftLines.isEmpty || !rightLines.isEmpty else { return }
         let ignoreWhitespace = self.ignoreWhitespace
         compareTask?.cancel()
+        let generation = bumpCompareGeneration()
         isComparing = true
         memberLoadProgress = DiffsplitterIndexProgress(
             fractionCompleted: 0,
             status: L10n.t("Aligning…")
         )
         compareTask = Task.detached(priority: .userInitiated) {
+#if os(iOS)
+            await self.beginContinuedProcessing(subtitle: L10n.t("Aligning…"))
+#endif
             let result = Result {
                 try DiffsplitterEngine.alignLines(
                     left: leftLines,
@@ -4460,13 +4607,18 @@ final class DiffsplitterSession: ObservableObject {
                 )
             }
             await MainActor.run { [self] in
-                guard !Task.isCancelled else { return }
+                if Task.isCancelled {
+                    self.endContinuedProcessingIfCurrent(generation: generation, success: false)
+                    return
+                }
                 self.isComparing = false
                 self.memberLoadProgress = nil
                 switch result {
                 case .success(let aligned):
                     self.applyRows(aligned)
+                    self.endContinuedProcessingIfCurrent(generation: generation, success: true)
                 case .failure(let error):
+                    self.endContinuedProcessingIfCurrent(generation: generation, success: false)
                     if error is CancellationError { return }
                     self.setupError = error.localizedDescription
                 }
@@ -4482,6 +4634,7 @@ final class DiffsplitterSession: ObservableObject {
             return
         }
         compareTask?.cancel()
+        let generation = bumpCompareGeneration()
         isComparing = true
         indexProgress = DiffsplitterIndexProgress(fractionCompleted: 0, status: L10n.t("Comparing…"))
         memberLoadProgress = nil
@@ -4496,11 +4649,14 @@ final class DiffsplitterSession: ObservableObject {
         let rightName = rightURL.lastPathComponent
         let compareStartedAt = Date()
         compareTask = Task.detached(priority: .userInitiated) {
+#if os(iOS)
+            await self.beginContinuedProcessing(subtitle: L10n.t("Comparing…"))
+#endif
             var builtLeftSession: DiffsplitterContainerSession?
             var builtRightSession: DiffsplitterContainerSession?
             let reporter = DiffsplitterIndexProgressReporter { progress in
                 Task { @MainActor [self] in
-                    self.indexProgress = progress
+                    self.publishIndexProgress(progress)
                 }
             }
             let result: Result<ComparePayload, Error>
@@ -4510,7 +4666,7 @@ final class DiffsplitterSession: ObservableObject {
                 case .files:
                     let progressPublish = DiffsplitterProgressPublisher { progress in
                         Task { @MainActor [self] in
-                            self.indexProgress = progress
+                            self.publishIndexProgress(progress)
                         }
                     }
                     progressPublish.publish(
@@ -4663,6 +4819,7 @@ final class DiffsplitterSession: ObservableObject {
                     leftoverRightSession?.close()
                     self.isComparing = false
                     self.indexProgress = nil
+                    self.endContinuedProcessingIfCurrent(generation: generation, success: false)
                     return
                 }
                 self.isComparing = false
@@ -4717,9 +4874,11 @@ final class DiffsplitterSession: ObservableObject {
                     }
                     finishSuccessfulCompare(
                         label: "\(leftName) ↔ \(rightName)",
-                        startedAt: compareStartedAt
+                        startedAt: compareStartedAt,
+                        generation: generation
                     )
                 case .failure(let error):
+                    self.endContinuedProcessingIfCurrent(generation: generation, success: false)
                     if error is CancellationError { return }
                     self.closeContainerSessions()
                     self.comparisonKind = nil
@@ -4801,10 +4960,18 @@ final class DiffsplitterSession: ObservableObject {
         let aeaKey = aeaSessionKeys[path]
         let compareLabel = (path as NSString).lastPathComponent
         let compareStartedAt = Date()
+        let generation = bumpCompareGeneration()
         compareTask = Task.detached(priority: .userInitiated) {
+#if os(iOS)
+            await self.beginContinuedProcessing(
+                subtitle: expandingAEA
+                    ? L10n.t("Expanding AEA…")
+                    : L10n.t("Expanding archive…")
+            )
+#endif
             let progressPublish = DiffsplitterProgressPublisher { progress in
                 Task { @MainActor [self] in
-                    self.memberLoadProgress = progress
+                    self.publishMemberLoadProgress(progress)
                 }
             }
             let result = Result {
@@ -4914,7 +5081,10 @@ final class DiffsplitterSession: ObservableObject {
                 )
             }
             await MainActor.run { [self] in
-                guard !Task.isCancelled else { return }
+                if Task.isCancelled {
+                    self.endContinuedProcessingIfCurrent(generation: generation, success: false)
+                    return
+                }
                 switch result {
                 case .success(let payload):
                     if payload.didExpand {
@@ -4927,7 +5097,11 @@ final class DiffsplitterSession: ObservableObject {
                         self.selectedRelativePath = nil
                         self.applyRows([])
                         self.directoryBrowsePrefix = path
-                        finishSuccessfulCompare(label: compareLabel, startedAt: compareStartedAt)
+                        finishSuccessfulCompare(
+                            label: compareLabel,
+                            startedAt: compareStartedAt,
+                            generation: generation
+                        )
                     } else {
                         self.openSkippedContainerAsFileComparison(
                             path: path,
@@ -4935,12 +5109,16 @@ final class DiffsplitterSession: ObservableObject {
                         )
                     }
                 case .failure(let error):
-                    if error is CancellationError { return }
+                    if error is CancellationError {
+                        self.endContinuedProcessingIfCurrent(generation: generation, success: false)
+                        return
+                    }
                     self.isComparing = false
                     self.memberLoadProgress = nil
                     if let containerError = error as? DiffsplitterContainer.ContainerError {
                         switch containerError {
                         case .aeaKeyRequired:
+                            self.endContinuedProcessingIfCurrent(generation: generation, success: false)
                             self.aeaKeyDraft = self.aeaSessionKeys[path] ?? ""
                             self.aeaKeyPrompt = AEAKeyPromptState(
                                 path: path,
@@ -4957,6 +5135,7 @@ final class DiffsplitterSession: ObservableObject {
                             break
                         }
                     }
+                    self.endContinuedProcessingIfCurrent(generation: generation, success: false)
                     self.applyRows([])
                     self.setupError = error.localizedDescription
                 }
@@ -4994,10 +5173,14 @@ final class DiffsplitterSession: ObservableObject {
         let status = entry.status
         let compareLabel = (path as NSString).lastPathComponent
         let compareStartedAt = Date()
+        let generation = bumpCompareGeneration()
         compareTask = Task.detached(priority: .userInitiated) {
+#if os(iOS)
+            await self.beginContinuedProcessing(subtitle: L10n.t("Loading…"))
+#endif
             let progressPublish = DiffsplitterProgressPublisher { progress in
                 Task { @MainActor [self] in
-                    self.memberLoadProgress = progress
+                    self.publishMemberLoadProgress(progress)
                 }
             }
 
@@ -5117,7 +5300,10 @@ final class DiffsplitterSession: ObservableObject {
                 return Outcome.rows(aligned)
             }
             await MainActor.run { [self] in
-                guard !Task.isCancelled else { return }
+                if Task.isCancelled {
+                    self.endContinuedProcessingIfCurrent(generation: generation, success: false)
+                    return
+                }
                 self.isComparing = false
                 self.memberLoadProgress = nil
                 switch result {
@@ -5134,8 +5320,13 @@ final class DiffsplitterSession: ObservableObject {
                         self.rows = []
                         self.visibleRowCount = 0
                     }
-                    finishSuccessfulCompare(label: compareLabel, startedAt: compareStartedAt)
+                    finishSuccessfulCompare(
+                        label: compareLabel,
+                        startedAt: compareStartedAt,
+                        generation: generation
+                    )
                 case .failure(let error):
+                    self.endContinuedProcessingIfCurrent(generation: generation, success: false)
                     if error is CancellationError { return }
                     self.applyRows([])
                     self.setupError = error.localizedDescription
@@ -5156,18 +5347,39 @@ final class DiffsplitterSession: ObservableObject {
             rightNeedsMaterialize: rightURL.map { DiffsplitterContainer.zipStubMetadata(at: $0) != nil } ?? false
         )
         showBinaryMetadataRows(leftURL: leftURL, rightURL: rightURL)
+#if os(macOS)
         isPresentingAppKitAlert = true
         DiffsplitterFileAccess.presentBinaryDumpPrompt(estimate: estimate) { [weak self] result in
             guard let self else { return }
             self.isPresentingAppKitAlert = false
-            switch result {
-            case .inspectDump:
-                self.beginBinaryDump(path: path, entry: entry)
-            case .metadataOnly:
-                self.beginBinaryMetadataCompare(path: path, entry: entry)
-            case .cancel:
-                self.leaveDirectoryDetail()
-            }
+            self.handleBinaryDumpPromptResult(result, path: path, entry: entry)
+        }
+#else
+        guard pendingBinaryDumpPrompt == nil else { return }
+        isPresentingAppKitAlert = true
+        pendingBinaryDumpPrompt = BinaryDumpPromptState(
+            path: path,
+            entry: entry,
+            estimate: estimate
+        )
+#endif
+    }
+    func handleBinaryDumpPromptResult(
+        _ result: DiffsplitterFileAccess.BinaryDumpPromptResult,
+        path: String,
+        entry: DiffsplitterEngine.DirEntry
+    ) {
+#if os(iOS)
+        pendingBinaryDumpPrompt = nil
+        isPresentingAppKitAlert = false
+#endif
+        switch result {
+        case .inspectDump:
+            beginBinaryDump(path: path, entry: entry)
+        case .metadataOnly:
+            beginBinaryMetadataCompare(path: path, entry: entry)
+        case .cancel:
+            leaveDirectoryDetail()
         }
     }
     private func showBinaryMetadataRows(leftURL: URL?, rightURL: URL?) {
@@ -5200,7 +5412,11 @@ final class DiffsplitterSession: ObservableObject {
         let rightSession = self.rightSession
         let compareLabel = (path as NSString).lastPathComponent
         let compareStartedAt = Date()
+        let generation = bumpCompareGeneration()
         compareTask = Task.detached(priority: .userInitiated) {
+#if os(iOS)
+            await self.beginContinuedProcessing(subtitle: L10n.t("Loading…"))
+#endif
             let result = Result {
                 try DiffsplitterEngine.alignDirectoryEntry(
                     status: .binary,
@@ -5212,14 +5428,22 @@ final class DiffsplitterSession: ObservableObject {
                 )
             }
             await MainActor.run { [self] in
-                guard !Task.isCancelled else { return }
+                if Task.isCancelled {
+                    self.endContinuedProcessingIfCurrent(generation: generation, success: false)
+                    return
+                }
                 self.isComparing = false
                 self.memberLoadProgress = nil
                 switch result {
                 case .success(let aligned):
                     self.applyRows(aligned)
-                    finishSuccessfulCompare(label: compareLabel, startedAt: compareStartedAt)
+                    finishSuccessfulCompare(
+                        label: compareLabel,
+                        startedAt: compareStartedAt,
+                        generation: generation
+                    )
                 case .failure(let error):
+                    self.endContinuedProcessingIfCurrent(generation: generation, success: false)
                     if error is CancellationError { return }
                     self.setupError = error.localizedDescription
                 }
@@ -5242,10 +5466,14 @@ final class DiffsplitterSession: ObservableObject {
         let preferDiskTemp = DiffsplitterSettings.preferDiskTempForLargeFiles()
         let compareLabel = (path as NSString).lastPathComponent
         let compareStartedAt = Date()
+        let generation = bumpCompareGeneration()
         compareTask = Task.detached(priority: .userInitiated) {
+#if os(iOS)
+            await self.beginContinuedProcessing(subtitle: L10n.t("Preparing binary dump…"))
+#endif
             let progressPublish = DiffsplitterProgressPublisher { progress in
                 Task { @MainActor [self] in
-                    self.memberLoadProgress = progress
+                    self.publishMemberLoadProgress(progress)
                 }
             }
             let result = Result {
@@ -5314,7 +5542,10 @@ final class DiffsplitterSession: ObservableObject {
                 )
             }
             await MainActor.run { [self] in
-                guard !Task.isCancelled else { return }
+                if Task.isCancelled {
+                    self.endContinuedProcessingIfCurrent(generation: generation, success: false)
+                    return
+                }
                 self.isComparing = false
                 self.memberLoadProgress = nil
                 switch result {
@@ -5323,8 +5554,13 @@ final class DiffsplitterSession: ObservableObject {
                     self.binaryDumpOffsetField = String(format: "%08x", sessionDump.windowStartLine * DiffsplitterBinaryDump.bytesPerLine)
                     self.rows = []
                     self.visibleRowCount = 0
-                    finishSuccessfulCompare(label: compareLabel, startedAt: compareStartedAt)
+                    finishSuccessfulCompare(
+                        label: compareLabel,
+                        startedAt: compareStartedAt,
+                        generation: generation
+                    )
                 case .failure(let error):
+                    self.endContinuedProcessingIfCurrent(generation: generation, success: false)
                     if error is CancellationError { return }
                     self.setupError = error.localizedDescription
                     self.showBinaryMetadataRows(leftURL: leftStub, rightURL: rightStub)
@@ -5379,11 +5615,24 @@ final class DiffsplitterSession: ObservableObject {
             dump.windowStartLine * DiffsplitterBinaryDump.bytesPerLine
         )
     }
-    private func finishSuccessfulCompare(label: String, startedAt: Date) {
-        DiffsplitterCompletionFeedback.notifyIfNeeded(
-            elapsed: Date().timeIntervalSince(startedAt),
-            label: label
-        )
+    private func finishSuccessfulCompare(label: String, startedAt: Date, generation: UInt64) {
+        guard generation == compareGeneration else { return }
+        endContinuedProcessing(success: true)
+        let shouldNotify: Bool = {
+#if os(iOS)
+            let suppress = suppressCompletionBannerForCurrentCompare
+            suppressCompletionBannerForCurrentCompare = false
+            return !suppress
+#else
+            return true
+#endif
+        }()
+        if shouldNotify {
+            DiffsplitterCompletionFeedback.notifyIfNeeded(
+                elapsed: Date().timeIntervalSince(startedAt),
+                label: label
+            )
+        }
         EntityTracker.shared.record(
             source: .diffsplitter,
             arguments: [
@@ -5428,6 +5677,7 @@ final class DiffsplitterSession: ObservableObject {
     func exportUnifiedDiff() {
         let text = currentUnifiedDiff()
         guard !text.isEmpty else { return }
+#if os(macOS)
         DiffsplitterFileAccess.exportText(
             title: L10n.t("Export Unified Diff"),
             suggestedName: "Diffsplitter.diff",
@@ -5436,6 +5686,9 @@ final class DiffsplitterSession: ObservableObject {
         ) { [weak self] message in
             self?.documentError = message
         }
+#else
+        pendingExport = .exportText(suggestedName: "Diffsplitter.diff", text: text)
+#endif
     }
     func exportDiffsplitterXDocument() {
         guard canExportDiffsplitterX else { return }
@@ -5483,6 +5736,8 @@ final class DiffsplitterSession: ObservableObject {
                 }.value
                 try Task.checkCancellation()
                 self.documentTransferProgress = nil
+                let encoded = try document.encoded()
+#if os(macOS)
                 let url = await withCheckedContinuation { (continuation: CheckedContinuation<URL?, Never>) in
                     DiffsplitterFileAccess.exportDocument(
                         title: L10n.t("Export DiffsplitterX Document"),
@@ -5499,7 +5754,7 @@ final class DiffsplitterSession: ObservableObject {
                 )
                 await Task.yield()
                 try await Task.detached(priority: .userInitiated) {
-                    try document.encoded().write(to: url, options: .atomic)
+                    try encoded.write(to: url, options: .atomic)
                 }.value
                 EntityTracker.shared.record(
                     source: .diffsplitter,
@@ -5508,6 +5763,18 @@ final class DiffsplitterSession: ObservableObject {
                         url.lastPathComponent
                     ]
                 )
+#else
+                let url = await withCheckedContinuation { (continuation: CheckedContinuation<URL?, Never>) in
+                    self.pendingDocumentURLCompletion = { url in
+                        continuation.resume(returning: url)
+                    }
+                    self.pendingExport = .exportDiffsplitterX(
+                        suggestedName: suggestedName,
+                        data: encoded
+                    )
+                }
+                guard url != nil else { return }
+#endif
             } catch is CancellationError {
                 return
             } catch {
@@ -5550,9 +5817,7 @@ final class DiffsplitterSession: ObservableObject {
     }
     func suggestedDiffsplitterXName() -> String {
         let names = sideDisplayNames()
-        let base = "\(names.left) vs \(names.right)"
-            .replacingOccurrences(of: "/", with: "-")
-        return "\(base).dspltx"
+        return DeboogeyAppDocuments.sanitizedFilename("\(names.left) vs \(names.right).dspltx")
     }
     func currentUnifiedDiff() -> String {
         guard !rows.isEmpty else { return "" }
@@ -5574,7 +5839,7 @@ final class DiffsplitterSession: ObservableObject {
         )
     }
     func sideBookmark(_ url: URL?, relativeTo documentURL: URL?) -> Data? {
-#if DEBOOGEY_MCE
+#if os(macOS) && DEBOOGEY_MCE
         guard let url, let documentURL else { return nil }
         return try? url.bookmarkData(
             options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
@@ -5590,7 +5855,7 @@ final class DiffsplitterSession: ObservableObject {
         bookmark: Data?,
         relativeTo documentURL: URL
     ) -> URL? {
-#if DEBOOGEY_MCE
+#if os(macOS) && DEBOOGEY_MCE
         if let bookmark {
             var stale = false
             if let url = try? URL(
@@ -5711,45 +5976,63 @@ final class DiffsplitterSession: ObservableObject {
             }
         }
     }
-    func saveDocument(forceSaveAs: Bool) {
-        if forceSaveAs {
-            saveRedirectDocument(forceSaveAs: true)
-            return
-        }
-        DiffsplitterFileAccess.presentSaveOrExportChooser(allowExport: canExportDiffsplitterX) { [weak self] choice in
-            guard let self else { return }
-            switch choice {
-            case .save:
-                self.saveRedirectDocument(forceSaveAs: false)
-            case .export:
-                self.exportDiffsplitterXDocument()
-            case .cancel:
-                break
-            }
-        }
+    @discardableResult
+    func saveDocument(forceSaveAs: Bool) -> Bool {
+        saveRedirectDocument(forceSaveAs: forceSaveAs)
     }
-    func saveRedirectDocument(forceSaveAs: Bool) {
-        guard hasBothSides else { return }
-        let saveAs = forceSaveAs || documentURL == nil || documentURL?.pathExtension.lowercased() == "dspltx"
-        if saveAs {
+    @discardableResult
+    func saveRedirectDocument(forceSaveAs: Bool) -> Bool {
+        guard hasBothSides else { return false }
+        let needsNewLocation = forceSaveAs
+            || documentURL == nil
+            || documentURL?.pathExtension.lowercased() == "dspltx"
+        if needsNewLocation {
+            let suggestedName = suggestedRedirectDocumentName()
+#if os(macOS)
             DiffsplitterFileAccess.saveDocument(
                 title: L10n.t("Save Diffsplitter Document"),
-                suggestedName: suggestedRedirectDocumentName()
+                suggestedName: suggestedName
             ) { [weak self] url in
                 guard let self, let url else { return }
                 self.writeDocument(to: url)
             }
+            return true
+#else
+            if forceSaveAs {
+                pendingDocumentURLCompletion = { [weak self] url in
+                    guard let self, let url else { return }
+                    self.writeDocument(to: url)
+                }
+                pendingExport = .saveDocument(suggestedName: suggestedName)
+                return true
+            } else {
+                return writeDocument(to: DeboogeyAppDocuments.uniqueURL(preferredFilename: suggestedName))
+            }
+#endif
         } else if let documentURL {
-            writeDocument(to: documentURL)
+            return writeDocument(to: documentURL)
         }
+        return false
     }
     func suggestedRedirectDocumentName() -> String {
         if let documentURL, documentURL.pathExtension.lowercased() == "dsplt" {
-            return documentURL.lastPathComponent
+            return DeboogeyAppDocuments.sanitizedFilename(documentURL.lastPathComponent)
         }
-        return "Untitled.dsplt"
+        return DeboogeyAppDocuments.sanitizedFilename("\(redirectDocumentBaseName()).dsplt")
     }
-    func writeDocument(to url: URL) {
+    func redirectDocumentBaseName() -> String {
+        let left = leftURL?.lastPathComponent
+        let right = rightURL?.lastPathComponent
+        switch (left, right) {
+        case let (l?, r?) where l == r: return l
+        case let (l?, r?): return "\(l) vs \(r)"
+        case let (l?, nil): return l
+        case let (nil, r?): return r
+        default: return "Untitled"
+        }
+    }
+    @discardableResult
+    func writeDocument(to url: URL) -> Bool {
         do {
             if isEmbeddedDocument {
                 exitEmbeddedDocumentMode(clearRows: false)
@@ -5762,12 +6045,15 @@ final class DiffsplitterSession: ObservableObject {
             try data.write(to: url, options: .atomic)
             startDocumentAccess(at: url)
             savedDocumentData = data
+            documentError = nil
             EntityTracker.shared.record(
                 source: .diffsplitter,
                 arguments: [activity.rawValue, url.lastPathComponent]
             )
+            return true
         } catch {
             documentError = error.localizedDescription
+            return false
         }
     }
     func saveDraftForClosing(completion: @escaping (Bool) -> Void) {
@@ -5776,58 +6062,127 @@ final class DiffsplitterSession: ObservableObject {
             return
         }
         if documentURL == nil || documentURL?.pathExtension.lowercased() == "dspltx" {
+            let suggestedName = suggestedRedirectDocumentName()
+#if os(macOS)
             DiffsplitterFileAccess.saveDocument(
                 title: L10n.t("Save Diffsplitter Document"),
-                suggestedName: "Untitled.dsplt"
+                suggestedName: suggestedName
             ) { [weak self] url in
                 guard let self, let url else {
                     completion(false)
                     return
                 }
-                self.writeDocument(to: url)
-                completion(self.documentError == nil)
+                completion(self.writeDocument(to: url))
             }
+#else
+            completion(writeDocument(to: DeboogeyAppDocuments.uniqueURL(preferredFilename: suggestedName)))
+#endif
         } else if let documentURL {
-            writeDocument(to: documentURL)
-            completion(documentError == nil)
+            completion(writeDocument(to: documentURL))
         } else {
             completion(false)
         }
     }
     func presentMessageAlert(title: String, message: String?, clear: @escaping () -> Void) {
+#if os(macOS)
         guard let message, !message.isEmpty, !isPresentingAppKitAlert else { return }
         isPresentingAppKitAlert = true
         DiffsplitterFileAccess.presentMessageAlert(title: title, message: message) { [weak self] in
             clear()
             self?.isPresentingAppKitAlert = false
         }
+#else
+        _ = title
+        _ = message
+        _ = clear
+#endif
     }
     func presentAEAKeyPromptIfNeeded() {
+#if os(macOS)
         guard let prompt = aeaKeyPrompt, !isPresentingAppKitAlert else { return }
         isPresentingAppKitAlert = true
         let initial = aeaSessionKeys[prompt.path] ?? aeaKeyDraft
         DiffsplitterFileAccess.presentAEAKeyPrompt(initialValue: initial) { [weak self] result in
             guard let self else { return }
-            self.aeaKeyPrompt = nil
-            self.aeaKeyDraft = ""
-            self.isPresentingAppKitAlert = false
-            switch result {
-            case .decrypt(let draft):
-                guard let normalized = DiffsplitterAEA.normalizeKeyValue(draft) else {
-                    self.openSkippedContainerAsFileComparison(
-                        path: prompt.path,
-                        entry: prompt.fallbackEntry
-                    )
-                    return
-                }
-                self.aeaSessionKeys[prompt.path] = normalized
-                self.expandSelectedNestedContainer(path: prompt.path, fallbackEntry: prompt.fallbackEntry)
-            case .metadataOnly:
-                self.openSkippedContainerAsFileComparison(
+            self.handleAEAKeyPromptResult(result, prompt: prompt)
+        }
+#endif
+    }
+    func handleAEAKeyPromptResult(
+        _ result: DiffsplitterFileAccess.AEAKeyPromptResult,
+        prompt: AEAKeyPromptState
+    ) {
+        guard aeaKeyPrompt?.id == prompt.id else { return }
+        aeaKeyPrompt = nil
+        aeaKeyDraft = ""
+        isPresentingAppKitAlert = false
+        switch result {
+        case .decrypt(let draft):
+            guard let normalized = DiffsplitterAEA.normalizeKeyValue(draft) else {
+                openSkippedContainerAsFileComparison(
                     path: prompt.path,
                     entry: prompt.fallbackEntry
                 )
+                return
             }
+            aeaSessionKeys[prompt.path] = normalized
+            expandSelectedNestedContainer(path: prompt.path, fallbackEntry: prompt.fallbackEntry)
+        case .metadataOnly:
+            openSkippedContainerAsFileComparison(
+                path: prompt.path,
+                entry: prompt.fallbackEntry
+            )
         }
     }
+#if os(iOS)
+    func consumePendingExportResult(_ result: Result<URL, Error>) {
+        let completion = pendingDocumentURLCompletion
+        let export = pendingExport
+        pendingDocumentURLCompletion = nil
+        pendingExport = nil
+        switch result {
+        case .success(let url):
+            switch export {
+            case .saveDocument:
+                completion?(url)
+            case .exportDiffsplitterX(_, let data):
+                let accessed = url.startAccessingSecurityScopedResource()
+                defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+                do {
+                    try data.write(to: url, options: .atomic)
+                    EntityTracker.shared.record(
+                        source: .diffsplitter,
+                        arguments: [
+                            TrackedEntity.DiffsplitterActivity.documentExported.rawValue,
+                            url.lastPathComponent
+                        ]
+                    )
+                    completion?(url)
+                } catch {
+                    documentError = error.localizedDescription
+                    completion?(nil)
+                }
+            case .exportText(_, let text):
+                let accessed = url.startAccessingSecurityScopedResource()
+                defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+                do {
+                    try text.data(using: .utf8)?.write(to: url, options: .atomic)
+                } catch {
+                    documentError = error.localizedDescription
+                }
+                completion?(url)
+            case .none:
+                completion?(url)
+            }
+        case .failure(let error):
+            let nsError = error as NSError
+            if nsError.domain == NSCocoaErrorDomain, nsError.code == NSUserCancelledError {
+                completion?(nil)
+                return
+            }
+            documentError = error.localizedDescription
+            completion?(nil)
+        }
+    }
+#endif
 }

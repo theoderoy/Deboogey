@@ -110,10 +110,7 @@ private struct ContinueButton: View {
     var body: some View {
         Button(action: action) {
             Text(L10n.t(title))
-                .font(.headline)
-                .padding(8)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
+                .deboogeyOnboardingButtonLabel()
         }
         .deboogeyProminentButtonStyle(tint: color)
     }

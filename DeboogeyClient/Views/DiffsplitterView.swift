@@ -7,9 +7,15 @@
 
 import SwiftUI
 import UniformTypeIdentifiers
-import AppKit
 import Combine
+#if canImport(AppKit)
+import AppKit
+#endif
+#if canImport(UIKit)
+import UIKit
+#endif
 
+#if os(macOS)
 struct DiffsplitterCommandActions {
     let canSave: Bool
     let canExportDiffsplitterX: Bool
@@ -114,17 +120,62 @@ final class DocumentSaveDispatcherBridge: ObservableObject {
     }
 }
 
+#endif
+
+
+#if os(iOS)
+private struct DiffsplitterExportDocument: FileDocument {
+    static var readableContentTypes: [UTType] {
+        [.diffsplitterDocument, .diffsplitterXDocument, .plainText]
+    }
+    static var writableContentTypes: [UTType] {
+        [.diffsplitterDocument, .diffsplitterXDocument, .plainText]
+    }
+
+    let data: Data
+
+    init(data: Data) {
+        self.data = data
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        guard let data = configuration.file.regularFileContents else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        self.data = data
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
+    }
+}
+#endif
+
 struct DiffsplitterView: View {
     let request: DiffsplitterWindowRequest
     @StateObject private var session = DiffsplitterSession()
     @State private var statusPriorityRaw = PersistentVariables.loadDiffsplitterStatusPriority()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+#if os(iOS)
+    @Environment(\.dismiss) private var dismiss
+    @State private var showDiscardConfirmation = false
+    @State private var exportDocument: DiffsplitterExportDocument?
+    @State private var exportContentType: UTType = .diffsplitterDocument
+    @State private var exportDefaultFilename = "Untitled"
+    @State private var isExporting = false
+    @State private var saveSucceededFlash = false
+    @State private var saveSucceededResetTask: Task<Void, Never>?
+#endif
     private var statusPriority: [DiffsplitterEngine.DirEntryStatus] {
         DiffsplitterEngine.statusPriority(fromRawValues: statusPriorityRaw)
     }
     private var needsInlineWindowChrome: Bool {
+#if os(macOS)
         if #available(macOS 13.0, *) { return false }
         return true
+#else
+        return false
+#endif
     }
     var body: some View {
         VStack(spacing: 0) {
@@ -148,6 +199,7 @@ struct DiffsplitterView: View {
             statusPriorityRaw = PersistentVariables.loadDiffsplitterStatusPriority()
         }
         .minimumWindowContentSize(AppWindowSizing.diffsplitter)
+#if os(macOS)
         .background(
             DiffsplitterWindowCoordinator(
                 hasUnsavedChanges: session.hasUnsavedDocumentChanges,
@@ -169,9 +221,6 @@ struct DiffsplitterView: View {
                 }
             }
         }
-        .onChange(of: session.ignoreWhitespace) { _ in
-            session.applyIgnoreWhitespaceChange()
-        }
         .onChange(of: session.documentError) { message in
             session.presentMessageAlert(
                 title: L10n.t("Diffsplitter Document Error"),
@@ -191,9 +240,173 @@ struct DiffsplitterView: View {
         .onChange(of: session.aeaKeyPrompt?.id) { _ in
             session.presentAEAKeyPromptIfNeeded()
         }
+#else
+        .navigationTitle(L10n.t("Diffsplitter"))
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    if showsDirectoryBackButton {
+                        navigateDirectoryBack()
+                    } else if session.hasUnsavedDocumentChanges {
+                        showDiscardConfirmation = true
+                    } else {
+                        dismiss()
+                    }
+                } label: {
+                    Label(L10n.t("Back"), systemImage: "chevron.backward")
+                }
+            }
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if session.isReady {
+                    documentToolbarControls
+                    toolbarActionControls
+                }
+            }
+        }
+        .fileImporter(
+            isPresented: Binding(
+                get: { session.isPresentingSidePicker },
+                set: {
+                    session.isPresentingSidePicker = $0
+                    if !$0 {
+                        session.handleSidePickerDismissed()
+                    }
+                }
+            ),
+            allowedContentTypes: [.item, .folder],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                let url = urls.first
+                if let url {
+                    _ = url.startAccessingSecurityScopedResource()
+                }
+                session.handlePickedSideURL(url)
+            case .failure(let error):
+                session.setupError = error.localizedDescription
+                session.handlePickedSideURL(nil)
+            }
+        }
+        .fileExporter(
+            isPresented: $isExporting,
+            document: exportDocument,
+            contentType: exportContentType,
+            defaultFilename: exportDefaultFilename
+        ) { result in
+            session.consumePendingExportResult(result)
+            exportDocument = nil
+        }
+        .onChange(of: session.pendingExport?.id) { _ in
+            presentPendingExportIfNeeded()
+        }
+        .alert(
+            L10n.t("Save changes to this Diffsplitter document?"),
+            isPresented: $showDiscardConfirmation
+        ) {
+            Button(L10n.t("Save")) {
+                session.saveDocument(forceSaveAs: false)
+            }
+            Button(L10n.t("Don't Save"), role: .destructive) {
+                dismiss()
+            }
+            Button(L10n.t("Cancel"), role: .cancel) {}
+        } message: {
+            Text(L10n.t("Your session pair will be lost if you don’t save it."))
+        }
+        .alert(L10n.t("Diffsplitter Document Error"), isPresented: Binding(
+            get: { session.documentError != nil },
+            set: { if !$0 { session.documentError = nil } }
+        )) {
+            Button(L10n.t("OK"), role: .cancel) {}
+        } message: {
+            Text(session.documentError ?? "")
+        }
+        .alert(L10n.t("Diffsplitter Error"), isPresented: Binding(
+            get: { session.setupError != nil },
+            set: { if !$0 { session.setupError = nil } }
+        )) {
+            Button(L10n.t("OK"), role: .cancel) {}
+        } message: {
+            Text(session.setupError ?? "")
+        }
+        .alert(
+            L10n.t("Inspect Binary Dump?"),
+            isPresented: Binding(
+                get: { session.pendingBinaryDumpPrompt != nil },
+                set: {
+                    if !$0, let prompt = session.pendingBinaryDumpPrompt {
+                        session.handleBinaryDumpPromptResult(.cancel, path: prompt.path, entry: prompt.entry)
+                    }
+                }
+            ),
+            presenting: session.pendingBinaryDumpPrompt
+        ) { prompt in
+            Button(L10n.t("Inspect Dump")) {
+                session.handleBinaryDumpPromptResult(.inspectDump, path: prompt.path, entry: prompt.entry)
+            }
+            Button(L10n.t("Metadata Only")) {
+                session.handleBinaryDumpPromptResult(.metadataOnly, path: prompt.path, entry: prompt.entry)
+            }
+            Button(L10n.t("Cancel"), role: .cancel) {
+                session.handleBinaryDumpPromptResult(.cancel, path: prompt.path, entry: prompt.entry)
+            }
+        } message: { prompt in
+            Text(prompt.estimate.promptDetail)
+        }
+        .sheet(item: Binding(
+            get: { session.aeaKeyPrompt },
+            set: {
+                if $0 == nil, let prompt = session.aeaKeyPrompt {
+                    session.handleAEAKeyPromptResult(.metadataOnly, prompt: prompt)
+                }
+            }
+        )) { prompt in
+            NavigationStack {
+                Form {
+                    Text(L10n.t(
+                        "Enter the base64 or hex key for this Apple Encrypted Archive. Leave blank to compare metadata only."
+                    ))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    TextField(L10n.t("base64:… or hex:…"), text: $session.aeaKeyDraft)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+                .navigationTitle(L10n.t("AEA Decryption Key"))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(L10n.t("Compare Metadata")) {
+                            session.handleAEAKeyPromptResult(.metadataOnly, prompt: prompt)
+                        }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(L10n.t("Decrypt")) {
+                            session.handleAEAKeyPromptResult(
+                                .decrypt(session.aeaKeyDraft),
+                                prompt: prompt
+                            )
+                        }
+                    }
+                }
+                .onAppear {
+                    session.aeaKeyDraft = session.aeaSessionKeys[prompt.path] ?? session.aeaKeyDraft
+                }
+            }
+        }
+#endif
+        .onChange(of: session.ignoreWhitespace) { _ in
+            session.applyIgnoreWhitespaceChange()
+        }
         .onAppear {
             session.reduceMotion = reduceMotion
             session.handleDocumentRequest(request)
+#if os(iOS)
+            presentPendingExportIfNeeded()
+#endif
         }
         .onDisappear {
             session.cancelAndClose()
@@ -205,7 +418,9 @@ struct DiffsplitterView: View {
                         .ignoresSafeArea()
                     VStack(spacing: 12) {
                         ProgressView()
+#if os(macOS)
                             .controlSize(.large)
+#endif
                         Text(progress.status)
                             .font(.callout)
                             .foregroundStyle(.secondary)
@@ -220,6 +435,49 @@ struct DiffsplitterView: View {
             }
         }
     }
+#if os(iOS)
+    private func presentPendingExportIfNeeded() {
+        guard let pending = session.pendingExport, !isExporting else { return }
+        switch pending {
+        case .saveDocument(let suggestedName):
+            do {
+                beginExport(
+                    DiffsplitterExportDocument(data: try session.currentDocument.encoded()),
+                    type: .diffsplitterDocument,
+                    filename: suggestedName
+                )
+            } catch {
+                session.documentError = error.localizedDescription
+                session.consumePendingExportResult(.failure(error))
+            }
+        case .exportDiffsplitterX(let suggestedName, let data):
+            beginExport(
+                DiffsplitterExportDocument(data: data),
+                type: .diffsplitterXDocument,
+                filename: suggestedName
+            )
+        case .exportText(let suggestedName, let text):
+            beginExport(
+                DiffsplitterExportDocument(data: Data(text.utf8)),
+                type: .plainText,
+                filename: suggestedName
+            )
+        }
+    }
+
+    private func beginExport(
+        _ document: DiffsplitterExportDocument,
+        type: UTType,
+        filename: String
+    ) {
+        let sanitized = DeboogeyAppDocuments.sanitizedFilename(filename)
+        let base = (sanitized as NSString).deletingPathExtension
+        exportDocument = document
+        exportContentType = type
+        exportDefaultFilename = base.isEmpty ? "Untitled" : base
+        isExporting = true
+    }
+#endif
     private var setupView: some View {
         ZStack {
             DiffsplitterEmptyBackground()
@@ -321,6 +579,7 @@ struct DiffsplitterView: View {
                 session.handleDrop(providers, onto: side)
             }
 
+#if os(macOS)
         if #available(macOS 26.0, *) {
             well
                 .glassEffect(
@@ -330,6 +589,9 @@ struct DiffsplitterView: View {
         } else {
             well
         }
+#else
+        well
+#endif
     }
 
     @ViewBuilder
@@ -357,7 +619,9 @@ struct DiffsplitterView: View {
             Button(L10n.t("Import…")) {
                 session.presentOpenPanel(for: side)
             }
+#if os(macOS)
             .controlSize(.large)
+#endif
             .colorScheme(.dark)
         }
     }
@@ -427,8 +691,67 @@ struct DiffsplitterView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(DiffsplitterPalette.windowBackground)
     }
+    @ViewBuilder
+    private var documentToolbarControls: some View {
+#if os(iOS)
+        Button {
+            guard session.saveDocument(forceSaveAs: false) else { return }
+            flashSaveSucceeded()
+        } label: {
+            Label(
+                L10n.t("Save Diffsplitter Document"),
+                systemImage: saveSucceededFlash ? "checkmark.circle.fill" : "square.and.arrow.down"
+            )
+        }
+        .labelStyle(.iconOnly)
+        .foregroundStyle(saveSucceededFlash ? Color.green : Color.primary)
+        .disabled(!session.hasBothSides || session.isTransferringDocument)
+        .help(L10n.t("Save Diffsplitter Document"))
+        .accessibilityLabel(
+            saveSucceededFlash
+                ? L10n.t("Diffsplitter Document Saved")
+                : L10n.t("Save Diffsplitter Document")
+        )
+        Button {
+            session.saveDocument(forceSaveAs: true)
+        } label: {
+            Label(L10n.t("Save Diffsplitter Document As…"), systemImage: "square.and.arrow.down.on.square")
+        }
+        .labelStyle(.iconOnly)
+        .disabled(!session.hasBothSides || session.isTransferringDocument)
+        .help(L10n.t("Save Diffsplitter Document As…"))
+        .accessibilityLabel(L10n.t("Save Diffsplitter Document As…"))
+        if isShowingFileDiffChrome {
+            Button {
+                session.exportDiffsplitterXDocument()
+            } label: {
+                Label(L10n.t("Export DiffsplitterX Document…"), systemImage: Self.diffsplitterXExportSymbolName)
+            }
+            .labelStyle(.iconOnly)
+            .disabled(!session.canExportDiffsplitterX || session.isTransferringDocument)
+            .help(L10n.t("Export DiffsplitterX Document…"))
+            .accessibilityLabel(L10n.t("Export DiffsplitterX Document…"))
+        }
+#endif
+    }
+#if os(iOS)
+    private func flashSaveSucceeded() {
+        saveSucceededResetTask?.cancel()
+        withAnimation(.easeInOut(duration: 0.15)) {
+            saveSucceededFlash = true
+        }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        saveSucceededResetTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeInOut(duration: 0.2)) {
+                saveSucceededFlash = false
+            }
+        }
+    }
+#endif
     @ViewBuilder
     private var toolbarActionControls: some View {
         if isShowingDirectoryList {
@@ -462,6 +785,7 @@ struct DiffsplitterView: View {
             .disabled(session.rows.isEmpty)
             .help(L10n.t("Copy Unified Diff"))
             .accessibilityLabel(L10n.t("Copy Unified Diff"))
+#if os(macOS)
             Button {
                 session.exportDiffsplitterXDocument()
             } label: {
@@ -470,22 +794,28 @@ struct DiffsplitterView: View {
             .disabled(!session.canExportDiffsplitterX || session.isTransferringDocument)
             .help(L10n.t("Export DiffsplitterX Document…"))
             .accessibilityLabel(L10n.t("Export DiffsplitterX Document…"))
+#endif
         }
     }
     private static var diffsplitterXExportSymbolName: String {
+#if os(macOS)
         if #available(macOS 13.0, *) {
             return "doc.badge.arrow.up"
         }
         return "arrow.up.doc"
+#else
+        return "doc.badge.arrow.up"
+#endif
+    }
+    private func navigateDirectoryBack() {
+        if session.selectedRelativePath != nil {
+            session.leaveDirectoryDetail()
+        } else {
+            session.leaveDirectoryBrowseLevel()
+        }
     }
     private var directoryBackButton: some View {
-        Button {
-            if session.selectedRelativePath != nil {
-                session.leaveDirectoryDetail()
-            } else {
-                session.leaveDirectoryBrowseLevel()
-            }
-        } label: {
+        Button(action: navigateDirectoryBack) {
             Label(L10n.t("Back"), systemImage: "chevron.left")
         }
         .help(L10n.t("Back"))
@@ -693,18 +1023,18 @@ struct DiffsplitterView: View {
                 .frame(width: 100)
                 .font(.caption.monospaced())
                 .onSubmit { session.binaryDumpJumpToOffsetField() }
-                .disabled(dump.isEmbeddedSnapshot)
+                .disabled(!dump.canNavigateWindows)
             Button(L10n.t("Go")) {
                 session.binaryDumpJumpToOffsetField()
             }
-            .disabled(session.isComparing || dump.isEmbeddedSnapshot)
+            .disabled(session.isComparing || !dump.canNavigateWindows)
             Button {
                 session.binaryDumpPageUp()
             } label: {
                 Image(systemName: "chevron.up")
             }
             .help(L10n.t("Previous window"))
-            .disabled(session.isComparing || dump.isEmbeddedSnapshot || dump.windowStartLine <= 0)
+            .disabled(session.isComparing || !dump.canNavigateWindows || dump.windowStartLine <= 0)
             Button {
                 session.binaryDumpPageDown()
             } label: {
@@ -713,13 +1043,13 @@ struct DiffsplitterView: View {
             .help(L10n.t("Next window"))
             .disabled(
                 session.isComparing
-                    || dump.isEmbeddedSnapshot
+                    || !dump.canNavigateWindows
                     || dump.windowEndLine >= dump.totalLines
             )
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(DiffsplitterPalette.controlBackground)
     }
     private func binaryDumpRows(_ dump: DiffsplitterBinaryDump.Session) -> some View {
         ScrollView {
@@ -752,6 +1082,24 @@ struct DiffsplitterView: View {
     }
     private enum DiffHighlightKind {
         case equal, delete, insert, replace
+
+        init(rowKind: DiffsplitterEngine.RowKind) {
+            switch rowKind {
+            case .equal: self = .equal
+            case .delete: self = .delete
+            case .insert: self = .insert
+            case .replace: self = .replace
+            }
+        }
+
+        init(hexKind: DiffsplitterBinaryDump.HexRow.Kind) {
+            switch hexKind {
+            case .equal: self = .equal
+            case .delete: self = .delete
+            case .insert: self = .insert
+            case .replace: self = .replace
+            }
+        }
     }
     private func highlightColor(
         kind: DiffHighlightKind,
@@ -775,14 +1123,7 @@ struct DiffsplitterView: View {
         side: DiffsplitterSession.Side,
         hasText: Bool
     ) -> Color {
-        let mapped: DiffHighlightKind
-        switch kind {
-        case .equal: mapped = .equal
-        case .delete: mapped = .delete
-        case .insert: mapped = .insert
-        case .replace: mapped = .replace
-        }
-        return highlightColor(kind: mapped, side: side, hasText: hasText)
+        highlightColor(kind: DiffHighlightKind(hexKind: kind), side: side, hasText: hasText)
     }
     private var textDiffRows: some View {
         Group {
@@ -838,9 +1179,9 @@ struct DiffsplitterView: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 4)
-                        .background(Color(nsColor: .windowBackgroundColor))
+                        .background(DiffsplitterPalette.windowBackground)
                         .clipShape(Capsule())
-                        .overlay(Capsule().stroke(Color(nsColor: .separatorColor), lineWidth: 1))
+                        .overlay(Capsule().stroke(DiffsplitterPalette.separator, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .help(L10n.t("Swap Sides"))
@@ -850,13 +1191,13 @@ struct DiffsplitterView: View {
             columnHeader(url: session.rightURL, side: .right)
         }
         .padding(.vertical, 6)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(DiffsplitterPalette.controlBackground)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.t("Comparison"))
     }
     private var columnHairline: some View {
         Rectangle()
-            .fill(Color(nsColor: .separatorColor))
+            .fill(DiffsplitterPalette.separator)
             .frame(width: 1)
     }
     private func columnHeader(url: URL?, side: DiffsplitterSession.Side) -> some View {
@@ -865,15 +1206,21 @@ struct DiffsplitterView: View {
             ?? embeddedName
             ?? (side == .left ? L10n.t("Left") : L10n.t("Right"))
         let subtitle = columnSubtitle(for: url)
-        let icon = url.map { NSWorkspace.shared.icon(forFile: $0.path) }
-            ?? NSImage(systemSymbolName: side == .left ? "doc.text" : "doc.text", accessibilityDescription: nil)
         return HStack(spacing: 10) {
+#if os(macOS)
+            let icon = url.map { NSWorkspace.shared.icon(forFile: $0.path) }
+                ?? NSImage(systemSymbolName: "doc.text", accessibilityDescription: nil)
             if let icon {
                 Image(nsImage: icon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 28, height: 28)
             }
+#else
+            Image(systemName: url.map { session.isDirectoryLike($0) ? "folder" : "doc.text" } ?? "doc.text")
+                .font(.title2)
+                .frame(width: 28, height: 28)
+#endif
             VStack(alignment: .leading, spacing: 1) {
                 Text(side == .left ? L10n.t("Left") : L10n.t("Right"))
                     .font(.caption2.weight(.semibold))
@@ -932,6 +1279,7 @@ struct DiffsplitterView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         } else {
             Group {
+#if os(macOS)
                 if #available(macOS 14.0, *) {
                     ContentUnavailableView {
                         Label {
@@ -945,6 +1293,15 @@ struct DiffsplitterView: View {
                         .font(.largeTitle)
                         .foregroundStyle(.secondary)
                 }
+#else
+                ContentUnavailableView {
+                    Label {
+                        EmptyView()
+                    } icon: {
+                        Image(systemName: "doc.slash")
+                    }
+                }
+#endif
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityLabel(L10n.t("No differences."))
@@ -973,14 +1330,7 @@ struct DiffsplitterView: View {
         side: DiffsplitterSession.Side,
         hasText: Bool
     ) -> Color {
-        let mapped: DiffHighlightKind
-        switch kind {
-        case .equal: mapped = .equal
-        case .delete: mapped = .delete
-        case .insert: mapped = .insert
-        case .replace: mapped = .replace
-        }
-        return highlightColor(kind: mapped, side: side, hasText: hasText)
+        highlightColor(kind: DiffHighlightKind(rowKind: kind), side: side, hasText: hasText)
     }
 }
 
@@ -1075,17 +1425,22 @@ private struct DiffsplitterEmptyBackground: View {
 
 private struct DirectoryListStyleModifier: ViewModifier {
     func body(content: Content) -> some View {
+#if os(macOS)
         if #available(macOS 13.0, *) {
             content.listStyle(.inset(alternatesRowBackgrounds: true))
         } else {
             content
         }
+#else
+        content.listStyle(.insetGrouped)
+#endif
     }
 }
 
 private struct DiffsplitterDirectoryBackToolbarModifier: ViewModifier {
     let action: () -> Void
     func body(content: Content) -> some View {
+#if os(macOS)
         if #available(macOS 13.0, *) {
             content.toolbar {
                 ToolbarItem(placement: .navigation) {
@@ -1098,9 +1453,37 @@ private struct DiffsplitterDirectoryBackToolbarModifier: ViewModifier {
         } else {
             content
         }
+#else
+        content
+#endif
     }
 }
 
+private enum DiffsplitterPalette {
+    static var windowBackground: Color {
+#if os(macOS)
+        Color(nsColor: .windowBackgroundColor)
+#else
+        Color(.systemBackground)
+#endif
+    }
+    static var controlBackground: Color {
+#if os(macOS)
+        Color(nsColor: .controlBackgroundColor)
+#else
+        Color(.secondarySystemBackground)
+#endif
+    }
+    static var separator: Color {
+#if os(macOS)
+        Color(nsColor: .separatorColor)
+#else
+        Color(.separator)
+#endif
+    }
+}
+
+#if os(macOS)
 private struct DiffsplitterWindowCoordinator: NSViewRepresentable {
     let hasUnsavedChanges: Bool
     let documentURL: URL?
@@ -1226,13 +1609,18 @@ private struct DiffsplitterWindowCoordinator: NSViewRepresentable {
     }
 }
 
+#endif
 
 struct DiffsplitterEducationView: View {
     let onDismiss: () -> Void
     @StateObject private var vars = PersistentVariables()
     @State private var step = 0
 
+#if os(macOS)
     private let stepCount = 4
+#else
+    private let stepCount = 3
+#endif
 
     var body: some View {
         VStack(spacing: 24) {
@@ -1245,22 +1633,32 @@ struct DiffsplitterEducationView: View {
                 case 2:
                     completionSoundStep
                 default:
+#if os(macOS)
                     statusDotsStep
+#else
+                    EmptyView()
+#endif
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .frame(
+                maxWidth: .infinity,
+                maxHeight: .infinity,
+                alignment: .top
+            )
 
             pageIndicators
 
             HStack(spacing: 12) {
                 if step > 0 {
-                    Button(L10n.t("Back")) {
+                    Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             step -= 1
                         }
+                    } label: {
+                        Text(L10n.t("Back"))
+                            .deboogeyOnboardingButtonLabel()
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
+                    .deboogeyButtonStyle(tint: .accentColor)
                 }
                 DiffsplitterEducationContinueButton {
                     if step < stepCount - 1 {
@@ -1276,7 +1674,12 @@ struct DiffsplitterEducationView: View {
             .padding(.bottom, 40)
         }
         .padding(.top, 40)
+#if os(macOS)
         .frame(width: 520, height: 520)
+#else
+        .frame(maxWidth: 520, maxHeight: 520)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+#endif
     }
 
     private var introStep: some View {
@@ -1327,6 +1730,22 @@ struct DiffsplitterEducationView: View {
     private var completionSoundStep: some View {
         VStack(spacing: 16) {
             VStack(spacing: 8) {
+#if os(iOS)
+                Image(systemName: "platter.filled.top.and.arrow.up.iphone")
+                    .font(.system(size: 72, weight: .thin))
+                    .foregroundStyle(.secondary)
+                    .symbolRenderingMode(.hierarchical)
+                Text(L10n.t("Notify with Live Activity when Diffsplitter finishes"))
+                    .font(.title3)
+                    .fontWeight(.medium)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(L10n.t("Live Activity when available, otherwise a banner. Plays a sound after the selected minimum duration."))
+                    .padding(.top, 12)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+#else
                 Image(systemName: "speaker.wave.2")
                     .font(.system(size: 72, weight: .thin))
                     .foregroundStyle(.secondary)
@@ -1335,51 +1754,36 @@ struct DiffsplitterEducationView: View {
                     .font(.title3)
                     .fontWeight(.medium)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(L10n.t("Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration."))
                     .padding(.top, 12)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+#endif
             }
+
             Toggle(isOn: $vars.playDiffsplitterDoneSound) {
                 EmptyView()
             }
             .labelsHidden()
             .toggleStyle(.switch)
+
             if vars.playDiffsplitterDoneSound {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(L10n.t("Minimum Duration"))
-                        Spacer()
-                        Text(
-                            DiffsplitterCompletionFeedback.durationLabel(
-                                for: vars.diffsplitterNotifyMinimumSeconds
-                            )
-                        )
-                        .monospacedDigit()
-                        .foregroundColor(.secondary)
-                    }
-                    Slider(
-                        value: Binding(
-                            get: {
-                                DiffsplitterCompletionFeedback.sliderIndex(
-                                    forSeconds: vars.diffsplitterNotifyMinimumSeconds
-                                )
-                            },
-                            set: {
-                                vars.diffsplitterNotifyMinimumSeconds =
-                                    DiffsplitterCompletionFeedback.seconds(forSliderIndex: $0)
-                            }
-                        ),
-                        in: DiffsplitterCompletionFeedback.sliderIndexRange,
-                        step: 1
-                    )
-                }
+                DiffsplitterCompletionDurationControls(
+                    minimumSeconds: $vars.diffsplitterNotifyMinimumSeconds,
+                    notifyWhenBackgrounded: $vars.diffsplitterNotifyWhenBackgrounded,
+                    stacksBackgroundControls: true,
+                    footerUsesForegroundStyle: true
+                )
             }
+
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 40)
     }
 
+#if os(macOS)
     private var statusDotsStep: some View {
         VStack(alignment: .leading, spacing: 16) {
             educationStepHeader(
@@ -1391,6 +1795,7 @@ struct DiffsplitterEducationView: View {
         }
         .padding(.horizontal, 40)
     }
+#endif
 
     private var pageIndicators: some View {
         HStack(spacing: 8) {
@@ -1427,10 +1832,7 @@ private struct DiffsplitterEducationContinueButton: View {
     var body: some View {
         Button(action: action) {
             Text(L10n.t("Continue"))
-                .font(.headline)
-                .padding(8)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
+                .deboogeyOnboardingButtonLabel()
         }
         .deboogeyProminentButtonStyle()
     }
