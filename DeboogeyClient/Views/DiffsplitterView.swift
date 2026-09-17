@@ -484,10 +484,11 @@ struct DiffsplitterView: View {
 
             VStack(spacing: 28) {
                 HStack(spacing: 14) {
-                    Image(systemName: "square.split.2x1")
-                        .font(.system(size: 52, weight: .thin))
-                        .foregroundStyle(.white.opacity(0.72))
-                        .symbolRenderingMode(.hierarchical)
+                    Image("DiffsplitterIdent")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 72, height: 72)
+                        .environment(\.colorScheme, .dark)
                     Text(L10n.t("Diffsplitter"))
                         .font(.largeTitle.weight(.semibold))
                         .foregroundStyle(.white)
@@ -1684,10 +1685,11 @@ struct DiffsplitterEducationView: View {
 
     private var introStep: some View {
         VStack(spacing: 8) {
-            Image(systemName: "square.split.2x1")
-                .font(.system(size: 72, weight: .thin))
-                .foregroundStyle(.secondary)
-                .symbolRenderingMode(.hierarchical)
+            Image("DiffsplitterIdent")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 128, height: 128)
+                .padding(.bottom, 12)
             Text(L10n.t("Diffsplitter"))
                 .font(.title2)
                 .fontWeight(.medium)

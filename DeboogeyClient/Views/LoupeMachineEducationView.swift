@@ -28,6 +28,7 @@ struct LoupeMachineEducationView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 128, height: 128)
+                    .padding(.bottom, 12)
 
                 Text(title)
                     .font(.title2)

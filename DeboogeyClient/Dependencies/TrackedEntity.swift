@@ -56,7 +56,7 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
             case .deboogeyCDM:   return "wrench.and.screwdriver"
             case .wsOverlay: return "macwindow"
             case .loupeMachine: return "scope"
-            case .diffsplitter: return "square.split.2x1"
+            case .diffsplitter: return "DiffsplitterIconIPOSF"
             }
         }
 

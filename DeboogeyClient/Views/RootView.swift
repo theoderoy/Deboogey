@@ -10,6 +10,9 @@ import UniformTypeIdentifiers
 #if os(macOS)
 import AppKit
 #endif
+#if os(iOS)
+import UIKit
+#endif
 
 let appName =
 Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
@@ -103,11 +106,35 @@ struct LauncherButton: View {
             Label {
                 Text(L10n.t(title))
             } icon: {
-                Image(systemName: icon)
+                LauncherIcon(name: icon)
             }
             .deboogeyStandardButtonLabel()
         }
         .deboogeyButtonStyle(tint: color, prominent: prominent)
+    }
+}
+
+private struct LauncherIcon: View {
+    let name: String
+
+    private var usesAssetIcon: Bool {
+#if os(macOS)
+        NSImage(named: name) != nil
+#else
+        UIImage(named: name) != nil
+#endif
+    }
+
+    var body: some View {
+        if usesAssetIcon {
+            Image(name)
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 18, height: 18)
+        } else {
+            Image(systemName: name)
+        }
     }
 }
 
@@ -217,7 +244,7 @@ struct RootView: View {
                 HStack {
                     LauncherButton(
                         title: "Diffsplitter",
-                        icon: "square.split.2x1",
+                        icon: "DiffsplitterIconIPOSF",
                         color: .accentColor,
                         prominent: true
                     ) { }
@@ -981,7 +1008,7 @@ private struct DeboogeyDiffsplitterLauncherMenu: View {
     var body: some View {
         DeboogeyDocumentToolLauncherMenu(
             title: "Diffsplitter",
-            icon: "square.split.2x1",
+            icon: "DiffsplitterIconIPOSF",
             prominent: prominent,
             openLabel: "Open Diffsplitter Document",
             openIcon: "doc.text",

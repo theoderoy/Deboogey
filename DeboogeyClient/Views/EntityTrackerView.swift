@@ -357,6 +357,13 @@ private struct AppIconImage: View {
                 Image(nsImage: icon)
                     .resizable()
                     .scaledToFit()
+            } else if NSImage(named: fallbackSystemImage) != nil {
+                Image(fallbackSystemImage)
+                    .renderingMode(.template)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 22 * iconScale, height: 22 * iconScale)
+                    .foregroundColor(.accentColor)
             } else {
                 Image(systemName: fallbackSystemImage)
                     .font(.system(size: 22 * iconScale))

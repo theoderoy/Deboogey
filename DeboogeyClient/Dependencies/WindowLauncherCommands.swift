@@ -28,7 +28,15 @@ struct LegacyWindowLauncherCommands: Commands {
             Button {
                 DiffsplitterNavigation.openLegacy(documentAt: nil)
             } label: {
-                Label(L10n.t("Diffsplitter"), systemImage: "square.split.2x1")
+                Label {
+                    Text(L10n.t("Diffsplitter"))
+                } icon: {
+                    Image("DiffsplitterIconIPOSF")
+                        .renderingMode(.template)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 16, height: 16)
+                }
             }
 
             if let openCocoaDebugMenu {
@@ -64,8 +72,18 @@ struct WindowLauncherCommands: Commands {
                 LoupeMachineNavigation.open(documentAt: nil, using: openWindow)
             }
 
-            Button(L10n.t("Diffsplitter"), systemImage: "square.split.2x1") {
+            Button {
                 DiffsplitterNavigation.open(documentAt: nil, using: openWindow)
+            } label: {
+                Label {
+                    Text(L10n.t("Diffsplitter"))
+                } icon: {
+                    Image("DiffsplitterIconIPOSF")
+                        .renderingMode(.template)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 16, height: 16)
+                }
             }
 
             if includesCocoaDebugMenu {
