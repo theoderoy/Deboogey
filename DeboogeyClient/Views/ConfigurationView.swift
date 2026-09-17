@@ -122,6 +122,50 @@ private struct ConfigurationPanelContainer<Content: View>: View {
     }
 }
 
+private struct ConfigurationPreferenceBannerPanel<Content: View>: View {
+    let imageName: String
+    @ViewBuilder let content: () -> Content
+
+    private var banner: some View {
+        Image(imageName)
+            .resizable()
+            .scaledToFit()
+            .frame(maxWidth: .infinity)
+            .cornerRadius(10)
+    }
+
+    var body: some View {
+        Group {
+            if #available(iOS 16.0, macOS 13.0, *) {
+                Form {
+                    Section { banner }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                    content()
+                }
+#if os(macOS)
+                .formStyle(.grouped)
+#endif
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        banner.padding(.horizontal)
+                        VStack(spacing: 20) { content() }
+                            .padding(.vertical)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@ViewBuilder
+private func configurationSecondaryCaption(_ text: String) -> some View {
+    Text(text)
+        .font(.subheadline)
+        .foregroundColor(.secondary)
+}
+
 private enum ConfigurationMaintenanceAction {
     case resetPreferences
     case deleteStorage
@@ -178,9 +222,7 @@ private struct ConfigurationMaintenanceRows: View {
             Button(action: action) {
                 Label(title, systemImage: systemImage)
             }
-            Text(detail)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+            configurationSecondaryCaption(detail)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -241,9 +283,7 @@ private struct GeneralPanelView: View {
             Toggle(isOn: $vm.playIndexingDoneSound) {
                 Text(L10n.t("Play a sound when indexing finishes"))
             }
-            Text(L10n.t("Play a sound after an application is completely indexed."))
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+            configurationSecondaryCaption(L10n.t("Play a sound after an application is completely indexed."))
 
             Toggle(isOn: $vm.playToolCycleSound) {
 #if DEBOOGEY_MCE
@@ -253,13 +293,13 @@ private struct GeneralPanelView: View {
 #endif
             }
 #if DEBOOGEY_MCE
-            Text(L10n.t("Play sounds when Cocoa Debug Menu completes successfully or halts due to an error."))
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+            configurationSecondaryCaption(
+                L10n.t("Play sounds when Cocoa Debug Menu completes successfully or halts due to an error.")
+            )
 #else
-            Text(L10n.t("Play sounds when Apple System Tools complete successfully or halt due to an error."))
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+            configurationSecondaryCaption(
+                L10n.t("Play sounds when Apple System Tools complete successfully or halt due to an error.")
+            )
 #endif
 
             diffsplitterSoundControls
@@ -271,129 +311,6 @@ private struct GeneralPanelView: View {
             }
         }
 #endif
-
-        if configurationShowsDiffsplitter {
-            section(header: "Diffsplitter") {
-                Picker(
-                    L10n.t("Offload Large Dumps to Temporary Storage"),
-                    selection: $vm.diffsplitterPreferDiskTempForLargeFiles
-                ) {
-                    Text(L10n.t("Session Disk Space")).tag(true)
-                    Text(L10n.t("Memory (RAM)")).tag(false)
-                }
-                Text(L10n.t("Choose where Diffsplitter stores large dumps while you inspect them. Storing on disk demands less horsepower, while memory (RAM) can be faster on powerful machines."))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            section() {
-                Toggle(isOn: $vm.diffsplitterIncludeHiddenFiles) {
-                    Text(L10n.t("Include Hidden Files"))
-                }
-                Text(L10n.t("When off, Diffsplitter skips hidden files while walking folders."))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-
-            section {
-                diffsplitterLabeledSlider(
-                    title: L10n.t("Hex Dump Window"),
-                    valueLabel: L10n.f("%d lines", Int(vm.diffsplitterHexWindowLines.rounded())),
-                    isDefault: Int(vm.diffsplitterHexWindowLines.rounded())
-                        == DiffsplitterSettings.defaultHexWindowLines,
-                    range: Double(DiffsplitterSettings.hexWindowLinesRange.lowerBound)
-                        ... Double(DiffsplitterSettings.hexWindowLinesRange.upperBound),
-                    value: $vm.diffsplitterHexWindowLines
-                ) {
-                    vm.diffsplitterHexWindowLines = Double(DiffsplitterSettings.defaultHexWindowLines)
-                }
-                Text(L10n.t("How many hex lines stay in memory for the visible dump window."))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                Toggle(isOn: $vm.diffsplitterLargeFileHexConversionEnabled) {
-                    Text(L10n.t("Large File Hex Conversion"))
-                }
-                Text(L10n.t("When on, oversized files that are not content-detected binaries open as a windowed hex dump instead of text. Binary status is only for recognised binary content and is unaffected."))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                diffsplitterLabeledSlider(
-                    title: L10n.t("Large File Size Threshold"),
-                    valueLabel: L10n.f("%d MB", Int(vm.diffsplitterMaxTextMegabytes.rounded())),
-                    isDefault: Int(vm.diffsplitterMaxTextMegabytes.rounded())
-                        == DiffsplitterSettings.defaultMaxTextMegabytes,
-                    range: Double(DiffsplitterSettings.maxTextMegabytesRange.lowerBound)
-                        ... Double(DiffsplitterSettings.maxTextMegabytesRange.upperBound),
-                    value: $vm.diffsplitterMaxTextMegabytes,
-                    enabled: vm.diffsplitterLargeFileHexConversionEnabled
-                ) {
-                    vm.diffsplitterMaxTextMegabytes = Double(DiffsplitterSettings.defaultMaxTextMegabytes)
-                }
-                Text(L10n.t("Files larger than this use windowed hex conversion when Large File Hex Conversion is on."))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .opacity(vm.diffsplitterLargeFileHexConversionEnabled ? 1 : 0.45)
-
-                diffsplitterLabeledSlider(
-                    title: L10n.t("Archive Nest Depth"),
-                    valueLabel: L10n.f("%d levels", Int(vm.diffsplitterMaxNestDepth.rounded())),
-                    isDefault: Int(vm.diffsplitterMaxNestDepth.rounded())
-                        == DiffsplitterSettings.defaultMaxNestDepth,
-                    range: Double(DiffsplitterSettings.maxNestDepthRange.lowerBound)
-                        ... Double(DiffsplitterSettings.maxNestDepthRange.upperBound),
-                    value: $vm.diffsplitterMaxNestDepth,
-                    step: 1
-                ) {
-                    vm.diffsplitterMaxNestDepth = Double(DiffsplitterSettings.defaultMaxNestDepth)
-                }
-                Text(L10n.t("Maximum nested archive depth Diffsplitter will expand."))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                diffsplitterLabeledSlider(
-                    title: L10n.t("Archive Entry Limit"),
-                    valueLabel: L10n.f("%d entries", Int(vm.diffsplitterMaxEntries.rounded())),
-                    isDefault: Int(vm.diffsplitterMaxEntries.rounded())
-                        == DiffsplitterSettings.defaultMaxEntries,
-                    range: DiffsplitterSettings.maxEntriesStopIndexRange,
-                    value: Binding(
-                        get: {
-                            Double(
-                                DiffsplitterSettings.maxEntriesStopIndex(
-                                    for: Int(vm.diffsplitterMaxEntries.rounded())
-                                )
-                            )
-                        },
-                        set: { index in
-                            vm.diffsplitterMaxEntries = Double(
-                                DiffsplitterSettings.maxEntriesStop(atIndex: Int(index.rounded()))
-                            )
-                        }
-                    ),
-                    step: 1
-                ) {
-                    vm.diffsplitterMaxEntries = Double(DiffsplitterSettings.defaultMaxEntries)
-                }
-                Text(L10n.t("Maximum files Diffsplitter will index from folders and archives."))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-
-#if os(macOS)
-            section {
-                Text(L10n.t("Folder Status Dot Priority"))
-                Text(L10n.t("Drag to reorder. Items nearer the top win when a folder contains mixed changes."))
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                DiffsplitterStatusPriorityEditor(
-                    order: $vm.diffsplitterStatusPriority,
-                    onMove: vm.moveDiffsplitterStatusPriority
-                )
-            }
-#endif
-        }
         
 #if !DEBOOGEY_MCE
         section(header: "Notices") {
@@ -402,43 +319,35 @@ private struct GeneralPanelView: View {
             }
             .disabled(!sipSatisfied)
             if sipSatisfied {
-                Text(
+                configurationSecondaryCaption(
                     "Show a notice when utilities require security adjustments."
                 )
-                .font(.subheadline)
-                .foregroundColor(.secondary)
             } else {
-                Text(
+                configurationSecondaryCaption(
                     "These notices will not be shown until System Integrity Protection is adjusted."
                 )
-                .font(.subheadline)
-                .foregroundColor(.secondary)
             }
 
             Toggle(isOn: $vm.showNetworkNotices) {
                 Text("Network Connection")
             }
-            Text(
+            configurationSecondaryCaption(
                 "Show a notice when network connection is required for upgrades."
             )
-            .font(.subheadline)
-            .foregroundColor(.secondary)
 
             Toggle(isOn: $vm.showCLTNotices) {
                 Text("Command Line Tools for Xcode")
             }
-            Text(
+            configurationSecondaryCaption(
                 "Show a notice when a feature requires Command Line Tools for Xcode to be installed."
             )
-            .font(.subheadline)
-            .foregroundColor(.secondary)
 
             Toggle(isOn: $vm.showLoupeApplyVerification) {
                 Text(L10n.t("Verify Loupe Machine Changes"))
             }
-            Text(L10n.t("Ask for confirmation before Loupe Machine applies changes to an application."))
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+            configurationSecondaryCaption(
+                L10n.t("Ask for confirmation before Loupe Machine applies changes to an application.")
+            )
         }
         
         if !DebugVariables.areUpdatesDisabled {
@@ -448,9 +357,9 @@ private struct GeneralPanelView: View {
                     Text("Internal").tag("Internal")
                 }
                 if vm.upgradeChannel == "Internal" {
-                    Text("Internal builds contain experimental features and are not notarised by Apple.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    configurationSecondaryCaption(
+                        "Internal builds contain experimental features and are not notarised by Apple."
+                    )
                 }
 
                 Toggle("Hide Automatic Notices", isOn: $vm.hideUpgradeAlerts)
@@ -470,16 +379,16 @@ private struct GeneralPanelView: View {
         Toggle(isOn: $vm.playDiffsplitterDoneSound) {
             Text(L10n.t("Notify with Live Activity when Diffsplitter finishes"))
         }
-        Text(L10n.t("Live Activity when available, otherwise a banner. Plays a sound after the selected minimum duration."))
-            .font(.subheadline)
-            .foregroundColor(.secondary)
+        configurationSecondaryCaption(
+            L10n.t("Live Activity when available, otherwise a banner. Plays a sound after the selected minimum duration.")
+        )
 #else
         Toggle(isOn: $vm.playDiffsplitterDoneSound) {
             Text(L10n.t("Play a sound when Diffsplitter finishes a comparison"))
         }
-        Text(L10n.t("Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration."))
-            .font(.subheadline)
-            .foregroundColor(.secondary)
+        configurationSecondaryCaption(
+            L10n.t("Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration.")
+        )
 #endif
 
         if vm.playDiffsplitterDoneSound {
@@ -496,7 +405,148 @@ private struct GeneralPanelView: View {
         configurationSection(header: header, content: content)
     }
 
-    private func diffsplitterLabeledSlider(
+}
+
+private struct DiffsplitterPanelView: View {
+    @ObservedObject var vm: ConfigurationViewModel
+
+    var body: some View {
+        ConfigurationPreferenceBannerPanel(imageName: "DiffsplitterConfUnit") {
+            panels
+        }
+    }
+
+    @ViewBuilder
+    private var panels: some View {
+        let hexLines = Int(vm.diffsplitterHexWindowLines.rounded())
+        let maxTextMB = Int(vm.diffsplitterMaxTextMegabytes.rounded())
+        let nestDepth = Int(vm.diffsplitterMaxNestDepth.rounded())
+        let maxEntries = Int(vm.diffsplitterMaxEntries.rounded())
+        let largeHexEnabled = vm.diffsplitterLargeFileHexConversionEnabled
+
+        section {
+            Picker(
+                L10n.t("Offload Large Dumps to Temporary Storage"),
+                selection: $vm.diffsplitterPreferDiskTempForLargeFiles
+            ) {
+                Text(L10n.t("Session Disk Space")).tag(true)
+                Text(L10n.t("Memory (RAM)")).tag(false)
+            }
+            configurationSecondaryCaption(
+                L10n.t("Choose where Diffsplitter stores large dumps while you inspect them. Storing on disk demands less horsepower, while memory (RAM) can be faster on powerful machines.")
+            )
+        }
+
+        section {
+            Toggle(isOn: $vm.diffsplitterIncludeHiddenFiles) {
+                Text(L10n.t("Include Hidden Files"))
+            }
+            configurationSecondaryCaption(
+                L10n.t("When off, Diffsplitter skips hidden files while walking folders.")
+            )
+        }
+
+        section {
+            labeledSlider(
+                title: L10n.t("Hex Dump Window"),
+                valueLabel: L10n.f("%d lines", hexLines),
+                isDefault: hexLines == DiffsplitterSettings.defaultHexWindowLines,
+                range: Double(DiffsplitterSettings.hexWindowLinesRange.lowerBound)
+                    ... Double(DiffsplitterSettings.hexWindowLinesRange.upperBound),
+                value: $vm.diffsplitterHexWindowLines
+            ) {
+                vm.diffsplitterHexWindowLines = Double(DiffsplitterSettings.defaultHexWindowLines)
+            }
+            configurationSecondaryCaption(
+                L10n.t("How many hex lines stay in memory for the visible dump window.")
+            )
+
+            Toggle(isOn: $vm.diffsplitterLargeFileHexConversionEnabled) {
+                Text(L10n.t("Large File Hex Conversion"))
+            }
+            configurationSecondaryCaption(
+                L10n.t("When on, oversized files that are not content-detected binaries open as a windowed hex dump instead of text. Binary status is only for recognised binary content and is unaffected.")
+            )
+
+            labeledSlider(
+                title: L10n.t("Large File Size Threshold"),
+                valueLabel: L10n.f("%d MB", maxTextMB),
+                isDefault: maxTextMB == DiffsplitterSettings.defaultMaxTextMegabytes,
+                range: Double(DiffsplitterSettings.maxTextMegabytesRange.lowerBound)
+                    ... Double(DiffsplitterSettings.maxTextMegabytesRange.upperBound),
+                value: $vm.diffsplitterMaxTextMegabytes,
+                enabled: largeHexEnabled
+            ) {
+                vm.diffsplitterMaxTextMegabytes = Double(DiffsplitterSettings.defaultMaxTextMegabytes)
+            }
+            configurationSecondaryCaption(
+                L10n.t("Files larger than this use windowed hex conversion when Large File Hex Conversion is on.")
+            )
+            .opacity(largeHexEnabled ? 1 : 0.45)
+
+            labeledSlider(
+                title: L10n.t("Archive Nest Depth"),
+                valueLabel: L10n.f("%d levels", nestDepth),
+                isDefault: nestDepth == DiffsplitterSettings.defaultMaxNestDepth,
+                range: Double(DiffsplitterSettings.maxNestDepthRange.lowerBound)
+                    ... Double(DiffsplitterSettings.maxNestDepthRange.upperBound),
+                value: $vm.diffsplitterMaxNestDepth,
+                step: 1
+            ) {
+                vm.diffsplitterMaxNestDepth = Double(DiffsplitterSettings.defaultMaxNestDepth)
+            }
+            configurationSecondaryCaption(
+                L10n.t("Maximum nested archive depth Diffsplitter will expand.")
+            )
+
+            labeledSlider(
+                title: L10n.t("Archive Entry Limit"),
+                valueLabel: L10n.f("%d entries", maxEntries),
+                isDefault: maxEntries == DiffsplitterSettings.defaultMaxEntries,
+                range: DiffsplitterSettings.maxEntriesStopIndexRange,
+                value: Binding(
+                    get: {
+                        Double(
+                            DiffsplitterSettings.maxEntriesStopIndex(
+                                for: Int(vm.diffsplitterMaxEntries.rounded())
+                            )
+                        )
+                    },
+                    set: { index in
+                        vm.diffsplitterMaxEntries = Double(
+                            DiffsplitterSettings.maxEntriesStop(atIndex: Int(index.rounded()))
+                        )
+                    }
+                ),
+                step: 1
+            ) {
+                vm.diffsplitterMaxEntries = Double(DiffsplitterSettings.defaultMaxEntries)
+            }
+            configurationSecondaryCaption(
+                L10n.t("Maximum files Diffsplitter will index from folders and archives.")
+            )
+        }
+
+#if os(macOS)
+        section {
+            Text(L10n.t("Folder Status Dot Priority"))
+            configurationSecondaryCaption(
+                L10n.t("Drag to reorder. Items nearer the top win when a folder contains mixed changes.")
+            )
+            DiffsplitterStatusPriorityEditor(
+                order: $vm.diffsplitterStatusPriority,
+                onMove: vm.moveDiffsplitterStatusPriority
+            )
+        }
+#endif
+    }
+
+    @ViewBuilder
+    private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
+        configurationSection(header: header, content: content)
+    }
+
+    private func labeledSlider(
         title: String,
         valueLabel: String,
         isDefault: Bool,
@@ -515,35 +565,23 @@ private struct GeneralPanelView: View {
                     .foregroundColor(.secondary)
             }
             HStack(spacing: 8) {
-                diffsplitterSliderResetButton(isDefault: isDefault, action: reset)
-                    .disabled(!enabled)
+                Button(action: reset) {
+                    Image(systemName: "arrow.counterclockwise")
+                }
+                .buttonStyle(.borderless)
+                .disabled(isDefault || !enabled)
+                .help(L10n.t("Reset to Default"))
+                .accessibilityLabel(L10n.t("Reset to Default"))
                 if let step {
-                    Slider(value: value, in: range, step: step)
-                        .disabled(!enabled)
+                    Slider(value: value, in: range, step: step).disabled(!enabled)
                 } else {
-                    Slider(value: value, in: range)
-                        .disabled(!enabled)
+                    Slider(value: value, in: range).disabled(!enabled)
                 }
             }
         }
         .opacity(enabled ? 1 : 0.45)
     }
-
-    private func diffsplitterSliderResetButton(
-        isDefault: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: "arrow.counterclockwise")
-        }
-        .buttonStyle(.borderless)
-        .disabled(isDefault)
-        .help(L10n.t("Reset to Default"))
-        .accessibilityLabel(L10n.t("Reset to Default"))
-    }
-
 }
-
 
 #if os(macOS)
 private struct EntityTrackerPanelView: View {
@@ -554,47 +592,16 @@ private struct EntityTrackerPanelView: View {
         return stored.isZero ? 1.0 : stored
     }()
     @AppStorage("theoderoy.Deboogey.EntityTracker.scaleTarget") private var scaleTarget: String = "both"
-    
-    private var preferenceBanner: some View {
-        Image("EntityTrackerConfUnit")
-            .resizable()
-            .scaledToFit()
-            .frame(maxWidth: .infinity)
-            .cornerRadius(10)
-    }
-    
+
     var body: some View {
-        Group {
-            if #available(macOS 13.0, *) {
-                Form {
-                    Section {
-                        preferenceBanner
-                    }
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-
-                    panels
-                }
-                .formStyle(.grouped)
-            } else {
-                ScrollView {
-                    VStack(spacing: 0) {
-                        preferenceBanner
-                            .padding(.horizontal)
-
-                        VStack(spacing: 20) {
-                            panels
-                        }
-                        .padding(.vertical)
-                    }
-                }
-            }
+        ConfigurationPreferenceBannerPanel(imageName: "EntityTrackerConfUnit") {
+            panels
         }
     }
-    
+
     @ViewBuilder
     private var panels: some View {
-        section(header: "Entity Tracker") {
+        section {
             Toggle("Auto-Delete", isOn: $vm.entityTrackerAutoDeleteEnabled)
             if vm.entityTrackerAutoDeleteEnabled {
                 Picker("Trigger", selection: $vm.entityTrackerAutoDeleteTrigger) {
@@ -617,24 +624,23 @@ private struct EntityTrackerPanelView: View {
                 }
                 Text(descriptionForAutoDelete)
                     .font(.subheadline)
-                .foregroundColor(.secondary)
+                    .foregroundColor(.secondary)
             }
         }
-        
+
         section {
             Picker("Display Scale", selection: $scaleTarget) {
                 Text("Icon").tag("icon")
                 Text("Text").tag("text")
                 Text("Both").tag("both")
             }
-            
+
             HStack {
                 Text("Scale Size")
                 Spacer()
                 Text("\(Int((displayScale * 100).rounded()))%")
                     .monospacedDigit()
                     .foregroundColor(.secondary)
-
                 Stepper("", value: Binding(
                     get: { rowScale },
                     set: { newValue in
@@ -642,11 +648,11 @@ private struct EntityTrackerPanelView: View {
                         displayScale = newValue
                     }
                 ), in: 0.70...1.50, step: 0.05)
-                    .labelsHidden()
+                .labelsHidden()
             }
         }
     }
-    
+
     private var descriptionForAutoDelete: String {
         let what = !DebugVariables.isMarketplaceCandidateEditionBuild
             && vm.entityTrackerAutoDeleteScope == "ephemerals"
@@ -661,7 +667,7 @@ private struct EntityTrackerPanelView: View {
             : L10n.t("on every app launch.")
         return "\(what) \(when)"
     }
-    
+
     @ViewBuilder
     private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
         configurationSection(header: header, content: content)
@@ -742,18 +748,19 @@ private struct AcknowledgementsPanelView: View {
 enum Panel: Identifiable, Hashable, Codable {
     case general
     case about
+    case diffsplitter
     case entityTracker
     case acknowledge
 
     static var allCases: [Panel] {
 #if os(iOS)
         if configurationShowsDiffsplitter {
-            [.general, .about, .acknowledge]
+            [.general, .diffsplitter, .about, .acknowledge]
         } else {
             [.about, .acknowledge]
         }
 #else
-        [.general, .entityTracker, .acknowledge]
+        [.general, .diffsplitter, .entityTracker, .acknowledge]
 #endif
     }
     
@@ -761,6 +768,7 @@ enum Panel: Identifiable, Hashable, Codable {
         switch self {
         case .general: return "general"
         case .about: return "about"
+        case .diffsplitter: return "diffsplitter"
         case .entityTracker: return "entityTracker"
         case .acknowledge: return "acknowledge"
         }
@@ -771,6 +779,8 @@ enum Panel: Identifiable, Hashable, Codable {
             return L10n.t("General")
         case .about:
             return L10n.t("About Deboogey")
+        case .diffsplitter:
+            return L10n.t("Diffsplitter")
         case .entityTracker:
             return L10n.t("Entity Tracker")
         case .acknowledge:
@@ -781,8 +791,27 @@ enum Panel: Identifiable, Hashable, Codable {
         switch self {
         case .general: return "gear"
         case .about: return "info.circle"
-        case .entityTracker: return "binoculars"
+        case .diffsplitter: return "DiffsplitterIconIPOSF"
+        case .entityTracker: return "eyeglasses"
         case .acknowledge: return "star"
+        }
+    }
+
+    @ViewBuilder
+    var label: some View {
+        switch self {
+        case .diffsplitter:
+            Label {
+                Text(title)
+            } icon: {
+                Image("DiffsplitterIconIPOSF")
+                    .renderingMode(.template)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 16, height: 16)
+            }
+        default:
+            Label(title, systemImage: systemImage)
         }
     }
 }
@@ -1011,34 +1040,23 @@ final class ConfigurationViewModel: ObservableObject {
 
 private struct PanelList: View {
     @Binding var selection: Panel?
-    
+    private let panels: [Panel] = [.general, .diffsplitter, .entityTracker, .acknowledge]
+
     var body: some View {
         if #available(macOS 13.0, *) {
             List(selection: $selection) {
-                NavigationLink(value: Panel.general) {
-                    Label(Panel.general.title, systemImage: Panel.general.systemImage)
-                }
-                NavigationLink(value: Panel.entityTracker) {
-                    Label(Panel.entityTracker.title, systemImage: Panel.entityTracker.systemImage)
-                }
-                NavigationLink(value: Panel.acknowledge) {
-                    Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+                ForEach(panels) { panel in
+                    NavigationLink(value: panel) { panel.label }
                 }
             }
         } else {
             List {
-                Button(action: { selection = .general }) {
-                    Label(Panel.general.title, systemImage: Panel.general.systemImage)
+                ForEach(panels) { panel in
+                    Button(action: { selection = panel }) {
+                        panel.label
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-                Button(action: { selection = .entityTracker }) {
-                    Label(Panel.entityTracker.title, systemImage: Panel.entityTracker.systemImage)
-                }
-                .buttonStyle(.plain)
-                Button(action: { selection = .acknowledge }) {
-                    Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
-                }
-                .buttonStyle(.plain)
             }
         }
     }
@@ -1054,6 +1072,8 @@ private struct PanelDetail: View {
                 GeneralPanelView(vm: vm)
             case .about:
                 AboutView()
+            case .diffsplitter:
+                DiffsplitterPanelView(vm: vm)
             case .entityTracker:
 #if os(macOS)
                 EntityTrackerPanelView(vm: vm)
@@ -1086,7 +1106,14 @@ struct ConfigurationRootView: View {
                             .navigationTitle(Panel.general.title)
                             .navigationBarTitleDisplayMode(.inline)
                     } label: {
-                        Label(Panel.general.title, systemImage: Panel.general.systemImage)
+                        Panel.general.label
+                    }
+                    NavigationLink {
+                        DiffsplitterPanelView(vm: vm)
+                            .navigationTitle(Panel.diffsplitter.title)
+                            .navigationBarTitleDisplayMode(.inline)
+                    } label: {
+                        Panel.diffsplitter.label
                     }
                 }
                 NavigationLink {
@@ -1094,14 +1121,14 @@ struct ConfigurationRootView: View {
                         .navigationTitle(Panel.about.title)
                         .navigationBarTitleDisplayMode(.inline)
                 } label: {
-                    Label(Panel.about.title, systemImage: Panel.about.systemImage)
+                    Panel.about.label
                 }
                 NavigationLink {
                     AcknowledgementsPanelView(vm: vm)
                         .navigationTitle(Panel.acknowledge.title)
                         .navigationBarTitleDisplayMode(.inline)
                 } label: {
-                    Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+                    Panel.acknowledge.label
                 }
             }
             if !configurationShowsDiffsplitter {
@@ -1122,17 +1149,22 @@ struct ConfigurationRootView: View {
             TabView {
                 GeneralPanelView(vm: vm)
                     .tabItem {
-                        Label(Panel.general.title, systemImage: Panel.general.systemImage)
+                        Panel.general.label
+                    }
+
+                DiffsplitterPanelView(vm: vm)
+                    .tabItem {
+                        Panel.diffsplitter.label
                     }
                 
                 EntityTrackerPanelView(vm: vm)
                     .tabItem {
-                        Label(Panel.entityTracker.title, systemImage: Panel.entityTracker.systemImage)
+                        Panel.entityTracker.label
                     }
                 
                 AcknowledgementsPanelView(vm: vm)
                     .tabItem {
-                        Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+                        Panel.acknowledge.label
                     }
             }
             .minimumWindowContentSize(AppWindowSizing.Configuration.legacy)

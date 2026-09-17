@@ -329,7 +329,7 @@ struct RootView: View {
                     } else {
                         LauncherButton(
                             title: "Entity Tracker",
-                            icon: "binoculars",
+                            icon: "eyeglasses",
                             color: .accentColor
                         ) {
                             showingEntityTracker = true
@@ -560,7 +560,7 @@ struct RootView: View {
                     } else {
                         LauncherButton(
                             title: "Entity Tracker",
-                            icon: "binoculars",
+                            icon: "eyeglasses",
                             color: .accentColor
                         ) {
                             showingEntityTracker = true
@@ -1171,7 +1171,7 @@ private struct DeboogeySDWindowLauncher: View {
 private struct EntityTrackerWindowLauncher: View {
     @Environment(\.openWindow) var openWindow
     var body: some View {
-        LauncherButton(title: "Entity Tracker", icon: "binoculars", color: .accentColor) {
+        LauncherButton(title: "Entity Tracker", icon: "eyeglasses", color: .accentColor) {
             openWindow(id: "entity-tracker")
         }
     }
