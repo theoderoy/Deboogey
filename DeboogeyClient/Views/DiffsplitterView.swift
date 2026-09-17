@@ -151,10 +151,21 @@ private struct DiffsplitterExportDocument: FileDocument {
 #endif
 
 struct DiffsplitterView: View {
+#if os(macOS)
+    private static let dropWellTypeIdentifiers = [UTType.fileURL.identifier]
+#else
+    private static let dropWellTypeIdentifiers = [
+        UTType.item.identifier,
+        UTType.folder.identifier,
+        UTType.fileURL.identifier
+    ]
+#endif
+
     let request: DiffsplitterWindowRequest
     @StateObject private var session = DiffsplitterSession()
     @State private var statusPriorityRaw = PersistentVariables.loadDiffsplitterStatusPriority()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 #if os(iOS)
     @Environment(\.dismiss) private var dismiss
     @State private var showDiscardConfirmation = false
@@ -175,6 +186,9 @@ struct DiffsplitterView: View {
 #else
         return false
 #endif
+    }
+    private var usesCompactSetupLayout: Bool {
+        horizontalSizeClass == .compact
     }
     var body: some View {
         VStack(spacing: 0) {
@@ -279,11 +293,7 @@ struct DiffsplitterView: View {
         ) { result in
             switch result {
             case .success(let urls):
-                let url = urls.first
-                if let url {
-                    _ = url.startAccessingSecurityScopedResource()
-                }
-                session.handlePickedSideURL(url)
+                session.handlePickedSideURL(urls.first)
             case .failure(let error):
                 session.setupError = error.localizedDescription
                 session.handlePickedSideURL(nil)
@@ -480,48 +490,69 @@ struct DiffsplitterView: View {
     private var setupView: some View {
         ZStack {
             DiffsplitterEmptyBackground()
-
-            VStack(spacing: 28) {
-                HStack(spacing: 14) {
-                    Image("DiffsplitterIdent")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 72, height: 72)
-                        .environment(\.colorScheme, .dark)
-                    Text(L10n.t("Diffsplitter"))
-                        .font(.largeTitle.weight(.semibold))
-                        .foregroundStyle(.white)
+            if usesCompactSetupLayout {
+                ScrollView {
+                    setupContent
+                        .padding(28)
+                        .frame(maxWidth: .infinity)
                 }
-                HStack(spacing: 20) {
-                    dropWell(
-                        title: L10n.t("Left"),
-                        url: session.leftURL,
-                        isTargeted: session.leftDropTargeted,
-                        side: .left
-                    )
-                    dropWell(
-                        title: L10n.t("Right"),
-                        url: session.rightURL,
-                        isTargeted: session.rightDropTargeted,
-                        side: .right
-                    )
-                }
-                .frame(maxWidth: 760)
-                if session.isComparing {
-                    indexingProgressChrome
-                        .frame(maxWidth: 420)
-                        .foregroundStyle(.white.opacity(0.75))
-                        .tint(.white)
-                } else {
-                    Text(L10n.t("Drop two text files, or two folders or archives — one on each side — to compare them."))
-                        .font(.body)
-                        .foregroundStyle(.white.opacity(0.65))
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: 560)
-                }
+            } else {
+                setupContent
+                    .padding(48)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding(48)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private var setupContent: some View {
+        VStack(spacing: 28) {
+            HStack(spacing: 14) {
+                Image("DiffsplitterIdent")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 72, height: 72)
+                    .environment(\.colorScheme, .dark)
+                Text(L10n.t("Diffsplitter"))
+                    .font(.largeTitle.weight(.semibold))
+                    .foregroundStyle(.white)
+            }
+            setupDropWells
+                .frame(maxWidth: usesCompactSetupLayout ? .infinity : 760)
+            if session.isComparing {
+                indexingProgressChrome
+                    .frame(maxWidth: 420)
+                    .foregroundStyle(.white.opacity(0.75))
+                    .tint(.white)
+            } else {
+                Text(L10n.t("Drop two text files, or two folders or archives — one on each side — to compare them."))
+                    .font(.body)
+                    .foregroundStyle(.white.opacity(0.65))
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 560)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var setupDropWells: some View {
+        let wells = Group {
+            dropWell(
+                title: L10n.t("Left"),
+                url: session.leftURL,
+                isTargeted: session.leftDropTargeted,
+                side: .left
+            )
+            dropWell(
+                title: L10n.t("Right"),
+                url: session.rightURL,
+                isTargeted: session.rightDropTargeted,
+                side: .right
+            )
+        }
+        if usesCompactSetupLayout {
+            VStack(spacing: 20) { wells }
+        } else {
+            HStack(spacing: 20) { wells }
         }
     }
     private var indexingProgressChrome: some View {
@@ -575,25 +606,39 @@ struct DiffsplitterView: View {
             }
             .scaleEffect(isTargeted ? 1.015 : 1)
             .animation(.easeOut(duration: 0.15), value: isTargeted)
-            .onDrop(of: [UTType.fileURL.identifier], isTargeted: binding(for: side)) { providers in
-                session.handleDrop(providers, onto: side)
-            }
 
 #if os(macOS)
         if #available(macOS 26.0, *) {
-            well
-                .glassEffect(
-                    .clear.tint(tint.opacity(isTargeted ? 0.28 : 0.16)).interactive(),
+            attachDropTarget(
+                to: well.glassEffect(
+                    .clear.tint(tint.opacity(isTargeted ? 0.28 : 0.16)),
                     in: shape
-                )
+                ),
+                side: side
+            )
         } else {
-            well
-                .background(tint.opacity(isTargeted ? 0.18 : 0.10), in: shape)
+            attachDropTarget(
+                to: well.background(tint.opacity(isTargeted ? 0.18 : 0.10), in: shape),
+                side: side
+            )
         }
 #else
-        well
-            .background(tint.opacity(isTargeted ? 0.18 : 0.10), in: shape)
+        attachDropTarget(
+            to: well.background(tint.opacity(isTargeted ? 0.18 : 0.10), in: shape),
+            side: side
+        )
 #endif
+    }
+
+    private func attachDropTarget<V: View>(to view: V, side: DiffsplitterSession.Side) -> some View {
+        view
+            .contentShape(Rectangle())
+            .onDrop(
+                of: Self.dropWellTypeIdentifiers,
+                isTargeted: binding(for: side)
+            ) { providers in
+                session.handleDrop(providers, onto: side)
+            }
     }
 
     @ViewBuilder
@@ -840,27 +885,11 @@ struct DiffsplitterView: View {
         .help(L10n.t("Back"))
     }
     private var directoryListRoot: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                TextField(L10n.t("Search paths"), text: $session.directoryFilter)
-                    .textFieldStyle(.roundedBorder)
-                Text(L10n.f("%d changed", directoryBrowserItemCount))
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-            }
-            .padding(10)
-            if !session.directoryBrowsePrefix.isEmpty {
-                Text(session.directoryBrowsePrefix)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 8)
-                    .help(session.directoryBrowsePrefix)
-            }
+        let items = directoryBrowserItems
+        return VStack(alignment: .leading, spacing: 0) {
+            directoryListHeader(items: items)
             Divider()
-            List(directoryBrowserItems) { item in
+            List(items) { item in
                 Button {
                     session.activateDirectoryBrowserItem(item)
                 } label: {
@@ -875,6 +904,28 @@ struct DiffsplitterView: View {
         .navigationTitle(directoryListNavigationTitle)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+
+    private func directoryListHeader(items: [DiffsplitterSession.DirectoryBrowserItem]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                TextField(L10n.t("Search paths"), text: $session.directoryFilter)
+                    .textFieldStyle(.roundedBorder)
+                Text(L10n.f("%d changed", directoryBrowserItemCount(using: items)))
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+            }
+            if !session.directoryBrowsePrefix.isEmpty {
+                Text(session.directoryBrowsePrefix)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .help(session.directoryBrowsePrefix)
+            }
+        }
+        .padding(10)
+    }
+
     private var directoryListNavigationTitle: String {
         if session.directoryBrowsePrefix.isEmpty {
             return L10n.t("Changed Paths")
@@ -888,13 +939,15 @@ struct DiffsplitterView: View {
             statusPriority: statusPriority
         )
     }
-    private var directoryBrowserItemCount: Int {
+    private func directoryBrowserItemCount(
+        using items: [DiffsplitterSession.DirectoryBrowserItem]
+    ) -> Int {
         if session.directoryFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return directoryBrowserItems.reduce(0) { partial, item in
+            return items.reduce(0) { partial, item in
                 partial + (item.kind == .folder ? item.childCount : 1)
             }
         }
-        return directoryBrowserItems.count
+        return items.count
     }
     private func directoryBrowserRow(_ item: DiffsplitterSession.DirectoryBrowserItem) -> some View {
         HStack(spacing: 10) {

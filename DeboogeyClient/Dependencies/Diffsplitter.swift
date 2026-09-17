@@ -3943,7 +3943,6 @@ final class DiffsplitterWindowController: NSWindowController {
 #endif
 
 @MainActor
-
 final class DiffsplitterSession: ObservableObject {
     enum Side {
         case left
@@ -4151,21 +4150,66 @@ final class DiffsplitterSession: ObservableObject {
 #endif
     func handleDrop(_ providers: [NSItemProvider], onto side: Side) -> Bool {
         guard let provider = providers.first else { return false }
-        provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { [weak self] item, _ in
-            let url: URL?
-            if let data = item as? Data {
-                url = URL(dataRepresentation: data, relativeTo: nil)
-            } else if let value = item as? URL {
-                url = value
-            } else {
-                url = nil
+        let fileURLType = UTType.fileURL.identifier
+        if provider.hasItemConformingToTypeIdentifier(fileURLType) {
+            provider.loadItem(forTypeIdentifier: fileURLType, options: nil) { [weak self] item, _ in
+                DispatchQueue.main.async {
+                    self?.finishDrop(Self.url(fromDropItem: item), onto: side)
+                }
             }
-            guard let url else { return }
-            DispatchQueue.main.async {
-                self?.assign(url, to: side)
+            return true
+        }
+        guard let representationType = [UTType.folder.identifier, UTType.item.identifier]
+            .first(where: provider.hasItemConformingToTypeIdentifier)
+        else { return false }
+        provider.loadFileRepresentation(forTypeIdentifier: representationType) { [weak self] url, error in
+            guard let self else { return }
+            if let error {
+                self.reportDropFailure(error.localizedDescription)
+                return
+            }
+            guard let url else {
+                self.reportDropFailure(L10n.t("The dropped item could not be opened."))
+                return
+            }
+            do {
+                let durableURL = try Self.durableCopyOfDroppedURL(url)
+                DispatchQueue.main.async { self.assign(durableURL, to: side) }
+            } catch {
+                self.reportDropFailure(error.localizedDescription)
             }
         }
         return true
+    }
+
+    private func finishDrop(_ url: URL?, onto side: Side) {
+        if let url {
+            assign(url, to: side)
+        } else {
+            setupError = L10n.t("The dropped item could not be opened.")
+        }
+    }
+
+    private func reportDropFailure(_ message: String) {
+        DispatchQueue.main.async { self.setupError = message }
+    }
+
+    private static func url(fromDropItem item: NSSecureCoding?) -> URL? {
+        if let data = item as? Data {
+            return URL(dataRepresentation: data, relativeTo: nil)
+        }
+        return item as? URL
+    }
+
+    private static func durableCopyOfDroppedURL(_ url: URL) throws -> URL {
+        let fm = FileManager.default
+        let directory = fm.temporaryDirectory
+            .appendingPathComponent("DiffsplitterDrops", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+        let destination = directory.appendingPathComponent(url.lastPathComponent)
+        try fm.copyItem(at: url, to: destination)
+        return destination
     }
     func assign(_ url: URL, to side: Side) {
         if isEmbeddedDocument {
