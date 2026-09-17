@@ -98,10 +98,13 @@
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>
-				<string>public.json</string>
+				<string>public.data</string>
+				<string>public.content</string>
 			</array>
 			<key>UTTypeDescription</key>
 			<string>Loupe Machine Document</string>
+			<key>UTTypeIconFile</key>
+			<string>LoumDocumentIcon</string>
 			<key>UTTypeIdentifier</key>
 			<string>theoderoy.Deboogey.LoupeMachine</string>
 			<key>UTTypeTagSpecification</key>
@@ -117,10 +120,13 @@
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>
-				<string>public.json</string>
+				<string>public.data</string>
+				<string>public.content</string>
 			</array>
 			<key>UTTypeDescription</key>
 			<string>Diffsplitter Document</string>
+			<key>UTTypeIconFile</key>
+			<string>DiffsplitterDocumentIcon</string>
 			<key>UTTypeIdentifier</key>
 			<string>theoderoy.Deboogey.Diffsplitter</string>
 			<key>UTTypeTagSpecification</key>
@@ -136,10 +142,13 @@
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>
-				<string>public.json</string>
+				<string>public.data</string>
+				<string>public.content</string>
 			</array>
 			<key>UTTypeDescription</key>
 			<string>DiffsplitterX Document</string>
+			<key>UTTypeIconFile</key>
+			<string>DiffsplitterXDocumentIcon</string>
 			<key>UTTypeIdentifier</key>
 			<string>theoderoy.Deboogey.DiffsplitterX</string>
 			<key>UTTypeTagSpecification</key>

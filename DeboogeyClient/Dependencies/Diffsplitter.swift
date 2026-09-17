@@ -3527,8 +3527,8 @@ nonisolated final class DiffsplitterProgressPublisher: @unchecked Sendable {
 }
 
 extension UTType {
-    static let diffsplitterDocument = UTType(exportedAs: "theoderoy.Deboogey.Diffsplitter", conformingTo: .json)
-    static let diffsplitterXDocument = UTType(exportedAs: "theoderoy.Deboogey.DiffsplitterX", conformingTo: .json)
+    static let diffsplitterDocument = UTType(exportedAs: "theoderoy.Deboogey.Diffsplitter", conformingTo: .data)
+    static let diffsplitterXDocument = UTType(exportedAs: "theoderoy.Deboogey.DiffsplitterX", conformingTo: .data)
 }
 
 nonisolated struct DiffsplitterDocument: Codable {

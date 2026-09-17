@@ -8,7 +8,7 @@
 	<array>
 		<dict>
 			<key>CFBundleTypeIconFile</key>
-			<string>LoumDocumentIcon.icns</string>
+			<string>LoumDocumentIcon</string>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>loum</string>
@@ -25,6 +25,8 @@
 			</array>
 		</dict>
 		<dict>
+			<key>CFBundleTypeIconFile</key>
+			<string>DiffsplitterDocumentIcon</string>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>dsplt</string>
@@ -41,6 +43,8 @@
 			</array>
 		</dict>
 		<dict>
+			<key>CFBundleTypeIconFile</key>
+			<string>DiffsplitterXDocumentIcon</string>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>dspltx</string>
@@ -86,12 +90,13 @@
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>
-				<string>public.json</string>
+				<string>public.data</string>
+				<string>public.content</string>
 			</array>
 			<key>UTTypeDescription</key>
 			<string>Loupe Machine Document</string>
 			<key>UTTypeIconFile</key>
-			<string>LoumDocumentIcon.icns</string>
+			<string>LoumDocumentIcon</string>
 			<key>UTTypeIdentifier</key>
 			<string>theoderoy.Deboogey.LoupeMachine</string>
 			<key>UTTypeTagSpecification</key>
@@ -107,10 +112,13 @@
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>
-				<string>public.json</string>
+				<string>public.data</string>
+				<string>public.content</string>
 			</array>
 			<key>UTTypeDescription</key>
 			<string>Diffsplitter Document</string>
+			<key>UTTypeIconFile</key>
+			<string>DiffsplitterDocumentIcon</string>
 			<key>UTTypeIdentifier</key>
 			<string>theoderoy.Deboogey.Diffsplitter</string>
 			<key>UTTypeTagSpecification</key>
@@ -126,10 +134,13 @@
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>
-				<string>public.json</string>
+				<string>public.data</string>
+				<string>public.content</string>
 			</array>
 			<key>UTTypeDescription</key>
 			<string>DiffsplitterX Document</string>
+			<key>UTTypeIconFile</key>
+			<string>DiffsplitterXDocumentIcon</string>
 			<key>UTTypeIdentifier</key>
 			<string>theoderoy.Deboogey.DiffsplitterX</string>
 			<key>UTTypeTagSpecification</key>

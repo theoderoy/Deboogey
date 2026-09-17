@@ -13,7 +13,7 @@ import AppKit
 #endif
 
 extension UTType {
-    static let loupeMachineDocument = UTType(exportedAs: "theoderoy.Deboogey.LoupeMachine", conformingTo: .json)
+    static let loupeMachineDocument = UTType(exportedAs: "theoderoy.Deboogey.LoupeMachine", conformingTo: .data)
 }
 
 struct LoupeMachineDocument: Codable {
