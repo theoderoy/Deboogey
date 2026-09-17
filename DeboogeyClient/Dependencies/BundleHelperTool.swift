@@ -38,4 +38,23 @@ enum BundleHelperTool {
         }
         return path
     }
+
+    static func pathMapped<E: Error>(
+        resource: String?,
+        auxiliaryExecutable: String? = nil,
+        expectedDirectory: String,
+        map: (ResolveError) -> E
+    ) throws -> String {
+        do {
+            return try path(
+                resource: resource,
+                auxiliaryExecutable: auxiliaryExecutable,
+                expectedDirectory: expectedDirectory
+            )
+        } catch let error as ResolveError {
+            throw map(error)
+        } catch {
+            throw map(.notFound)
+        }
+    }
 }

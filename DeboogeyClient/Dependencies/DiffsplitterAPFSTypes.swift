@@ -87,21 +87,14 @@ nonisolated enum DiffsplitterAPFSTypes {
     }
 
     static func readU16(_ data: Data, _ offset: Int) -> UInt16 {
-        UInt16(data[offset]) | UInt16(data[offset + 1]) << 8
+        DiffsplitterBinaryIO.readUInt16LE(data, offset)
     }
 
     static func readU32(_ data: Data, _ offset: Int) -> UInt32 {
-        UInt32(data[offset])
-            | UInt32(data[offset + 1]) << 8
-            | UInt32(data[offset + 2]) << 16
-            | UInt32(data[offset + 3]) << 24
+        DiffsplitterBinaryIO.readUInt32LE(data, offset)
     }
 
     static func readU64(_ data: Data, _ offset: Int) -> UInt64 {
-        var value: UInt64 = 0
-        for i in 0..<8 {
-            value |= UInt64(data[offset + i]) << (8 * i)
-        }
-        return value
+        DiffsplitterBinaryIO.readUInt64LE(data, offset)
     }
 }

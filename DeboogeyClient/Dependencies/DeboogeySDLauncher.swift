@@ -46,20 +46,15 @@ nonisolated struct DeboogeySDLauncher {
     }
 
     private static func runOverlayHelperImpl(arguments: [String]) throws -> String {
-        let toolPath: String
-        do {
-            toolPath = try BundleHelperTool.path(
-                resource: "DeboogeySDHelper",
-                expectedDirectory: "/Contents/Resources/"
-            )
-        } catch BundleHelperTool.ResolveError.notFound {
-            throw DeboogeySDLauncherError.toolNotFound
-        } catch BundleHelperTool.ResolveError.outsideExpectedDirectory(let path) {
-            throw DeboogeySDLauncherError.toolOutsideResources(path: path)
-        } catch BundleHelperTool.ResolveError.notExecutable(let path) {
-            throw DeboogeySDLauncherError.toolNotExecutable(path: path)
-        } catch {
-            throw DeboogeySDLauncherError.toolNotFound
+        let toolPath = try BundleHelperTool.pathMapped(
+            resource: "DeboogeySDHelper",
+            expectedDirectory: "/Contents/Resources/"
+        ) { error in
+            switch error {
+            case .notFound: return DeboogeySDLauncherError.toolNotFound
+            case .outsideExpectedDirectory(let path): return DeboogeySDLauncherError.toolOutsideResources(path: path)
+            case .notExecutable(let path): return DeboogeySDLauncherError.toolNotExecutable(path: path)
+            }
         }
 
         let escapedArgs = arguments.map(PrivilegedShell.quoted).joined(separator: " ")

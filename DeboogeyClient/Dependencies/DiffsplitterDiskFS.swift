@@ -114,9 +114,9 @@ nonisolated enum DiffsplitterDiskFS {
     private static func readGPT(disk: DiffsplitterUDIFDisk) throws -> [Partition] {
         let header = try disk.read(offset: 512, length: 512)
         guard header.starts(with: Data("EFI PART".utf8)) else { return [] }
-        let entryLBA = readUInt64LE(header, 72)
-        let entryCount = Int(readUInt32LE(header, 80))
-        let entrySize = Int(readUInt32LE(header, 84))
+        let entryLBA = DiffsplitterBinaryIO.readUInt64LE(header, 72)
+        let entryCount = Int(DiffsplitterBinaryIO.readUInt32LE(header, 80))
+        let entrySize = Int(DiffsplitterBinaryIO.readUInt32LE(header, 84))
         guard entryCount > 0, entryCount < 4096, entrySize >= 128 else { return [] }
         let tableOffset = entryLBA * 512
         let table = try disk.read(offset: tableOffset, length: entryCount * entrySize)
@@ -126,8 +126,8 @@ nonisolated enum DiffsplitterDiskFS {
             let o = i * entrySize
             let typeGUID = table.subdata(in: o..<(o + 16))
             if typeGUID.allSatisfy({ $0 == 0 }) { continue }
-            let firstLBA = readUInt64LE(table, o + 32)
-            let lastLBA = readUInt64LE(table, o + 40)
+            let firstLBA = DiffsplitterBinaryIO.readUInt64LE(table, o + 32)
+            let lastLBA = DiffsplitterBinaryIO.readUInt64LE(table, o + 40)
             guard lastLBA >= firstLBA else { continue }
             let nameData = table.subdata(in: (o + 56)..<(o + 128))
             let name = String(data: nameData, encoding: .utf16LittleEndian)?
@@ -148,18 +148,18 @@ nonisolated enum DiffsplitterDiskFS {
         let dd = try disk.read(offset: 0, length: 512)
 
         guard dd.count >= 2, dd[0] == 0x45, dd[1] == 0x52 else { return [] }
-        let blockSize = Int(readUInt16BE(dd, 2))
+        let blockSize = Int(DiffsplitterBinaryIO.readUInt16BE(dd, 2))
         guard blockSize == 512 || blockSize == 2048 else { return [] }
         let first = try disk.read(offset: UInt64(blockSize), length: blockSize)
         guard first.count >= 8, first[0] == 0x50, first[1] == 0x4D else { return [] }
-        let mapBlockCount = Int(readUInt32BE(first, 4))
+        let mapBlockCount = Int(DiffsplitterBinaryIO.readUInt32BE(first, 4))
         guard mapBlockCount > 0, mapBlockCount < 64 else { return [] }
         var partitions: [Partition] = []
         for i in 0..<mapBlockCount {
             let entry = i == 0 ? first : try disk.read(offset: UInt64((i + 1) * blockSize), length: blockSize)
             guard entry.count >= 48, entry[0] == 0x50, entry[1] == 0x4D else { continue }
-            let pyPartStart = readUInt32BE(entry, 8)
-            let pyPartBlocks = readUInt32BE(entry, 12)
+            let pyPartStart = DiffsplitterBinaryIO.readUInt32BE(entry, 8)
+            let pyPartBlocks = DiffsplitterBinaryIO.readUInt32BE(entry, 12)
             let typeBytes = entry.subdata(in: 48..<80)
             let typeName = String(bytes: typeBytes.prefix(while: { $0 != 0 }), encoding: .macOSRoman)
                 ?? String(bytes: typeBytes.prefix(while: { $0 != 0 }), encoding: .ascii)
@@ -194,9 +194,9 @@ nonisolated enum DiffsplitterDiskFS {
         static func open(disk: DiffsplitterUDIFDisk, partitionOffset: UInt64) throws -> HFSPlusVolume {
             let header = try disk.read(offset: partitionOffset + 1024, length: 512)
             guard header.count >= 512 else { throw DiskFSError.truncated }
-            let sig = readUInt16BE(header, 0)
+            let sig = DiffsplitterBinaryIO.readUInt16BE(header, 0)
             guard sig == 0x482B || sig == 0x4858 else { throw DiskFSError.noFilesystem }
-            let blockSize = readUInt32BE(header, 0x28)
+            let blockSize = DiffsplitterBinaryIO.readUInt32BE(header, 0x28)
             guard blockSize >= 512, blockSize <= 64 * 1024 else { throw DiskFSError.truncated }
 
             let catalog = try Self.parseForkData(header, offset: 0x110)
@@ -273,9 +273,9 @@ nonisolated enum DiffsplitterDiskFS {
         private func enumerateCatalog(_ body: (CatalogRec) throws -> Void) throws {
             let headerNode = try readForkRange(catalogFile, offset: 0, length: 512)
             guard headerNode.count >= 144 else { throw DiskFSError.truncated }
-            let nodeSize = Int(readUInt16BE(headerNode, 32))
-            let rootNode = UInt32(readUInt32BE(headerNode, 24))
-            let firstLeaf = UInt32(readUInt32BE(headerNode, 36))
+            let nodeSize = Int(DiffsplitterBinaryIO.readUInt16BE(headerNode, 32))
+            let rootNode = UInt32(DiffsplitterBinaryIO.readUInt32BE(headerNode, 24))
+            let firstLeaf = UInt32(DiffsplitterBinaryIO.readUInt32BE(headerNode, 36))
             guard nodeSize >= 512, nodeSize <= 32 * 1024 else { throw DiskFSError.truncated }
             var nodeNum = firstLeaf != 0 ? firstLeaf : rootNode
             var parentNames: [UInt32: String] = [1: ""]
@@ -291,17 +291,17 @@ nonisolated enum DiffsplitterDiskFS {
                 )
                 guard nodeData.count == nodeSize else { throw DiskFSError.truncated }
                 let kind = nodeData[8]
-                let numRecords = Int(readUInt16BE(nodeData, 10))
+                let numRecords = Int(DiffsplitterBinaryIO.readUInt16BE(nodeData, 10))
                 if kind == 0xFF {
                     for i in 0..<numRecords {
-                        let recOffset = Int(readUInt16BE(nodeData, nodeSize - 2 * (i + 1)))
+                        let recOffset = Int(DiffsplitterBinaryIO.readUInt16BE(nodeData, nodeSize - 2 * (i + 1)))
                         guard recOffset + 2 <= nodeSize else { continue }
 
-                        let keyLen = Int(readUInt16BE(nodeData, recOffset))
+                        let keyLen = Int(DiffsplitterBinaryIO.readUInt16BE(nodeData, recOffset))
                         let keyStart = recOffset + 2
                         guard keyStart + keyLen <= nodeSize else { continue }
-                        let parentID = readUInt32BE(nodeData, keyStart)
-                        let nameLen = Int(readUInt16BE(nodeData, keyStart + 4))
+                        let parentID = DiffsplitterBinaryIO.readUInt32BE(nodeData, keyStart)
+                        let nameLen = Int(DiffsplitterBinaryIO.readUInt16BE(nodeData, keyStart + 4))
                         let nameBytesStart = keyStart + 6
                         let nameByteCount = nameLen * 2
                         guard nameBytesStart + nameByteCount <= keyStart + keyLen else { continue }
@@ -310,11 +310,11 @@ nonisolated enum DiffsplitterDiskFS {
                         let dataStart = keyStart + keyLen
                         let aligned = (dataStart + 1) & ~1
                         guard aligned + 2 <= nodeSize else { continue }
-                        let recordType = readUInt16BE(nodeData, aligned)
+                        let recordType = DiffsplitterBinaryIO.readUInt16BE(nodeData, aligned)
                         let parentPath = parentNames[parentID] ?? ""
                         let path = parentPath.isEmpty ? name : "\(parentPath)/\(name)"
                         if recordType == 1 {
-                            let folderID = readUInt32BE(nodeData, aligned + 8)
+                            let folderID = DiffsplitterBinaryIO.readUInt32BE(nodeData, aligned + 8)
                             parentNames[folderID] = path
                             try body(
                                 CatalogRec(
@@ -326,7 +326,7 @@ nonisolated enum DiffsplitterDiskFS {
                                 )
                             )
                         } else if recordType == 2 {
-                            let fileID = readUInt32BE(nodeData, aligned + 8)
+                            let fileID = DiffsplitterBinaryIO.readUInt32BE(nodeData, aligned + 8)
 
                             let forkOffset = aligned + 0x58
                             guard forkOffset + 80 <= nodeSize else { continue }
@@ -342,7 +342,7 @@ nonisolated enum DiffsplitterDiskFS {
                             )
                         }
                     }
-                    let flink = readUInt32BE(nodeData, 0)
+                    let flink = DiffsplitterBinaryIO.readUInt32BE(nodeData, 0)
                     nodeNum = flink
                 } else {
                     break
@@ -389,14 +389,14 @@ nonisolated enum DiffsplitterDiskFS {
         }
 
         private static func parseForkData(_ data: Data, offset: Int) throws -> ForkData {
-            let logicalSize = readUInt64BE(data, offset)
+            let logicalSize = DiffsplitterBinaryIO.readUInt64BE(data, offset)
             var extents: [(UInt32, UInt32)] = []
 
             for i in 0..<8 {
                 let eo = offset + 16 + i * 8
                 guard eo + 8 <= data.count else { break }
-                let start = readUInt32BE(data, eo)
-                let count = readUInt32BE(data, eo + 4)
+                let start = DiffsplitterBinaryIO.readUInt32BE(data, eo)
+                let count = DiffsplitterBinaryIO.readUInt32BE(data, eo + 4)
                 if count == 0 { break }
                 extents.append((start, count))
             }
@@ -456,51 +456,5 @@ nonisolated enum DiffsplitterDiskFS {
             case .readFailed(let detail): return .readFailed(detail)
             }
         }
-    }
-
-    fileprivate static func readUInt16BE(_ data: Data, _ offset: Int) -> UInt16 {
-        UInt16(data[offset]) << 8 | UInt16(data[offset + 1])
-    }
-
-    fileprivate static func readUInt32BE(_ data: Data, _ offset: Int) -> UInt32 {
-        UInt32(data[offset]) << 24
-            | UInt32(data[offset + 1]) << 16
-            | UInt32(data[offset + 2]) << 8
-            | UInt32(data[offset + 3])
-    }
-
-    fileprivate static func readUInt64BE(_ data: Data, _ offset: Int) -> UInt64 {
-        var value: UInt64 = 0
-        for i in 0..<8 {
-            value = (value << 8) | UInt64(data[offset + i])
-        }
-        return value
-    }
-
-    fileprivate static func readUInt16LE(_ data: Data, _ offset: Int) -> UInt16 {
-        UInt16(data[offset]) | UInt16(data[offset + 1]) << 8
-    }
-
-    fileprivate static func readUInt32LE(_ data: Data, _ offset: Int) -> UInt32 {
-        UInt32(data[offset])
-            | UInt32(data[offset + 1]) << 8
-            | UInt32(data[offset + 2]) << 16
-            | UInt32(data[offset + 3]) << 24
-    }
-
-    fileprivate static func readUInt64LE(_ data: Data, _ offset: Int) -> UInt64 {
-        var value: UInt64 = 0
-        for i in 0..<8 {
-            value |= UInt64(data[offset + i]) << (8 * i)
-        }
-        return value
-    }
-}
-
-private extension Data {
-    func prefix(while predicate: (UInt8) -> Bool) -> Data {
-        var end = 0
-        while end < count && predicate(self[end]) { end += 1 }
-        return subdata(in: 0..<end)
     }
 }

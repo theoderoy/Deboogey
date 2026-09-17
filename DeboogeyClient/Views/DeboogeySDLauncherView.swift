@@ -132,7 +132,7 @@ struct DeboogeySDLauncherView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         }
-        .frame(width: 520, height: 540)
+        .frame(width: AppWindowSizing.skyLightDiagnostics.defaultSize.width, height: AppWindowSizing.skyLightDiagnostics.defaultSize.height)
         .navigationTitle(L10n.t("SkyLight Diagnostics"))
     }
 

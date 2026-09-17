@@ -174,7 +174,7 @@ private struct MCEEntityTrackerScene: Scene {
             .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
-        .defaultSize(width: 560, height: 480)
+        .defaultSize(width: AppWindowSizing.entityTracker.defaultSize.width, height: AppWindowSizing.entityTracker.defaultSize.height)
         .windowResizability(.contentSize)
     }
 }

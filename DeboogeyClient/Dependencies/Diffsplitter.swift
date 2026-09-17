@@ -93,16 +93,16 @@ nonisolated enum DiffsplitterZip {
             guard remaining >= 46 else { break }
             let header = try readExact(handle, count: 46)
             remaining -= 46
-            guard readUInt32LE(header, 0) == 0x0201_4B50 else { throw ZipError.invalidSignature }
-            let gpFlag = readUInt16LE(header, 8)
-            let method = readUInt16LE(header, 10)
-            let crc = readUInt32LE(header, 16)
-            var compressed = UInt64(readUInt32LE(header, 20))
-            var uncompressed = UInt64(readUInt32LE(header, 24))
-            let nameLen = Int(readUInt16LE(header, 28))
-            let extraLen = Int(readUInt16LE(header, 30))
-            let commentLen = Int(readUInt16LE(header, 32))
-            var localOffset = UInt64(readUInt32LE(header, 42))
+            guard DiffsplitterBinaryIO.readUInt32LE(header, 0) == 0x0201_4B50 else { throw ZipError.invalidSignature }
+            let gpFlag = DiffsplitterBinaryIO.readUInt16LE(header, 8)
+            let method = DiffsplitterBinaryIO.readUInt16LE(header, 10)
+            let crc = DiffsplitterBinaryIO.readUInt32LE(header, 16)
+            var compressed = UInt64(DiffsplitterBinaryIO.readUInt32LE(header, 20))
+            var uncompressed = UInt64(DiffsplitterBinaryIO.readUInt32LE(header, 24))
+            let nameLen = Int(DiffsplitterBinaryIO.readUInt16LE(header, 28))
+            let extraLen = Int(DiffsplitterBinaryIO.readUInt16LE(header, 30))
+            let commentLen = Int(DiffsplitterBinaryIO.readUInt16LE(header, 32))
+            var localOffset = UInt64(DiffsplitterBinaryIO.readUInt32LE(header, 42))
             let nameData = try readExact(handle, count: nameLen)
             remaining -= UInt64(nameLen)
             let extra = try readExact(handle, count: extraLen)
@@ -239,9 +239,9 @@ nonisolated enum DiffsplitterZip {
         defer { try? handle.close() }
         try handle.seek(toOffset: entry.localHeaderOffset)
         let local = try readExact(handle, count: 30)
-        guard readUInt32LE(local, 0) == 0x0403_4B50 else { throw ZipError.invalidSignature }
-        let nameLen = Int(readUInt16LE(local, 26))
-        let extraLen = Int(readUInt16LE(local, 28))
+        guard DiffsplitterBinaryIO.readUInt32LE(local, 0) == 0x0403_4B50 else { throw ZipError.invalidSignature }
+        let nameLen = Int(DiffsplitterBinaryIO.readUInt16LE(local, 26))
+        let extraLen = Int(DiffsplitterBinaryIO.readUInt16LE(local, 28))
         _ = try readExact(handle, count: nameLen + extraLen)
         progress?(0, expectedBytes ?? entry.uncompressedSize)
         switch entry.compressionMethod {
@@ -280,7 +280,7 @@ nonisolated enum DiffsplitterZip {
         var eocdIndex: Int?
         if tail.count >= 22 {
             for i in stride(from: tail.count - 22, through: 0, by: -1) {
-                if readUInt32LE(tail, i) == 0x0605_4B50 {
+                if DiffsplitterBinaryIO.readUInt32LE(tail, i) == 0x0605_4B50 {
                     eocdIndex = i
                     break
                 }
@@ -288,10 +288,10 @@ nonisolated enum DiffsplitterZip {
         }
         guard let eocd = eocdIndex else { throw ZipError.invalidSignature }
         let absoluteEOCD = start + UInt64(eocd)
-        let diskEntries = readUInt16LE(tail, eocd + 8)
-        let totalEntries16 = readUInt16LE(tail, eocd + 10)
-        let cdSize32 = readUInt32LE(tail, eocd + 12)
-        let cdOffset32 = readUInt32LE(tail, eocd + 16)
+        let diskEntries = DiffsplitterBinaryIO.readUInt16LE(tail, eocd + 8)
+        let totalEntries16 = DiffsplitterBinaryIO.readUInt16LE(tail, eocd + 10)
+        let cdSize32 = DiffsplitterBinaryIO.readUInt32LE(tail, eocd + 12)
+        let cdOffset32 = DiffsplitterBinaryIO.readUInt32LE(tail, eocd + 16)
         if totalEntries16 == 0xFFFF || cdSize32 == 0xFFFF_FFFF || cdOffset32 == 0xFFFF_FFFF || diskEntries == 0xFFFF {
             return try locateZIP64CentralDirectory(handle: handle, eocdOffset: absoluteEOCD)
         }
@@ -305,14 +305,14 @@ nonisolated enum DiffsplitterZip {
         let locatorOffset = eocdOffset - 20
         try handle.seek(toOffset: locatorOffset)
         let locator = try readExact(handle, count: 20)
-        guard readUInt32LE(locator, 0) == 0x0706_4B50 else { throw ZipError.invalidSignature }
-        let zip64EOCDOffset = readUInt64LE(locator, 8)
+        guard DiffsplitterBinaryIO.readUInt32LE(locator, 0) == 0x0706_4B50 else { throw ZipError.invalidSignature }
+        let zip64EOCDOffset = DiffsplitterBinaryIO.readUInt64LE(locator, 8)
         try handle.seek(toOffset: zip64EOCDOffset)
         let header = try readExact(handle, count: 56)
-        guard readUInt32LE(header, 0) == 0x0606_4B50 else { throw ZipError.invalidSignature }
-        let entries = readUInt64LE(header, 32)
-        let cdSize = readUInt64LE(header, 40)
-        let cdOffset = readUInt64LE(header, 48)
+        guard DiffsplitterBinaryIO.readUInt32LE(header, 0) == 0x0606_4B50 else { throw ZipError.invalidSignature }
+        let entries = DiffsplitterBinaryIO.readUInt64LE(header, 32)
+        let cdSize = DiffsplitterBinaryIO.readUInt64LE(header, 40)
+        let cdOffset = DiffsplitterBinaryIO.readUInt64LE(header, 48)
         return (cdOffset, cdSize, entries)
     }
     private static func applyZIP64Extra(
@@ -323,22 +323,22 @@ nonisolated enum DiffsplitterZip {
     ) {
         var i = 0
         while i + 4 <= extra.count {
-            let headerID = readUInt16LE(extra, i)
-            let size = Int(readUInt16LE(extra, i + 2))
+            let headerID = DiffsplitterBinaryIO.readUInt16LE(extra, i)
+            let size = Int(DiffsplitterBinaryIO.readUInt16LE(extra, i + 2))
             i += 4
             guard i + size <= extra.count else { return }
             if headerID == 0x0001 {
                 var cursor = i
                 if uncompressed == 0xFFFF_FFFF, cursor + 8 <= i + size {
-                    uncompressed = readUInt64LE(extra, cursor)
+                    uncompressed = DiffsplitterBinaryIO.readUInt64LE(extra, cursor)
                     cursor += 8
                 }
                 if compressed == 0xFFFF_FFFF, cursor + 8 <= i + size {
-                    compressed = readUInt64LE(extra, cursor)
+                    compressed = DiffsplitterBinaryIO.readUInt64LE(extra, cursor)
                     cursor += 8
                 }
                 if localOffset == 0xFFFF_FFFF, cursor + 8 <= i + size {
-                    localOffset = readUInt64LE(extra, cursor)
+                    localOffset = DiffsplitterBinaryIO.readUInt64LE(extra, cursor)
                 }
                 return
             }
@@ -437,18 +437,6 @@ nonisolated enum DiffsplitterZip {
             throw ZipError.truncated
         }
         return data
-    }
-    private static func readUInt16LE(_ data: Data, _ offset: Int) -> UInt16 {
-        UInt16(data[offset]) | (UInt16(data[offset + 1]) << 8)
-    }
-    private static func readUInt32LE(_ data: Data, _ offset: Int) -> UInt32 {
-        UInt32(data[offset])
-            | (UInt32(data[offset + 1]) << 8)
-            | (UInt32(data[offset + 2]) << 16)
-            | (UInt32(data[offset + 3]) << 24)
-    }
-    private static func readUInt64LE(_ data: Data, _ offset: Int) -> UInt64 {
-        UInt64(readUInt32LE(data, offset)) | (UInt64(readUInt32LE(data, offset + 4)) << 32)
     }
 }
 nonisolated enum DiffsplitterImage4 {
@@ -580,20 +568,10 @@ nonisolated enum DiffsplitterImage4 {
             default: break
             }
         }
-        if let fourCC = fourCC(from: tag), tagClass != .universal {
+        if let fourCC = DiffsplitterImage4FourCC.string(from: tag), tagClass != .universal {
             return "[\(fourCC)]"
         }
         return "TAG(\(tagClass.rawValue):\(tag))"
-    }
-    private static func fourCC(from tag: UInt32) -> String? {
-        let bytes = [
-            UInt8((tag >> 24) & 0xff),
-            UInt8((tag >> 16) & 0xff),
-            UInt8((tag >> 8) & 0xff),
-            UInt8(tag & 0xff)
-        ]
-        guard bytes.allSatisfy({ (0x20...0x7E).contains($0) }) else { return nil }
-        return String(bytes: bytes, encoding: .ascii)
     }
     private static func integerDescription(_ value: Data) -> String {
         if value.isEmpty { return "0" }
@@ -618,7 +596,7 @@ nonisolated enum DiffsplitterImage4 {
         return parts.joined(separator: ".")
     }
     private static func sha256Hex(_ data: Data) -> String {
-        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        DiffsplitterBinaryIO.sha256Hex(data)
     }
 }
 private nonisolated enum DERTagClass: UInt8 {
@@ -2356,12 +2334,7 @@ nonisolated enum DiffsplitterContainer {
         }
     }
     static func zipStubMetadata(at url: URL) -> DiffsplitterZipMember? {
-        let metaURL = DiffsplitterContainerSession.sidecarURL(forStub: url)
-        guard let data = try? Data(contentsOf: metaURL),
-              let meta = try? JSONDecoder().decode(DiffsplitterContainerSession.StubSidecar.self, from: data),
-              meta.kind == .zip else {
-            return nil
-        }
+        guard let meta = stubSidecar(at: url), meta.kind == .zip else { return nil }
         return DiffsplitterZipMember(
             archiveURL: URL(fileURLWithPath: meta.archivePath),
             memberPath: meta.memberPath,
@@ -2370,51 +2343,53 @@ nonisolated enum DiffsplitterContainer {
         )
     }
     static func diskStubMetadata(at url: URL) -> DiffsplitterDiskMember? {
-        let metaURL = DiffsplitterContainerSession.sidecarURL(forStub: url)
-        guard let data = try? Data(contentsOf: metaURL),
-              let meta = try? JSONDecoder().decode(DiffsplitterContainerSession.StubSidecar.self, from: data),
-              meta.kind == .dmg else {
-            return nil
-        }
+        guard let meta = stubSidecar(at: url), meta.kind == .dmg else { return nil }
         return DiffsplitterDiskMember(
             imageURL: URL(fileURLWithPath: meta.archivePath),
             memberPath: meta.memberPath,
             uncompressedSize: meta.uncompressedSize
         )
     }
+    private static func stubSidecar(at url: URL) -> DiffsplitterContainerSession.StubSidecar? {
+        let metaURL = DiffsplitterContainerSession.sidecarURL(forStub: url)
+        guard let data = try? Data(contentsOf: metaURL),
+              let meta = try? JSONDecoder().decode(DiffsplitterContainerSession.StubSidecar.self, from: data) else {
+            return nil
+        }
+        return meta
+    }
     static func resolvedFileURL(
         for url: URL,
         session: DiffsplitterContainerSession?,
         progress: DiffsplitterContent.MaterializeProgress? = nil
     ) throws -> URL {
-        if zipStubMetadata(at: url) == nil && diskStubMetadata(at: url) == nil {
-            return url
-        }
+        guard let meta = stubSidecar(at: url) else { return url }
         if let session {
             return try session.materializeZipMember(forStubURL: url, progress: progress)
         }
         let temp = FileManager.default.temporaryDirectory
             .appendingPathComponent("Diffsplitter-materialize-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)
-        if let member = zipStubMetadata(at: url) {
-            let outURL = temp.appendingPathComponent((member.memberPath as NSString).lastPathComponent)
+        switch meta.kind {
+        case .zip:
+            let outURL = temp.appendingPathComponent((meta.memberPath as NSString).lastPathComponent)
             try extractZipMember(
-                archive: member.archiveURL,
-                memberPath: member.memberPath,
+                archive: URL(fileURLWithPath: meta.archivePath),
+                memberPath: meta.memberPath,
                 to: outURL,
-                expectedBytes: member.uncompressedSize,
+                expectedBytes: meta.uncompressedSize,
                 progress: progress
             )
             return outURL
-        }
-        if let disk = diskStubMetadata(at: url) {
-            let volume = try DiffsplitterContainerServices.backend.openDiskImage(disk.imageURL)
-            let data = try volume.readFile(path: disk.memberPath)
-            let outURL = temp.appendingPathComponent((disk.memberPath as NSString).lastPathComponent)
+        case .dmg:
+            let volume = try DiffsplitterContainerServices.backend.openDiskImage(
+                URL(fileURLWithPath: meta.archivePath)
+            )
+            let data = try volume.readFile(path: meta.memberPath)
+            let outURL = temp.appendingPathComponent((meta.memberPath as NSString).lastPathComponent)
             try data.write(to: outURL, options: .atomic)
             return outURL
         }
-        return url
     }
     static func extractZipMember(
         archive: URL,
@@ -2458,7 +2433,7 @@ nonisolated enum DiffsplitterContainer {
         preferDiskTemp: Bool,
         progress: DiffsplitterContent.MaterializeProgress? = nil
     ) throws -> DiffsplitterBinaryDump.ByteSource {
-        guard zipStubMetadata(at: url) != nil || diskStubMetadata(at: url) != nil else {
+        guard let meta = stubSidecar(at: url) else {
             return .file(url)
         }
         if preferDiskTemp {
@@ -2469,21 +2444,22 @@ nonisolated enum DiffsplitterContainer {
             let data = try session.materializeZipMemberToMemory(forStubURL: url, progress: progress)
             return .memory(DiffsplitterBinaryDump.MemoryBuffer(data))
         }
-        if let member = zipStubMetadata(at: url) {
+        switch meta.kind {
+        case .zip:
             let data = try extractZipMemberToMemory(
-                archive: member.archiveURL,
-                memberPath: member.memberPath,
-                expectedBytes: member.uncompressedSize,
+                archive: URL(fileURLWithPath: meta.archivePath),
+                memberPath: meta.memberPath,
+                expectedBytes: meta.uncompressedSize,
                 progress: progress
             )
             return .memory(DiffsplitterBinaryDump.MemoryBuffer(data))
-        }
-        if let disk = diskStubMetadata(at: url) {
-            let volume = try DiffsplitterContainerServices.backend.openDiskImage(disk.imageURL)
-            let data = try volume.readFile(path: disk.memberPath)
+        case .dmg:
+            let volume = try DiffsplitterContainerServices.backend.openDiskImage(
+                URL(fileURLWithPath: meta.archivePath)
+            )
+            let data = try volume.readFile(path: meta.memberPath)
             return .memory(DiffsplitterBinaryDump.MemoryBuffer(data))
         }
-        return .file(url)
     }
     private static func runPkgExpand(package: URL, into destination: URL) throws {
         do {
@@ -3374,6 +3350,31 @@ nonisolated struct DiffsplitterIndexProgress: Sendable, Equatable {
     var status: String
 }
 
+nonisolated struct DiffsplitterPublishThrottle {
+    private var lastPublish: CFAbsoluteTime = 0
+    private let minInterval: CFAbsoluteTime
+
+    init(hz: CFAbsoluteTime = 12) {
+        self.minInterval = 1.0 / hz
+    }
+
+    mutating func reset() {
+        lastPublish = 0
+    }
+
+    mutating func mark(now: CFAbsoluteTime = CFAbsoluteTimeGetCurrent()) {
+        lastPublish = now
+    }
+
+    mutating func shouldPublish(now: CFAbsoluteTime = CFAbsoluteTimeGetCurrent()) -> Bool {
+        if now - lastPublish >= minInterval {
+            lastPublish = now
+            return true
+        }
+        return false
+    }
+}
+
 nonisolated final class DiffsplitterIndexProgressReporter: @unchecked Sendable {
     enum Side: Sendable {
         case left
@@ -3387,8 +3388,7 @@ nonisolated final class DiffsplitterIndexProgressReporter: @unchecked Sendable {
     private var rightFraction = 0.0
     private var compareFraction = 0.0
     private var status = L10n.t("Comparing…")
-    private var lastPublish: CFAbsoluteTime = 0
-    private let minInterval: CFAbsoluteTime = 1.0 / 12.0
+    private var publishThrottle = DiffsplitterPublishThrottle()
     private let onUpdate: @Sendable (DiffsplitterIndexProgress) -> Void
     init(onUpdate: @escaping @Sendable (DiffsplitterIndexProgress) -> Void) {
         self.onUpdate = onUpdate
@@ -3408,7 +3408,7 @@ nonisolated final class DiffsplitterIndexProgressReporter: @unchecked Sendable {
         }
         status = label
         let snapshot = currentProgressLocked()
-        lastPublish = 0
+        publishThrottle.reset()
         lock.unlock()
         onUpdate(snapshot)
     }
@@ -3439,7 +3439,7 @@ nonisolated final class DiffsplitterIndexProgressReporter: @unchecked Sendable {
         }
         status = label
         let snapshot = currentProgressLocked()
-        let shouldPublish = shouldPublishLocked()
+        let shouldPublish = publishThrottle.shouldPublish()
         lock.unlock()
         if shouldPublish {
             onUpdate(snapshot)
@@ -3453,7 +3453,7 @@ nonisolated final class DiffsplitterIndexProgressReporter: @unchecked Sendable {
         }
         status = L10n.t("Comparing files…")
         let snapshot = currentProgressLocked()
-        lastPublish = 0
+        publishThrottle.reset()
         lock.unlock()
         onUpdate(snapshot)
     }
@@ -3468,7 +3468,7 @@ nonisolated final class DiffsplitterIndexProgressReporter: @unchecked Sendable {
         compareFraction = fraction
         status = L10n.t("Comparing files…")
         let snapshot = currentProgressLocked()
-        let shouldPublish = shouldPublishLocked() || completed >= total
+        let shouldPublish = publishThrottle.shouldPublish() || completed >= total
         lock.unlock()
         if shouldPublish {
             onUpdate(snapshot)
@@ -3494,21 +3494,12 @@ nonisolated final class DiffsplitterIndexProgressReporter: @unchecked Sendable {
             status: status
         )
     }
-    private func shouldPublishLocked() -> Bool {
-        let now = CFAbsoluteTimeGetCurrent()
-        if now - lastPublish >= minInterval {
-            lastPublish = now
-            return true
-        }
-        return false
-    }
 }
 
 nonisolated final class DiffsplitterProgressPublisher: @unchecked Sendable {
     private let lock = NSLock()
-    private var lastPublish: CFAbsoluteTime = 0
+    private var publishThrottle = DiffsplitterPublishThrottle()
     private var lastStatus: String?
-    private let minInterval: CFAbsoluteTime = 1.0 / 12.0
     private let onUpdate: @Sendable (DiffsplitterIndexProgress) -> Void
     init(onUpdate: @escaping @Sendable (DiffsplitterIndexProgress) -> Void) {
         self.onUpdate = onUpdate
@@ -3523,23 +3514,15 @@ nonisolated final class DiffsplitterProgressPublisher: @unchecked Sendable {
         lastStatus = status
         let shouldPublish: Bool
         if force || statusChanged {
-            lastPublish = CFAbsoluteTimeGetCurrent()
+            publishThrottle.mark()
             shouldPublish = true
         } else {
-            shouldPublish = shouldPublishLocked()
+            shouldPublish = publishThrottle.shouldPublish()
         }
         lock.unlock()
         if shouldPublish {
             onUpdate(snapshot)
         }
-    }
-    private func shouldPublishLocked() -> Bool {
-        let now = CFAbsoluteTimeGetCurrent()
-        if now - lastPublish >= minInterval {
-            lastPublish = now
-            return true
-        }
-        return false
     }
 }
 

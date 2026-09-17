@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import zlib
 import Compression
 
 nonisolated enum DiffsplitterXAR {
@@ -74,10 +73,7 @@ nonisolated enum DiffsplitterXAR {
     }
 
     static func looksLikeFile(at url: URL) -> Bool {
-        guard let handle = try? FileHandle(forReadingFrom: url) else { return false }
-        defer { try? handle.close() }
-        guard let header = try? handle.read(upToCount: 4), header.count == 4 else { return false }
-        return header == magic
+        DiffsplitterBinaryIO.fileMatchesMagic(at: url, magic: magic)
     }
 
     static func listEntries(archive: URL) throws -> [Entry] {
@@ -171,11 +167,11 @@ nonisolated enum DiffsplitterXAR {
             throw XARError.truncated
         }
         guard headerBytes.starts(with: magic) else { throw XARError.invalidMagic }
-        let headerSize = readUInt16BE(headerBytes, 4)
-        let version = readUInt16BE(headerBytes, 6)
+        let headerSize = DiffsplitterBinaryIO.readUInt16BE(headerBytes, 4)
+        let version = DiffsplitterBinaryIO.readUInt16BE(headerBytes, 6)
         guard version == 1 else { throw XARError.unsupportedVersion(version) }
-        let tocCompressed = readUInt64BE(headerBytes, 8)
-        let tocUncompressed = readUInt64BE(headerBytes, 16)
+        let tocCompressed = DiffsplitterBinaryIO.readUInt64BE(headerBytes, 8)
+        let tocUncompressed = DiffsplitterBinaryIO.readUInt64BE(headerBytes, 16)
         guard tocCompressed > 0, tocUncompressed > 0, tocUncompressed < 64 * 1024 * 1024 else {
             throw XARError.truncated
         }
@@ -413,39 +409,16 @@ nonisolated enum DiffsplitterXAR {
     }
 
     private static func inflateBuffer(_ data: Data, windowBits: Int32, expectedSize: Int) throws -> Data {
-        var stream = z_stream()
-        var status = inflateInit2_(&stream, windowBits, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size))
-        guard status == Z_OK else { throw XARError.tocInflateFailed }
-        defer { inflateEnd(&stream) }
-        var output = Data(count: max(expectedSize, 1))
-        var written = 0
-        try data.withUnsafeBytes { (src: UnsafeRawBufferPointer) in
-            guard let srcBase = src.bindMemory(to: Bytef.self).baseAddress else {
-                throw XARError.tocInflateFailed
-            }
-            stream.next_in = UnsafeMutablePointer(mutating: srcBase)
-            stream.avail_in = uInt(data.count)
-            while true {
-                if written >= output.count {
-                    output.count += max(64 * 1024, expectedSize / 4)
-                }
-                let capacity = output.count
-                let availOut = uInt(capacity - written)
-                let result: Int = output.withUnsafeMutableBytes { dst in
-                    let base = dst.bindMemory(to: Bytef.self).baseAddress!.advanced(by: written)
-                    stream.next_out = base
-                    stream.avail_out = availOut
-                    status = zlib.inflate(&stream, Z_NO_FLUSH)
-                    return Int(status)
-                }
-                written = capacity - Int(stream.avail_out)
-                if result == Z_STREAM_END { break }
-                if result != Z_OK { throw XARError.tocInflateFailed }
-                if stream.avail_in == 0 && stream.avail_out > 0 { break }
-            }
+        do {
+            return try DiffsplitterBinaryIO.inflateZlib(
+                data,
+                windowBits: windowBits,
+                initialCapacity: max(expectedSize, 1),
+                growBy: max(64 * 1024, expectedSize / 4)
+            )
+        } catch {
+            throw XARError.tocInflateFailed
         }
-        output.count = written
-        return output
     }
 
     private static func decompressLZMA(_ data: Data, expectedSize: Int) throws -> Data {
@@ -471,17 +444,5 @@ nonisolated enum DiffsplitterXAR {
         }
         destination.count = written
         return destination
-    }
-
-    private static func readUInt16BE(_ data: Data, _ offset: Int) -> UInt16 {
-        UInt16(data[offset]) << 8 | UInt16(data[offset + 1])
-    }
-
-    private static func readUInt64BE(_ data: Data, _ offset: Int) -> UInt64 {
-        var value: UInt64 = 0
-        for i in 0..<8 {
-            value = (value << 8) | UInt64(data[offset + i])
-        }
-        return value
     }
 }

@@ -614,29 +614,24 @@ struct LoupeMachineView: View {
             importError = nil
             unlockAllCategories = document.containsNonMCECategories
 #if os(iOS)
-            load(document)
-            savedDocumentData = try currentDocument.encoded()
+            try adopt(document)
             draftStore.markSaved()
             return
 #else
             guard allowReinspect, !document.containsNonMCECategories else {
-                load(document)
-                savedDocumentData = try currentDocument.encoded()
+                try adopt(document)
                 return
             }
             guard let sourceURL = sourceApplicationURL(in: document, relativeTo: url) else {
-                load(document)
-                savedDocumentData = try currentDocument.encoded()
+                try adopt(document)
                 return
             }
             guard FileManager.default.fileExists(atPath: sourceURL.path) else {
-                load(document)
-                savedDocumentData = try currentDocument.encoded()
+                try adopt(document)
                 return
             }
 
-            load(document, sourceApplicationURL: sourceURL)
-            savedDocumentData = try currentDocument.encoded()
+            try adopt(document, sourceApplicationURL: sourceURL)
             isInspecting = true
             inspection?.cancel()
             let currentInspection = DeboogeyLoupeInspection()
@@ -657,8 +652,7 @@ struct LoupeMachineView: View {
                         recordCompletedIndex(for: sourceURL)
                         reconcileIfNeeded(document: document, upstreamFlags: upstreamFlags)
                     case .failure(let error):
-                        load(document, sourceApplicationURL: sourceURL)
-                        savedDocumentData = try? currentDocument.encoded()
+                        try? adopt(document, sourceApplicationURL: sourceURL)
                         documentError = error.localizedDescription
                     }
                 }
@@ -668,6 +662,14 @@ struct LoupeMachineView: View {
             resetSession()
             documentError = error.localizedDescription
         }
+    }
+
+    private func adopt(
+        _ document: LoupeMachineDocument,
+        sourceApplicationURL: URL? = nil
+    ) throws {
+        load(document, sourceApplicationURL: sourceApplicationURL)
+        savedDocumentData = try currentDocument.encoded()
     }
 
     private func reconcileIfNeeded(document: LoupeMachineDocument, upstreamFlags: [LoupeFlag]) {
@@ -1455,11 +1457,7 @@ private struct LoupeFlagSidebar: View {
 
             Divider()
 
-            ForEach(visibleCases) { option in
-                if category == option {
-                    flagList(for: option)
-                }
-            }
+            flagList(for: category)
 
             Divider()
 

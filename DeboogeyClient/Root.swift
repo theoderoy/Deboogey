@@ -180,7 +180,7 @@ private struct DeboogeyCDMLauncherScene: Scene {
             .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
-        .defaultSize(width: 520, height: 650)
+        .defaultSize(width: AppWindowSizing.cocoaDebugMenu.defaultSize.width, height: AppWindowSizing.cocoaDebugMenu.defaultSize.height)
         .windowResizability(.contentSize)
     }
 }
@@ -214,7 +214,7 @@ private struct DeboogeySDLauncherScene: Scene {
             .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
-        .defaultSize(width: 520, height: 540)
+        .defaultSize(width: AppWindowSizing.skyLightDiagnostics.defaultSize.width, height: AppWindowSizing.skyLightDiagnostics.defaultSize.height)
         .windowResizability(.contentSize)
     }
 }
@@ -229,7 +229,7 @@ private struct EntityTrackerScene: Scene {
             .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
-        .defaultSize(width: 560, height: 480)
+        .defaultSize(width: AppWindowSizing.entityTracker.defaultSize.width, height: AppWindowSizing.entityTracker.defaultSize.height)
         .windowResizability(.contentSize)
     }
 }
@@ -277,7 +277,6 @@ struct Root: App {
         self._sipSatisfied = State(
             initialValue: DebugVariables.pseudoSystemIntegrityProtection ? false : isSIPSatisfied
         )
-        print("csrutil: \(isSIPSatisfied)")
 
         PersistentVariables.registerDefaults()
         EntityTracker.shared.performConfiguredAutoRemoval()

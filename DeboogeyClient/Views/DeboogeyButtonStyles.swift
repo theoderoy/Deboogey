@@ -29,31 +29,27 @@ extension View {
     @ViewBuilder
     func deboogeyButtonStyle(tint color: Color, prominent: Bool = false) -> some View {
         if #available(macOS 26.0, iOS 26.0, *) {
-            if prominent {
-                self
-                    .buttonStyle(.glassProminent)
-                    .buttonBorderShape(.capsule)
-                    .controlSize(.large)
-                    .tint(color)
-            } else {
-                self
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.capsule)
-                    .controlSize(.large)
-                    .tint(color)
+            Group {
+                if prominent {
+                    self.buttonStyle(.glassProminent)
+                } else {
+                    self.buttonStyle(.glass)
+                }
             }
-        } else if prominent {
-            self
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle)
-                .controlSize(.large)
-                .tint(color)
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
+            .tint(color)
         } else {
-            self
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.roundedRectangle)
-                .controlSize(.large)
-                .tint(color)
+            Group {
+                if prominent {
+                    self.buttonStyle(.borderedProminent)
+                } else {
+                    self.buttonStyle(.bordered)
+                }
+            }
+            .buttonBorderShape(.roundedRectangle)
+            .controlSize(.large)
+            .tint(color)
         }
     }
 
@@ -95,12 +91,7 @@ struct DiffsplitterCompletionDurationControls: View {
             Group {
                 durationSlider
 #if os(iOS)
-                Toggle(isOn: $notifyWhenBackgrounded) {
-                    Text(L10n.t("Also notify immediately in the background"))
-                }
-                Text(L10n.t("Skips Minimum Duration during Live Activity and Background Process."))
-                    .font(.subheadline)
-                    .modifier(FooterForegroundModifier(useForegroundStyle: footerUsesForegroundStyle))
+                backgroundNotifyBlock
 #endif
             }
         }

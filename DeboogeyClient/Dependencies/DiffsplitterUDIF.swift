@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import zlib
 import Compression
 
 nonisolated final class DiffsplitterUDIFDisk: @unchecked Sendable {
@@ -86,10 +85,10 @@ nonisolated final class DiffsplitterUDIFDisk: @unchecked Sendable {
             return DiffsplitterUDIFDisk(handle: handle, virtualSize: fileSize, runs: [run])
         }
 
-        let dataForkOffset = readUInt64BE(trailer, 0x18)
-        let xmlOffset = readUInt64BE(trailer, 0xD8)
-        let xmlLength = readUInt64BE(trailer, 0xE0)
-        let sectorCount = readUInt64BE(trailer, 0x28)
+        let dataForkOffset = DiffsplitterBinaryIO.readUInt64BE(trailer, 0x18)
+        let xmlOffset = DiffsplitterBinaryIO.readUInt64BE(trailer, 0xD8)
+        let xmlLength = DiffsplitterBinaryIO.readUInt64BE(trailer, 0xE0)
+        let sectorCount = DiffsplitterBinaryIO.readUInt64BE(trailer, 0x28)
         let virtualSize = sectorCount * 512
 
         guard xmlOffset > 0, xmlLength > 0, xmlOffset + xmlLength <= fileSize else {
@@ -159,8 +158,16 @@ nonisolated final class DiffsplitterUDIFDisk: @unchecked Sendable {
     }
 
     private func run(containingSector sector: UInt64) -> BlockRun? {
-        for run in runs {
-            if sector >= run.sectorNumber && sector < run.sectorNumber + run.sectorCount {
+        var low = 0
+        var high = runs.count - 1
+        while low <= high {
+            let mid = (low + high) / 2
+            let run = runs[mid]
+            if sector < run.sectorNumber {
+                high = mid - 1
+            } else if sector >= run.sectorNumber + run.sectorCount {
+                low = mid + 1
+            } else {
                 return run
             }
         }
@@ -258,7 +265,7 @@ nonisolated final class DiffsplitterUDIFDisk: @unchecked Sendable {
         guard data.count >= 0xCC, data.starts(with: Data("mish".utf8)) else {
             throw UDIFError.missingBlkx
         }
-        let entryCount = Int(readUInt32BE(data, 0x54))
+        let entryCount = Int(DiffsplitterBinaryIO.readUInt32BE(data, 0x54))
         let tableStart = 0xCC
         let entrySize = 40
         guard tableStart + entryCount * entrySize <= data.count else {
@@ -267,12 +274,12 @@ nonisolated final class DiffsplitterUDIFDisk: @unchecked Sendable {
         var runs: [BlockRun] = []
         for i in 0..<entryCount {
             let o = tableStart + i * entrySize
-            let type = readUInt32BE(data, o)
+            let type = DiffsplitterBinaryIO.readUInt32BE(data, o)
             if type == blockTerminator || type == blockComment { continue }
-            let sectorNumber = readUInt64BE(data, o + 8)
-            let sectorCount = readUInt64BE(data, o + 16)
-            let compressedOffset = readUInt64BE(data, o + 24) + dataForkOffset
-            let compressedLength = readUInt64BE(data, o + 32)
+            let sectorNumber = DiffsplitterBinaryIO.readUInt64BE(data, o + 8)
+            let sectorCount = DiffsplitterBinaryIO.readUInt64BE(data, o + 16)
+            let compressedOffset = DiffsplitterBinaryIO.readUInt64BE(data, o + 24) + dataForkOffset
+            let compressedLength = DiffsplitterBinaryIO.readUInt64BE(data, o + 32)
             runs.append(
                 BlockRun(
                     type: type,
@@ -287,35 +294,18 @@ nonisolated final class DiffsplitterUDIFDisk: @unchecked Sendable {
     }
 
     private static func inflateZlib(_ data: Data, expectedSize: Int) throws -> Data {
-        var stream = z_stream()
-        var status = inflateInit2_(&stream, 15, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size))
-        guard status == Z_OK else { throw UDIFError.decompressFailed }
-        defer { inflateEnd(&stream) }
-        var output = Data(count: max(expectedSize, 1))
-        var written = 0
-        try data.withUnsafeBytes { (src: UnsafeRawBufferPointer) in
-            guard let srcBase = src.bindMemory(to: Bytef.self).baseAddress else {
-                throw UDIFError.decompressFailed
-            }
-            stream.next_in = UnsafeMutablePointer(mutating: srcBase)
-            stream.avail_in = uInt(data.count)
-            while true {
-                if written >= output.count { output.count += expectedSize }
-                let capacity = output.count
-                let availOut = uInt(capacity - written)
-                let result: Int = output.withUnsafeMutableBytes { dst in
-                    let base = dst.bindMemory(to: Bytef.self).baseAddress!.advanced(by: written)
-                    stream.next_out = base
-                    stream.avail_out = availOut
-                    status = zlib.inflate(&stream, Z_NO_FLUSH)
-                    return Int(status)
-                }
-                written = capacity - Int(stream.avail_out)
-                if result == Z_STREAM_END { break }
-                if result != Z_OK { throw UDIFError.decompressFailed }
-            }
+        var output: Data
+        do {
+            output = try DiffsplitterBinaryIO.inflateZlib(
+                data,
+                windowBits: 15,
+                initialCapacity: max(expectedSize, 1),
+                growBy: max(expectedSize, 1)
+            )
+        } catch {
+            throw UDIFError.decompressFailed
         }
-        output.count = min(written, expectedSize)
+        output.count = min(output.count, expectedSize)
         if output.count < expectedSize {
             output.append(Data(count: expectedSize - output.count))
         }
@@ -385,20 +375,5 @@ nonisolated final class DiffsplitterUDIFDisk: @unchecked Sendable {
             let byte = output[output.count - offset]
             output.append(byte)
         }
-    }
-
-    private static func readUInt32BE(_ data: Data, _ offset: Int) -> UInt32 {
-        UInt32(data[offset]) << 24
-            | UInt32(data[offset + 1]) << 16
-            | UInt32(data[offset + 2]) << 8
-            | UInt32(data[offset + 3])
-    }
-
-    private static func readUInt64BE(_ data: Data, _ offset: Int) -> UInt64 {
-        var value: UInt64 = 0
-        for i in 0..<8 {
-            value = (value << 8) | UInt64(data[offset + i])
-        }
-        return value
     }
 }

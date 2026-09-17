@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import zlib
 
 nonisolated enum DiffsplitterPKG {
     enum PKGError: LocalizedError {
@@ -91,41 +90,15 @@ nonisolated enum DiffsplitterPKG {
     }
 
     private static func inflateGzip(_ data: Data) throws -> Data {
-        var stream = z_stream()
-        var status = inflateInit2_(&stream, 15 + 32, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size))
-        guard status == Z_OK else {
+        do {
+            return try DiffsplitterBinaryIO.inflateZlib(
+                data,
+                windowBits: 15 + 32,
+                initialCapacity: max(data.count * 4, 64 * 1024),
+                growBy: 256 * 1024
+            )
+        } catch {
             throw PKGError.expandFailed("gzip")
         }
-        defer { inflateEnd(&stream) }
-        var output = Data(count: max(data.count * 4, 64 * 1024))
-        var written = 0
-        try data.withUnsafeBytes { (src: UnsafeRawBufferPointer) in
-            guard let srcBase = src.bindMemory(to: Bytef.self).baseAddress else {
-                throw PKGError.expandFailed("gzip")
-            }
-            stream.next_in = UnsafeMutablePointer(mutating: srcBase)
-            stream.avail_in = uInt(data.count)
-            while true {
-                if written >= output.count {
-                    output.count += 256 * 1024
-                }
-                let capacity = output.count
-                let availOut = uInt(capacity - written)
-                let result: Int = output.withUnsafeMutableBytes { dst in
-                    let base = dst.bindMemory(to: Bytef.self).baseAddress!.advanced(by: written)
-                    stream.next_out = base
-                    stream.avail_out = availOut
-                    status = zlib.inflate(&stream, Z_NO_FLUSH)
-                    return Int(status)
-                }
-                written = capacity - Int(stream.avail_out)
-                if result == Z_STREAM_END { break }
-                if result != Z_OK {
-                    throw PKGError.expandFailed("gzip")
-                }
-            }
-        }
-        output.count = written
-        return output
     }
 }

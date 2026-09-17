@@ -128,27 +128,13 @@ nonisolated enum DiffsplitterCPIO {
         let nameStart = offset + headerSize
         guard namesize > 0, nameStart + namesize <= data.count else { throw CPIOError.truncated }
         let nameBytes = data.subdata(in: nameStart..<(nameStart + namesize))
-        let name = String(bytes: nameBytes.dropLast(while: { $0 == 0 }), encoding: .utf8)
-            ?? String(bytes: nameBytes.dropLast(while: { $0 == 0 }), encoding: .isoLatin1)
-            ?? ""
+        let name = decodeName(nameBytes)
         var dataStart = nameStart + namesize
         dataStart = (dataStart + 3) & ~3
         guard dataStart + Int(filesize) <= data.count else { throw CPIOError.truncated }
         var dataEnd = dataStart + Int(filesize)
         dataEnd = (dataEnd + 3) & ~3
-        let isDir = (mode & 0o170000) == 0o040000
-        let isLink = (mode & 0o170000) == 0o120000
-        return (
-            Entry(
-                name: name,
-                isDirectory: isDir,
-                isSymlink: isLink,
-                mode: mode,
-                dataOffset: UInt64(dataStart),
-                dataSize: filesize
-            ),
-            dataEnd
-        )
+        return (makeEntry(name: name, mode: mode, dataOffset: UInt64(dataStart), dataSize: filesize), dataEnd)
     }
 
     private static func readODC(data: Data, at offset: Int) throws -> (Entry, Int) {
@@ -169,23 +155,30 @@ nonisolated enum DiffsplitterCPIO {
         let nameStart = offset + headerSize
         guard namesize > 0, nameStart + namesize <= data.count else { throw CPIOError.truncated }
         let nameBytes = data.subdata(in: nameStart..<(nameStart + namesize))
-        let name = String(bytes: nameBytes.dropLast(while: { $0 == 0 }), encoding: .utf8)
-            ?? String(bytes: nameBytes.dropLast(while: { $0 == 0 }), encoding: .isoLatin1)
-            ?? ""
+        let name = decodeName(nameBytes)
         let dataStart = nameStart + namesize
         guard dataStart + Int(filesize) <= data.count else { throw CPIOError.truncated }
-        let isDir = (mode & 0o170000) == 0o040000
-        let isLink = (mode & 0o170000) == 0o120000
         return (
-            Entry(
-                name: name,
-                isDirectory: isDir,
-                isSymlink: isLink,
-                mode: mode,
-                dataOffset: UInt64(dataStart),
-                dataSize: filesize
-            ),
+            makeEntry(name: name, mode: mode, dataOffset: UInt64(dataStart), dataSize: filesize),
             dataStart + Int(filesize)
+        )
+    }
+
+    private static func decodeName(_ nameBytes: Data) -> String {
+        let trimmed = nameBytes.dropLast(while: { $0 == 0 })
+        return String(bytes: trimmed, encoding: .utf8)
+            ?? String(bytes: trimmed, encoding: .isoLatin1)
+            ?? ""
+    }
+
+    private static func makeEntry(name: String, mode: UInt32, dataOffset: UInt64, dataSize: UInt64) -> Entry {
+        Entry(
+            name: name,
+            isDirectory: (mode & 0o170000) == 0o040000,
+            isSymlink: (mode & 0o170000) == 0o120000,
+            mode: mode,
+            dataOffset: dataOffset,
+            dataSize: dataSize
         )
     }
 

@@ -43,10 +43,7 @@ nonisolated enum DiffsplitterAEA {
     }
 
     static func looksLikeFile(at url: URL) -> Bool {
-        guard let handle = try? FileHandle(forReadingFrom: url) else { return false }
-        defer { try? handle.close() }
-        guard let header = try? handle.read(upToCount: 4), header.count == 4 else { return false }
-        return header == magic
+        DiffsplitterBinaryIO.fileMatchesMagic(at: url, magic: magic)
     }
 
     static func summarize(at url: URL) throws -> [String] {
@@ -92,7 +89,7 @@ nonisolated enum DiffsplitterAEA {
                 }
             }
         }
-        lines.append("prologue-sha256: \(sha256Hex(probe))")
+        lines.append("prologue-sha256: \(DiffsplitterBinaryIO.sha256Hex(probe))")
         lines.append("prologue-bytes: \(probe.count)")
         return lines
     }
@@ -336,19 +333,19 @@ nonisolated enum DiffsplitterAEA {
     private static func parseAuthDataKeys(_ data: Data) -> [String]? {
         guard data.count >= 4 else { return nil }
 
-        let count = Int(readUInt32LE(data, 0))
+        let count = Int(DiffsplitterBinaryIO.readUInt32LE(data, 0))
         guard count > 0, count < 512 else { return nil }
         var offset = 4
         var keys: [String] = []
         for _ in 0..<count {
             guard offset + 4 <= data.count else { return nil }
-            let keyLen = Int(readUInt32LE(data, offset))
+            let keyLen = Int(DiffsplitterBinaryIO.readUInt32LE(data, offset))
             offset += 4
             guard keyLen > 0, keyLen < 4096, offset + keyLen <= data.count else { return nil }
             let keyData = data.subdata(in: offset..<(offset + keyLen))
             offset += keyLen
             guard offset + 4 <= data.count else { return nil }
-            let valLen = Int(readUInt32LE(data, offset))
+            let valLen = Int(DiffsplitterBinaryIO.readUInt32LE(data, offset))
             offset += 4
             guard valLen >= 0, valLen < 16 * 1024 * 1024, offset + valLen <= data.count else { return nil }
             offset += valLen
@@ -357,16 +354,5 @@ nonisolated enum DiffsplitterAEA {
             }
         }
         return keys
-    }
-
-    private static func readUInt32LE(_ data: Data, _ offset: Int) -> UInt32 {
-        UInt32(data[offset])
-            | UInt32(data[offset + 1]) << 8
-            | UInt32(data[offset + 2]) << 16
-            | UInt32(data[offset + 3]) << 24
-    }
-
-    private static func sha256Hex(_ data: Data) -> String {
-        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 }

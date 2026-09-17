@@ -111,6 +111,43 @@ struct LauncherButton: View {
     }
 }
 
+#if os(macOS)
+private struct DisabledSkyLightLauncher: View {
+    var usesTertiaryStyle: Bool = false
+    let onHelp: () -> Void
+
+    var body: some View {
+        HStack {
+            LauncherButton(
+                title: "SkyLight Diagnostics",
+                icon: "macwindow",
+                color: .accentColor
+            ) { }
+            .disabled(true)
+
+            Button(action: onHelp) {
+                Image(systemName: "questionmark.circle")
+                    .font(.title2)
+                    .modifier(DisabledSkyLightHelpForeground(usesTertiaryStyle: usesTertiaryStyle))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+private struct DisabledSkyLightHelpForeground: ViewModifier {
+    let usesTertiaryStyle: Bool
+
+    func body(content: Content) -> some View {
+        if usesTertiaryStyle {
+            content.foregroundStyle(.tertiary)
+        } else {
+            content.foregroundColor(.secondary)
+        }
+    }
+}
+#endif
+
 struct RootView: View {
 #if DEBOOGEY_MCE
 #if os(iOS)
@@ -298,13 +335,13 @@ struct RootView: View {
             NavigationView {
                 EntityTrackerView()
             }
-            .frame(width: 560, height: 480)
+            .frame(width: AppWindowSizing.entityTracker.defaultSize.width, height: AppWindowSizing.entityTracker.defaultSize.height)
         }
         .sheet(isPresented: $showingDeboogeyCDMLauncher) {
             DeboogeyCDMLauncherView { arguments in
                 EntityTracker.shared.record(source: .deboogeyCDM, arguments: arguments)
             }
-            .frame(width: 520, height: 480)
+            .frame(width: AppWindowSizing.cocoaDebugMenu.defaultSize.width, height: AppWindowSizing.cocoaDebugMenu.defaultSize.height)
         }
         .sheet(isPresented: $showingWhatsNew) {
             WhatsNewView {
@@ -457,80 +494,24 @@ struct RootView: View {
                     if !DebugVariables.isMarketplaceCandidateEditionBuild {
                         if #available(macOS 13.0, *) {
                             if sipSatisfied {
-                                HStack {
-                                    LauncherButton(
-                                        title: "SkyLight Diagnostics",
-                                        icon: "macwindow",
-                                        color: .accentColor
-                                    ) { }
-                                        .disabled(true)
-
-                                    Button(action: {
-                                        activeAlert = .sipNotice
-                                    }) {
-                                        Image(systemName: "questionmark.circle")
-                                            .font(.title2)
-                                            .foregroundStyle(.tertiary)
-                                    }
-                                    .buttonStyle(.plain)
+                                DisabledSkyLightLauncher(usesTertiaryStyle: true) {
+                                    activeAlert = .sipNotice
                                 }
                             } else if !cltInstalled {
-                                HStack {
-                                    LauncherButton(
-                                        title: "SkyLight Diagnostics",
-                                        icon: "macwindow",
-                                        color: .accentColor
-                                    ) { }
-                                        .disabled(true)
-
-                                    Button(action: {
-                                        activeAlert = .cltNotice
-                                    }) {
-                                        Image(systemName: "questionmark.circle")
-                                            .font(.title2)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .buttonStyle(.plain)
+                                DisabledSkyLightLauncher {
+                                    activeAlert = .cltNotice
                                 }
                             } else {
                                 DeboogeySDWindowLauncher()
                             }
                         } else {
                             if sipSatisfied {
-                                HStack {
-                                    LauncherButton(
-                                        title: "SkyLight Diagnostics",
-                                        icon: "macwindow",
-                                        color: .accentColor
-                                    ) { }
-                                        .disabled(true)
-
-                                    Button(action: {
-                                        activeAlert = .sipNotice
-                                    }) {
-                                        Image(systemName: "questionmark.circle")
-                                            .font(.title2)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .buttonStyle(.plain)
+                                DisabledSkyLightLauncher {
+                                    activeAlert = .sipNotice
                                 }
                             } else if !cltInstalled {
-                                HStack {
-                                    LauncherButton(
-                                        title: "SkyLight Diagnostics",
-                                        icon: "macwindow",
-                                        color: .accentColor
-                                    ) { }
-                                        .disabled(true)
-
-                                    Button(action: {
-                                        activeAlert = .cltNotice
-                                    }) {
-                                        Image(systemName: "questionmark.circle")
-                                            .font(.title2)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .buttonStyle(.plain)
+                                DisabledSkyLightLauncher {
+                                    activeAlert = .cltNotice
                                 }
                             } else {
                                 LauncherButton(
@@ -695,7 +676,7 @@ struct RootView: View {
                     EntityTracker.shared.record(source: .wsOverlay, arguments: [argument])
                 }
             }
-            .frame(width: 520, height: 540)
+            .frame(width: AppWindowSizing.skyLightDiagnostics.defaultSize.width, height: AppWindowSizing.skyLightDiagnostics.defaultSize.height)
         }
         .sheet(isPresented: $showingDeboogeyCDMLauncher) {
             NavigationView {
@@ -703,13 +684,13 @@ struct RootView: View {
                     EntityTracker.shared.record(source: .deboogeyCDM, arguments: arguments)
                 }
             }
-            .frame(width: 520, height: 650)
+            .frame(width: AppWindowSizing.cocoaDebugMenu.defaultSize.width, height: AppWindowSizing.cocoaDebugMenu.defaultSize.height)
         }
         .sheet(isPresented: $showingEntityTracker) {
             NavigationView {
                 EntityTrackerView()
             }
-            .frame(width: 560, height: 480)
+            .frame(width: AppWindowSizing.entityTracker.defaultSize.width, height: AppWindowSizing.entityTracker.defaultSize.height)
         }
         .sheet(isPresented: $showingWhatsNew) {
             WhatsNewView {

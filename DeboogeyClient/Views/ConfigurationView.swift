@@ -63,19 +63,49 @@ private struct LegacyGroupedSection<Content: View>: View {
     }
 }
 
-private struct GeneralPanelView: View {
-    @ObservedObject var vm: ConfigurationViewModel
-#if !DEBOOGEY_MCE
-    @Environment(\.sipSatisfied) private var sipSatisfied
-#endif
-    @State private var showResetAlert = false
-    @State private var showResetPreferencesAlert = false
-    
+@ViewBuilder
+private func configurationSection<Content: View>(
+    header: String? = nil,
+    @ViewBuilder content: () -> Content
+) -> some View {
+    if #available(macOS 13.0, *) {
+        if let header {
+            Section(header: Text(L10n.t(header))) {
+                content()
+            }
+        } else {
+            Section {
+                content()
+            }
+        }
+    } else if let header {
+        LegacyGroupedSection(header: header) {
+            content()
+        }
+    } else {
+        VStack(alignment: .leading, spacing: 12) {
+            content()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(platformGroupedBackground)
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+        )
+        .padding(.horizontal)
+    }
+}
+
+private struct ConfigurationPanelContainer<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
     var body: some View {
         Group {
             if #available(iOS 16.0, macOS 13.0, *) {
                 Form {
-                    panels
+                    content()
                 }
 #if os(macOS)
                 .formStyle(.grouped)
@@ -83,31 +113,124 @@ private struct GeneralPanelView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 20) {
-                        panels
+                        content()
                     }
                     .padding(.vertical)
                 }
             }
         }
-        .alert(isPresented: $showResetPreferencesAlert) {
-            Alert(
-                title: Text(L10n.t("Reset Preference Values?")),
-                message: Text(L10n.t("This will restore settings to their defaults without clearing other stored data.")),
-                primaryButton: .destructive(Text(L10n.t("Reset"))) {
-                    vm.resetPreferenceValues()
-                },
-                secondaryButton: .cancel()
-            )
+    }
+}
+
+private enum ConfigurationMaintenanceAction {
+    case resetPreferences
+    case deleteStorage
+
+    var title: String {
+        switch self {
+        case .resetPreferences: return L10n.t("Reset Preference Values?")
+        case .deleteStorage: return L10n.t("Delete Persistent Storage?")
         }
-        .alert(isPresented: $showResetAlert) {
-            Alert(
-                title: Text(L10n.t("Delete Persistent Storage?")),
-                message: Text(L10n.t("This will clear all preferences and then quit the app.")),
-                primaryButton: .destructive(Text(L10n.t("Delete"))) {
-                    vm.theThirdImpact()
-                },
-                secondaryButton: .cancel()
-            )
+    }
+
+    var message: String {
+        switch self {
+        case .resetPreferences:
+            return L10n.t("This will restore settings to their defaults without clearing other stored data, then quit the app.")
+        case .deleteStorage:
+            return L10n.t("This will clear all preferences and then quit the app.")
+        }
+    }
+
+    var confirmTitle: String {
+        switch self {
+        case .resetPreferences: return L10n.t("Reset")
+        case .deleteStorage: return L10n.t("Delete")
+        }
+    }
+}
+
+private struct ConfigurationMaintenanceRows: View {
+    let onSelect: (ConfigurationMaintenanceAction) -> Void
+
+    var body: some View {
+        maintenanceRow(
+            title: L10n.t("Reset Preference Values"),
+            systemImage: "arrow.counterclockwise",
+            detail: L10n.t("Restores settings defaults without clearing other stored data, then quits the app."),
+            action: { onSelect(.resetPreferences) }
+        )
+        maintenanceRow(
+            title: L10n.t("Delete Persistent Storage"),
+            systemImage: "trash",
+            detail: L10n.t("Clears all preferences and then quits the app."),
+            action: { onSelect(.deleteStorage) }
+        )
+    }
+
+    private func maintenanceRow(
+        title: String,
+        systemImage: String,
+        detail: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button(action: action) {
+                Label(title, systemImage: systemImage)
+            }
+            Text(detail)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private extension View {
+    func configurationMaintenanceAlert(
+        pending: Binding<ConfigurationMaintenanceAction?>,
+        onConfirm: @escaping (ConfigurationMaintenanceAction) -> Void
+    ) -> some View {
+        modifier(ConfigurationMaintenanceAlertModifier(pending: pending, onConfirm: onConfirm))
+    }
+}
+
+private struct ConfigurationMaintenanceAlertModifier: ViewModifier {
+    @Binding var pending: ConfigurationMaintenanceAction?
+    let onConfirm: (ConfigurationMaintenanceAction) -> Void
+
+    func body(content: Content) -> some View {
+        content.alert(
+            pending?.title ?? "",
+            isPresented: Binding(
+                get: { pending != nil },
+                set: { if !$0 { pending = nil } }
+            ),
+            presenting: pending
+        ) { action in
+            Button(action.confirmTitle, role: .destructive) {
+                onConfirm(action)
+            }
+            Button(L10n.t("Cancel"), role: .cancel) {}
+        } message: { action in
+            Text(action.message)
+        }
+    }
+}
+
+private struct GeneralPanelView: View {
+    @ObservedObject var vm: ConfigurationViewModel
+#if !DEBOOGEY_MCE
+    @Environment(\.sipSatisfied) private var sipSatisfied
+#endif
+    @State private var pendingMaintenanceAction: ConfigurationMaintenanceAction?
+
+    var body: some View {
+        ConfigurationPanelContainer {
+            panels
+        }
+        .configurationMaintenanceAlert(pending: $pendingMaintenanceAction) {
+            vm.performMaintenance($0)
         }
     }
     
@@ -337,28 +460,7 @@ private struct GeneralPanelView: View {
 #endif
 
         section(header: "Maintenance") {
-            HStack(alignment: .top, spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Button(action: { showResetPreferencesAlert = true }) {
-                        Label(L10n.t("Reset Preference Values"), systemImage: "arrow.counterclockwise")
-                    }
-                    Text(L10n.t("Restores settings defaults without clearing other stored data."))
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Button(action: { showResetAlert = true }) {
-                        Label(L10n.t("Delete Persistent Storage"), systemImage: "trash")
-                    }
-                    Text(L10n.t("Clears all preferences and then quits the app."))
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            ConfigurationMaintenanceRows { pendingMaintenanceAction = $0 }
         }
     }
     
@@ -391,36 +493,7 @@ private struct GeneralPanelView: View {
 
     @ViewBuilder
     private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
-        if #available(macOS 13.0, *) {
-            if let header = header {
-                Section(header: Text(L10n.t(header))) {
-                    content()
-                }
-            } else {
-                Section {
-                    content()
-                }
-            }
-        } else {
-            if let header = header {
-                LegacyGroupedSection(header: header) {
-                    content()
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    content()
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(platformGroupedBackground)
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
-                )
-                .padding(.horizontal)
-            }
-        }
+        configurationSection(header: header, content: content)
     }
 
     private func diffsplitterLabeledSlider(
@@ -577,11 +650,7 @@ private struct EntityTrackerPanelView: View {
     private var descriptionForAutoDelete: String {
         let what = !DebugVariables.isMarketplaceCandidateEditionBuild
             && vm.entityTrackerAutoDeleteScope == "ephemerals"
-            ? L10n.t(
-                DebugVariables.isMarketplaceCandidateEditionBuild
-                    ? "Removes ephemeral entries from the log"
-                    : "Removes ephemeral entries (e.g. SkyLight Diagnostics) from the log"
-            )
+            ? L10n.t("Removes ephemeral entries (e.g. SkyLight Diagnostics) from the log")
             : L10n.t(
                 vm.entityTrackerAutoDeleteLoupeActivities
                     ? "Clears the entire Entity Tracker log"
@@ -595,36 +664,7 @@ private struct EntityTrackerPanelView: View {
     
     @ViewBuilder
     private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
-        if #available(macOS 13.0, *) {
-            if let header = header {
-                Section(header: Text(L10n.t(header))) {
-                    content()
-                }
-            } else {
-                Section {
-                    content()
-                }
-            }
-        } else {
-            if let header = header {
-                LegacyGroupedSection(header: header) {
-                    content()
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    content()
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(platformGroupedBackground)
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
-                )
-                .padding(.horizontal)
-            }
-        }
+        configurationSection(header: header, content: content)
     }
 }
 
@@ -635,20 +675,8 @@ private struct AcknowledgementsPanelView: View {
     @Environment(\.openURL) private var openURL
     
     var body: some View {
-        Group {
-            if #available(macOS 13.0, *) {
-                Form {
-                    panels
-                }
-                .formStyle(.grouped)
-            } else {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        panels
-                    }
-                    .padding(.vertical)
-                }
-            }
+        ConfigurationPanelContainer {
+            panels
         }
     }
     
@@ -656,102 +684,49 @@ private struct AcknowledgementsPanelView: View {
     private var panels: some View {
 #if !DEBOOGEY_MCE
         section(header: "Sources") {
-            Button(action: {
-                openURL(
-                    URL(
-                        string:
-                            "https://mjtsai.com/blog/2024/03/22/_eventfirstresponderchaindescription/"
-                    )!)
-            }) {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Cocoa Debug Menu").font(.headline)
-                        Text("Sourced Article").font(.subheadline).foregroundColor(
-                            .secondary)
-                    }
-                } icon: {
-                    Image(systemName: "link").foregroundColor(.blue)
-                }
-            }
-            .buttonStyle(.plain)
-            
-            Button(action: {
-                openURL(
-                    URL(
-                        string:
-                            "https://x.com/khanhduytran0/status/1951637277760999628?s=61")!)
-            }) {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("enable_overlay").font(.headline)
-                        Text("Sourced Article").font(.subheadline).foregroundColor(
-                            .secondary)
-                    }
-                } icon: {
-                    Image(systemName: "link").foregroundColor(.blue)
-                }
-            }
-            .buttonStyle(.plain)
+            creditRows([
+                (
+                    "Cocoa Debug Menu",
+                    "Sourced Article",
+                    "https://mjtsai.com/blog/2024/03/22/_eventfirstresponderchaindescription/",
+                    "link",
+                    .blue
+                ),
+                (
+                    "enable_overlay",
+                    "Sourced Article",
+                    "https://x.com/khanhduytran0/status/1951637277760999628?s=61",
+                    "link",
+                    .blue
+                ),
+            ])
         }
 #endif
         
         section(header: "Special Thanks") {
-            Button(action: { openURL(URL(string: "https://github.com/ogui-775")!) }) {
+            creditRows([
+                ("Salty", "Insight", "https://github.com/ogui-775", "star.fill", .yellow),
+                ("1davi", "Tester", "https://github.com/1davi", "gearshape", .green),
+                ("Alex Spaulding", "Tester", "https://github.com/aspauldingcode", "gearshape", .green),
+                ("MTACS", "Tester", "https://github.com/MTACS", "gearshape", .green),
+                ("Olivia Iacovou", "Tester", "https://github.com/oliviaiacovou", "gearshape", .green),
+            ])
+        }
+    }
+
+    @ViewBuilder
+    private func creditRows(
+        _ rows: [(name: String, role: String, url: String, symbol: String, tint: Color)]
+    ) -> some View {
+        ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+            Button(action: { openURL(URL(string: row.url)!) }) {
                 Label {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Salty").font(.headline)
-                        Text("Insight").font(.subheadline).foregroundColor(.secondary)
+                        Text(row.name).font(.headline)
+                        Text(row.role).font(.subheadline).foregroundColor(.secondary)
                     }
                 } icon: {
-                    Image(systemName: "star.fill").foregroundColor(.yellow)
-                }
-            }
-            .buttonStyle(.plain)
-            
-            Button(action: { openURL(URL(string: "https://github.com/1davi")!) }) {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("1davi").font(.headline)
-                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
-                    }
-                } icon: {
-                    Image(systemName: "gearshape").foregroundColor(.green)
-                }
-            }
-            .buttonStyle(.plain)
-            
-            Button(action: { openURL(URL(string: "https://github.com/aspauldingcode")!) }) {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Alex Spaulding").font(.headline)
-                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
-                    }
-                } icon: {
-                    Image(systemName: "gearshape").foregroundColor(.green)
-                }
-            }
-            .buttonStyle(.plain)
-            
-            Button(action: { openURL(URL(string: "https://github.com/MTACS")!) }) {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("MTACS").font(.headline)
-                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
-                    }
-                } icon: {
-                    Image(systemName: "gearshape").foregroundColor(.green)
-                }
-            }
-            .buttonStyle(.plain)
-            
-            Button(action: { openURL(URL(string: "https://github.com/oliviaiacovou")!) }) {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Olivia Iacovou").font(.headline)
-                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
-                    }
-                } icon: {
-                    Image(systemName: "gearshape").foregroundColor(.green)
+                    Image(systemName: row.symbol).foregroundColor(row.tint)
                 }
             }
             .buttonStyle(.plain)
@@ -760,36 +735,7 @@ private struct AcknowledgementsPanelView: View {
     
     @ViewBuilder
     private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
-        if #available(macOS 13.0, *) {
-            if let header = header {
-                Section(header: Text(L10n.t(header))) {
-                    content()
-                }
-            } else {
-                Section {
-                    content()
-                }
-            }
-        } else {
-            if let header = header {
-                LegacyGroupedSection(header: header) {
-                    content()
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    content()
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(platformGroupedBackground)
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
-                )
-                .padding(.horizontal)
-            }
-        }
+        configurationSection(header: header, content: content)
     }
 }
 
@@ -1024,6 +970,13 @@ final class ConfigurationViewModel: ObservableObject {
         reloadFromVars()
     }
 
+    fileprivate func performMaintenance(_ action: ConfigurationMaintenanceAction) {
+        switch action {
+        case .resetPreferences: resetPreferenceValues()
+        case .deleteStorage: theThirdImpact()
+        }
+    }
+
     private func reloadFromVars() {
         pesterMeWithSipping = vars.pesterMeWithSipping
         showNetworkNotices = vars.showNetworkNotices
@@ -1120,9 +1073,9 @@ private struct PanelDetail: View {
 struct ConfigurationRootView: View {
     @StateObject private var vm = ConfigurationViewModel()
 #if os(iOS)
-    @State private var showResetAlert = false
+    @State private var pendingMaintenanceAction: ConfigurationMaintenanceAction?
 #endif
-    
+
     var body: some View {
 #if os(iOS)
         List {
@@ -1152,26 +1105,14 @@ struct ConfigurationRootView: View {
                 }
             }
             if !configurationShowsDiffsplitter {
-                Section {
-                    Button {
-                        showResetAlert = true
-                    } label: {
-                        Label(L10n.t("Delete Persistent Storage"), systemImage: "trash")
-                    }
-                    .foregroundStyle(Color.accentColor)
+                Section(header: Text(L10n.t("Maintenance"))) {
+                    ConfigurationMaintenanceRows { pendingMaintenanceAction = $0 }
                 }
             }
         }
         .navigationTitle(L10n.t("Settings"))
-        .alert(isPresented: $showResetAlert) {
-            Alert(
-                title: Text(L10n.t("Delete Persistent Storage?")),
-                message: Text(L10n.t("This will clear all preferences and then quit the app.")),
-                primaryButton: .destructive(Text(L10n.t("Delete"))) {
-                    vm.theThirdImpact()
-                },
-                secondaryButton: .cancel()
-            )
+        .configurationMaintenanceAlert(pending: $pendingMaintenanceAction) {
+            vm.performMaintenance($0)
         }
 #else
         if #available(macOS 14.0, *) {

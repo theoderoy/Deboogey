@@ -69,35 +69,23 @@ struct EntityTrackerView: View {
             return visibleEntities.sorted { $0.summary < $1.summary }
         case .alphabeticalTarget:
             return visibleEntities.sorted {
-                let leftTarget: String
-                let rightTarget: String
-
-                switch $0.source {
-                case .wsOverlay:
-                    leftTarget = $0.overlayArgument ?? ""
-                case .deboogeyCDM:
-                    leftTarget = $0.deboogeyCDMDomain ?? ""
-                case .loupeMachine:
-                    leftTarget = $0.loupeApplicationIdentifier ?? $0.loupeActivityTarget ?? ""
-                case .diffsplitter:
-                    leftTarget = $0.diffsplitterActivityTarget ?? ""
-                }
-                
-                switch $1.source {
-                case .wsOverlay:
-                    rightTarget = $1.overlayArgument ?? ""
-                case .deboogeyCDM:
-                    rightTarget = $1.deboogeyCDMDomain ?? ""
-                case .loupeMachine:
-                    rightTarget = $1.loupeApplicationIdentifier ?? $1.loupeActivityTarget ?? ""
-                case .diffsplitter:
-                    rightTarget = $1.diffsplitterActivityTarget ?? ""
-                }
-                
-                return leftTarget < rightTarget
+                sortTarget(for: $0) < sortTarget(for: $1)
             }
         case .alphabeticalTool:
             return visibleEntities.sorted { $0.source.displayName < $1.source.displayName }
+        }
+    }
+
+    private func sortTarget(for entity: TrackedEntity) -> String {
+        switch entity.source {
+        case .wsOverlay:
+            return entity.overlayArgument ?? ""
+        case .deboogeyCDM:
+            return entity.deboogeyCDMDomain ?? ""
+        case .loupeMachine:
+            return entity.loupeApplicationIdentifier ?? entity.loupeActivityTarget ?? ""
+        case .diffsplitter:
+            return entity.diffsplitterActivityTarget ?? ""
         }
     }
 
@@ -109,7 +97,7 @@ struct EntityTrackerView: View {
                 entityList
             }
         }
-        .frame(width: 560, height: 480)
+        .frame(width: AppWindowSizing.entityTracker.defaultSize.width, height: AppWindowSizing.entityTracker.defaultSize.height)
         .navigationTitle(L10n.t("Entity Tracker"))
         .modifier(ToolbarModifier(
             tracker: tracker,
@@ -494,11 +482,7 @@ private struct ToolbarModifier: ViewModifier {
                 }
             }
         } label: {
-            if iconOnly {
-                Image(systemName: "ellipsis.circle")
-            } else {
-                Image(systemName: "ellipsis.circle")
-            }
+            Image(systemName: "ellipsis.circle")
         }
         .if(!iconOnly) { view in
             view.frame(width: 42)

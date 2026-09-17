@@ -59,11 +59,7 @@ struct DeboogeyCDMLauncherView: View {
     }
 
     private var viewHeight: CGFloat {
-#if DEBOOGEY_MCE
-        480
-#else
-        650
-#endif
+        AppWindowSizing.cocoaDebugMenu.defaultSize.height
     }
 
     var body: some View {
@@ -160,7 +156,7 @@ struct DeboogeyCDMLauncherView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         }
-        .frame(width: 520, height: viewHeight)
+        .frame(width: AppWindowSizing.cocoaDebugMenu.defaultSize.width, height: viewHeight)
         .navigationTitle(L10n.t("Cocoa Debug Menu"))
         .alert(isPresented: $showExecutionConfirmation) {
             Alert(

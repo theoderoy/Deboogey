@@ -38,24 +38,15 @@ nonisolated enum DiffsplitterSettings {
     }
 
     static func includeHiddenFiles(defaults: UserDefaults = .standard) -> Bool {
-        if defaults.object(forKey: Keys.includeHiddenFiles) == nil {
-            return defaultIncludeHiddenFiles
-        }
-        return defaults.bool(forKey: Keys.includeHiddenFiles)
+        bool(forKey: Keys.includeHiddenFiles, default: defaultIncludeHiddenFiles, defaults: defaults)
     }
 
     static func preferDiskTempForLargeFiles(defaults: UserDefaults = .standard) -> Bool {
-        if defaults.object(forKey: Keys.preferDiskTempForLargeFiles) == nil {
-            return defaultPreferDiskTempForLargeFiles
-        }
-        return defaults.bool(forKey: Keys.preferDiskTempForLargeFiles)
+        bool(forKey: Keys.preferDiskTempForLargeFiles, default: defaultPreferDiskTempForLargeFiles, defaults: defaults)
     }
 
     static func largeFileHexConversionEnabled(defaults: UserDefaults = .standard) -> Bool {
-        if defaults.object(forKey: Keys.largeFileHexConversionEnabled) == nil {
-            return defaultLargeFileHexConversionEnabled
-        }
-        return defaults.bool(forKey: Keys.largeFileHexConversionEnabled)
+        bool(forKey: Keys.largeFileHexConversionEnabled, default: defaultLargeFileHexConversionEnabled, defaults: defaults)
     }
 
     static func hexWindowLines(defaults: UserDefaults = .standard) -> Int {
@@ -107,5 +98,9 @@ nonisolated enum DiffsplitterSettings {
     private static func clampedInt(_ value: Int?, default defaultValue: Int, range: ClosedRange<Int>) -> Int {
         let candidate = value ?? defaultValue
         return min(max(candidate, range.lowerBound), range.upperBound)
+    }
+
+    private static func bool(forKey key: String, default defaultValue: Bool, defaults: UserDefaults) -> Bool {
+        defaults.object(forKey: key) == nil ? defaultValue : defaults.bool(forKey: key)
     }
 }

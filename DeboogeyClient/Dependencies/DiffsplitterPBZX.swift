@@ -37,10 +37,7 @@ nonisolated enum DiffsplitterPBZX {
     }
 
     static func looksLikeFile(at url: URL) -> Bool {
-        guard let handle = try? FileHandle(forReadingFrom: url) else { return false }
-        defer { try? handle.close() }
-        guard let header = try? handle.read(upToCount: 4), header.count == 4 else { return false }
-        return header == magic
+        DiffsplitterBinaryIO.fileMatchesMagic(at: url, magic: magic)
     }
 
     static func decode(data: Data) throws -> Data {
@@ -53,9 +50,9 @@ nonisolated enum DiffsplitterPBZX {
         var output = Data()
         while offset + 16 <= data.count {
             try Task.checkCancellation()
-            let lastFlags = readUInt64BE(data, offset)
+            let lastFlags = DiffsplitterBinaryIO.readUInt64BE(data, offset)
             offset += 8
-            let chunkLength = readUInt64BE(data, offset)
+            let chunkLength = DiffsplitterBinaryIO.readUInt64BE(data, offset)
             offset += 8
             guard chunkLength <= UInt64(Int.max) else { throw PBZXError.tooLarge }
             let length = Int(chunkLength)
@@ -129,13 +126,5 @@ nonisolated enum DiffsplitterPBZX {
             }
         }
         throw lastError
-    }
-
-    private static func readUInt64BE(_ data: Data, _ offset: Int) -> UInt64 {
-        var value: UInt64 = 0
-        for i in 0..<8 {
-            value = (value << 8) | UInt64(data[offset + i])
-        }
-        return value
     }
 }

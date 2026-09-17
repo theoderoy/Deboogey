@@ -312,11 +312,12 @@ public final class PersistentVariables: ObservableObject {
     }
 
     public func resetPreferenceValues() {
-        for key in Self.registeredDefaults.keys {
+        for key in Self.registeredDefaults.keys where key != Keys.hasShownWhatsNew {
             defaults.removeObject(forKey: key)
         }
         defaults.synchronize()
         reloadFromDefaults()
+        Self.gracefullyTerminateAfterSettingsReset()
     }
 
     private func reloadFromDefaults() {
@@ -365,12 +366,17 @@ public final class PersistentVariables: ObservableObject {
         guard let bundleID = Bundle.main.bundleIdentifier else { return }
         defaults.removePersistentDomain(forName: bundleID)
         defaults.synchronize()
-        Self.gracefullyTerminateAfterPersistentStorageDeletion()
+        Self.gracefullyTerminateAfterSettingsReset()
     }
 
-    private static func gracefullyTerminateAfterPersistentStorageDeletion() {
+    private static func gracefullyTerminateAfterSettingsReset() {
 #if canImport(AppKit)
-        NSApp.terminate(nil)
+        DispatchQueue.main.async {
+            NSApp.terminate(nil)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                exit(EXIT_SUCCESS)
+            }
+        }
 #elseif canImport(UIKit)
         DispatchQueue.main.async {
             UIApplication.shared.perform(#selector(NSXPCConnection.suspend))
