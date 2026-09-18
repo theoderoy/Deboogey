@@ -198,17 +198,27 @@ private struct ConfigurationMaintenanceRows: View {
     let onSelect: (ConfigurationMaintenanceAction) -> Void
 
     var body: some View {
-        maintenanceRow(
-            title: L10n.t("Reset Preference Values"),
-            systemImage: "arrow.counterclockwise",
-            detail: L10n.t("Restores settings defaults without clearing other stored data, then quits the app."),
-            action: { onSelect(.resetPreferences) }
-        )
+#if os(iOS)
+        if UIDevice.current.userInterfaceIdiom != .phone {
+            resetPreferencesRow
+        }
+#else
+        resetPreferencesRow
+#endif
         maintenanceRow(
             title: L10n.t("Delete Persistent Storage"),
             systemImage: "trash",
             detail: L10n.t("Clears all preferences and then quits the app."),
             action: { onSelect(.deleteStorage) }
+        )
+    }
+
+    private var resetPreferencesRow: some View {
+        maintenanceRow(
+            title: L10n.t("Reset Preference Values"),
+            systemImage: "arrow.counterclockwise",
+            detail: L10n.t("Restores settings defaults without clearing other stored data, then quits the app."),
+            action: { onSelect(.resetPreferences) }
         )
     }
 
