@@ -114,7 +114,7 @@
 "Diffsplitter Error" = "Erreur Diffsplitter";
 "Diffsplitter Finished" = "Diffsplitter terminé";
 "Diffsplitter compares two text files, or two folders or archives side by side. Select a nested archive in the path list to expand it. Save a session to reopen the same pair later." = "Diffsplitter compare deux fichiers texte, ou deux dossiers ou archives côte à côte. Sélectionnez une archive imbriquée dans la liste des chemins pour l’ouvrir. Enregistrez une session pour rouvrir la même paire plus tard.";
-"Diffsplitter is only available on iPad." = "Diffsplitter est uniquement disponible sur iPad.";
+"Diffsplitter is only available on Mac, iPad and Apple Vision." = "Diffsplitter est uniquement disponible sur Mac, iPad et Apple Vision.";
 "Diffsplitter is unavailable on this device." = "Diffsplitter n’est pas disponible sur cet appareil.";
 "Diffsplitter requires an Apple A14 or M1 chip, or later." = "Diffsplitter nécessite une puce Apple A14 ou M1, ou une puce plus récente.";
 "Disable" = "Désactiver";
@@ -201,7 +201,7 @@
 "Internal" = "Internal";
 "Internal %@" = "Internal %@";
 "Internal builds contain experimental features and are not notarised by Apple." = "Les builds Internal contiennent des fonctionnalités expérimentales et ne sont pas notarisées par Apple.";
-"Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on both Mac and iPad." = "Présentation d’un outil de comparaison polyvalent et facile à utiliser, de classe bureau, intégré à Deboogey, avec une architecture entièrement personnalisée, puissante et suffisamment légère pour fonctionner à pleine vitesse sur Mac et iPad.";
+"Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on Mac, iPad, and Apple Vision." = "Présentation d’un outil de comparaison polyvalent et facile à utiliser, de classe bureau, intégré à Deboogey, avec une architecture entièrement personnalisée, puissante et suffisamment légère pour fonctionner à pleine vitesse sur Mac, iPad et Apple Vision.";
 "Invalid arguments. Expected: enable|disable <bundle-id|global> [--autokill]" = "Arguments invalides. Format attendu : enable|disable <bundle-id|global> [--autokill]";
 "Invalid arguments. First argument must be 'enable' or 'disable'" = "Arguments invalides. Le premier argument doit être « enable » ou « disable »";
 "Invalid arguments. Unknown flag: %@" = "Arguments invalides. Option inconnue : %@";
@@ -228,6 +228,7 @@
 "Loupe Machine lets you select an application, discover its system-modifiable flags, and inspect or edit them." = "Loupe Machine vous permet de sélectionner une application, de découvrir ses indicateurs modifiables par le système et de les inspecter ou de les modifier.";
 "Loupe Machine will apply %d value(s) to the selected application." = "Loupe Machine appliquera %d valeur(s) à l’application sélectionnée.";
 "Loupe View" = "Vue Loupe";
+"Loupe View lets you open Loupe Machine documents on iPhone, iPad, and Apple Vision, inspect and edit their flags, and prepare a change set to apply elsewhere." = "Vue Loupe vous permet d’ouvrir des documents Loupe Machine sur iPhone, iPad et Apple Vision, d’inspecter et de modifier leurs indicateurs, puis de préparer un ensemble de modifications à appliquer ailleurs.";
 "Maintenance" = "Maintenance";
 "Marketplace Candidate Edition" = "Marketplace Candidate Edition";
 "Mask: %@" = "Masque : %@";
@@ -403,7 +404,7 @@
 "Window %@–%@ of %@ (%d lines in memory)" = "Fenêtre %@–%@ sur %@ (%d lignes en mémoire)";
 "Writing DiffsplitterX Document…" = "Écriture du document DiffsplitterX…";
 "You might need to manually code-sign after upgrading." = "Vous devrez peut-être signer le code manuellement après la mise à niveau.";
-"You'll now be able to view Loupe Machine documents on iPhone and iPad." = "Vous pourrez désormais consulter les documents Loupe Machine sur iPhone et iPad.";
+"You'll now be able to view Loupe Machine documents on iPhone, iPad, and Apple Vision." = "Vous pourrez désormais consulter les documents Loupe Machine sur iPhone, iPad et Apple Vision.";
 "Your session pair will be lost if you don’t save it." = "Votre paire de session sera perdue si vous ne l’enregistrez pas.";
 "Your unapplied drafted value changes will be lost if you don’t save them." = "Les brouillons de valeurs non appliqués seront perdus si vous ne les enregistrez pas.";
 "base64:… or hex:…" = "base64:… ou hex:…";
