@@ -1846,37 +1846,20 @@ struct DiffsplitterEducationView: View {
     private var completionSoundStep: some View {
         VStack(spacing: 16) {
             VStack(spacing: 8) {
-#if os(iOS)
-                Image(systemName: "platter.filled.top.and.arrow.up.iphone")
+                Image(systemName: DiffsplitterCompletionFeedback.completionNotifySymbolName)
                     .font(.system(size: 72, weight: .thin))
                     .foregroundStyle(.secondary)
                     .symbolRenderingMode(.hierarchical)
-                Text(L10n.t("Notify with Live Activity when Diffsplitter finishes"))
+                Text(DiffsplitterCompletionFeedback.completionNotifyTitle)
                     .font(.title3)
                     .fontWeight(.medium)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(L10n.t("Live Activity when available, otherwise a banner. Plays a sound after the selected minimum duration."))
+                Text(DiffsplitterCompletionFeedback.completionNotifyCaption)
                     .padding(.top, 12)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-#else
-                Image(systemName: "speaker.wave.2")
-                    .font(.system(size: 72, weight: .thin))
-                    .foregroundStyle(.secondary)
-                    .symbolRenderingMode(.hierarchical)
-                Text(L10n.t("Play a sound when Diffsplitter finishes a comparison"))
-                    .font(.title3)
-                    .fontWeight(.medium)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(L10n.t("Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration."))
-                    .padding(.top, 12)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-#endif
             }
 
             Toggle(isOn: $vars.playDiffsplitterDoneSound) {

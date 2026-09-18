@@ -280,11 +280,6 @@ private struct GeneralPanelView: View {
     private var panels: some View {
 #if os(macOS)
         section(header: "Sounds") {
-            Toggle(isOn: $vm.playIndexingDoneSound) {
-                Text(L10n.t("Play a sound when indexing finishes"))
-            }
-            configurationSecondaryCaption(L10n.t("Play a sound after an application is completely indexed."))
-
             Toggle(isOn: $vm.playToolCycleSound) {
 #if DEBOOGEY_MCE
                 Text(L10n.t("Play sounds when Cocoa Debug Menu finishes or fails"))
@@ -302,11 +297,18 @@ private struct GeneralPanelView: View {
             )
 #endif
 
+            Toggle(isOn: $vm.playIndexingDoneSound) {
+                Text(L10n.t("Play a sound when Loupe Machine finishes an index cycle"))
+            }
+            configurationSecondaryCaption(
+                L10n.t("Notify with a sound and banner when Loupe Machine finishes an index cycle.")
+            )
+
             diffsplitterSoundControls
         }
 #else
         if configurationShowsDiffsplitter {
-            section(header: "Live Activity") {
+            section(header: DiffsplitterCompletionFeedback.completionNotifySectionHeader) {
                 diffsplitterSoundControls
             }
         }
@@ -375,21 +377,10 @@ private struct GeneralPanelView: View {
     
     @ViewBuilder
     private var diffsplitterSoundControls: some View {
-#if os(iOS)
         Toggle(isOn: $vm.playDiffsplitterDoneSound) {
-            Text(L10n.t("Notify with Live Activity when Diffsplitter finishes"))
+            Text(DiffsplitterCompletionFeedback.completionNotifyTitle)
         }
-        configurationSecondaryCaption(
-            L10n.t("Live Activity when available, otherwise a banner. Plays a sound after the selected minimum duration.")
-        )
-#else
-        Toggle(isOn: $vm.playDiffsplitterDoneSound) {
-            Text(L10n.t("Play a sound when Diffsplitter finishes a comparison"))
-        }
-        configurationSecondaryCaption(
-            L10n.t("Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration.")
-        )
-#endif
+        configurationSecondaryCaption(DiffsplitterCompletionFeedback.completionNotifyCaption)
 
         if vm.playDiffsplitterDoneSound {
             DiffsplitterCompletionDurationControls(

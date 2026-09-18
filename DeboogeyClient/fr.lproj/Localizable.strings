@@ -261,6 +261,7 @@
 "No upgrade is present at this time." = "Aucune mise à niveau n’est disponible pour le moment.";
 "Notices" = "Avis";
 "Notify with Live Activity when Diffsplitter finishes" = "Notifier avec Live Activity lorsque Diffsplitter se termine";
+"Notify with a sound and banner when Loupe Machine finishes an index cycle." = "Notifie avec un son et une bannière lorsque Loupe Machine termine un cycle d’indexation.";
 "Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration." = "Notifie avec un son et une bannière lorsqu’une comparaison Diffsplitter dure au moins la durée sélectionnée.";
 "OK" = "OK";
 "Off" = "Désactivé";
@@ -282,9 +283,8 @@
 "Pending change" = "Modification en attente";
 "PlaceholderText1" = "Salut!";
 "PlaceholderText2" = "Chaînes, texte, variables, espaces réservés, etc.";
-"Play a sound after an application is completely indexed." = "Émet un son lorsqu’une application a été entièrement indexée.";
 "Play a sound when Diffsplitter finishes a comparison" = "Émettre un son lorsque Diffsplitter termine une comparaison";
-"Play a sound when indexing finishes" = "Émettre un son à la fin de l’indexation";
+"Play a sound when Loupe Machine finishes an index cycle" = "Émettre un son lorsque Loupe Machine termine un cycle d’indexation";
 "Play sounds when Apple System Tools complete successfully or halt due to an error." = "Émet des sons lorsque les Outils système Apple se terminent avec succès ou s’arrêtent à cause d’une erreur.";
 "Play sounds when Apple System Tools finish or fail" = "Émettre des sons à la fin ou en cas d’échec des Outils système Apple";
 "Play sounds when Cocoa Debug Menu completes successfully or halts due to an error." = "Émet des sons lorsque le Menu de débogage Cocoa se termine avec succès ou s’arrête à cause d’une erreur.";

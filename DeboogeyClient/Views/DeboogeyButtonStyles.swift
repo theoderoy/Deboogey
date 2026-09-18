@@ -81,20 +81,20 @@ struct DiffsplitterCompletionDurationControls: View {
 
     var body: some View {
         if stacksBackgroundControls {
-            VStack(alignment: .leading, spacing: 16) {
-                durationSlider
-#if os(iOS)
-                backgroundNotifyBlock
-#endif
-            }
+            VStack(alignment: .leading, spacing: 16) { durationControlsContent }
         } else {
-            Group {
-                durationSlider
-#if os(iOS)
-                backgroundNotifyBlock
-#endif
-            }
+            durationControlsContent
         }
+    }
+
+    @ViewBuilder
+    private var durationControlsContent: some View {
+        durationSlider
+#if os(iOS)
+        if DiffsplitterCompletionFeedback.usesLiveActivityUX {
+            backgroundNotifyBlock
+        }
+#endif
     }
 
     private var durationSlider: some View {

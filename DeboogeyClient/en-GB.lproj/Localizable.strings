@@ -261,6 +261,7 @@
 "No upgrade is present at this time." = "No upgrade is present at this time.";
 "Notices" = "Notices";
 "Notify with Live Activity when Diffsplitter finishes" = "Notify with Live Activity when Diffsplitter finishes";
+"Notify with a sound and banner when Loupe Machine finishes an index cycle." = "Notify with a sound and banner when Loupe Machine finishes an index cycle.";
 "Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration." = "Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration.";
 "OK" = "OK";
 "Off" = "Off";
@@ -282,9 +283,8 @@
 "Pending change" = "Pending change";
 "PlaceholderText1" = "G'day!";
 "PlaceholderText2" = "Strings, text, variables, placeholders and the sort.";
-"Play a sound after an application is completely indexed." = "Play a sound after an application is completely indexed.";
 "Play a sound when Diffsplitter finishes a comparison" = "Play a sound when Diffsplitter finishes a comparison";
-"Play a sound when indexing finishes" = "Play a sound when indexing finishes";
+"Play a sound when Loupe Machine finishes an index cycle" = "Play a sound when Loupe Machine finishes an index cycle";
 "Play sounds when Apple System Tools complete successfully or halt due to an error." = "Play sounds when Apple System Tools complete successfully or halt due to an error.";
 "Play sounds when Apple System Tools finish or fail" = "Play sounds when Apple System Tools finish or fail";
 "Play sounds when Cocoa Debug Menu completes successfully or halts due to an error." = "Play sounds when Cocoa Debug Menu completes successfully or halts due to an error.";

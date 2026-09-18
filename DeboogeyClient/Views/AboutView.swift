@@ -42,7 +42,16 @@ struct AboutView: View {
 #endif
                 Text("\(clientVersion) \(clientBuild)")
                 Spacer(minLength: 4)
-                Link(L10n.t("© Théo De Roy"), destination: URL(string: "https://github.com/theoderoy")!)
+                Link(destination: URL(string: "https://github.com/theoderoy")!) {
+                    HStack(spacing: 4) {
+                        Image("theoderoyLogoIPOSF")
+                            .renderingMode(.template)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 12, height: 12)
+                        Text(L10n.t("© Théo De Roy"))
+                    }
+                }
             }
             .font(.subheadline)
             .foregroundStyle(.secondary)
