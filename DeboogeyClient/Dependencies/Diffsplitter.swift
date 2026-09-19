@@ -3970,6 +3970,7 @@ final class DiffsplitterSession: ObservableObject {
     @Published var visibleRowCount = 0
     @Published var directoryEntries: [DiffsplitterEngine.DirEntry] = []
     @Published var selectedRelativePath: String?
+    @Published var directoryMemberSidesFlipped = false
     @Published var directoryBrowsePrefix = ""
     @Published var directoryFilter = ""
     @Published var directoryStatusFilters: Set<DiffsplitterEngine.DirEntryStatus> = []
@@ -4068,7 +4069,7 @@ final class DiffsplitterSession: ObservableObject {
             title: L10n.t("Diffsplitter"),
             subtitle: subtitle,
             onExpire: { [weak self] in
-                Task { @MainActor in
+                Task { @MainActor [weak self] in
                     self?.compareTask?.cancel()
                 }
             }
@@ -4150,11 +4151,10 @@ final class DiffsplitterSession: ObservableObject {
 #endif
     func handleDrop(_ providers: [NSItemProvider], onto side: Side) -> Bool {
         guard let provider = providers.first else { return false }
-        let fileURLType = UTType.fileURL.identifier
-        if provider.hasItemConformingToTypeIdentifier(fileURLType) {
-            provider.loadItem(forTypeIdentifier: fileURLType, options: nil) { [weak self] item, _ in
+        if provider.canLoadObject(ofClass: URL.self) {
+            _ = provider.loadObject(ofClass: URL.self) { [weak self] url, _ in
                 DispatchQueue.main.async {
-                    self?.finishDrop(Self.url(fromDropItem: item), onto: side)
+                    self?.finishDrop(url, onto: side)
                 }
             }
             return true
@@ -4194,14 +4194,7 @@ final class DiffsplitterSession: ObservableObject {
         DispatchQueue.main.async { self.setupError = message }
     }
 
-    private static func url(fromDropItem item: NSSecureCoding?) -> URL? {
-        if let data = item as? Data {
-            return URL(dataRepresentation: data, relativeTo: nil)
-        }
-        return item as? URL
-    }
-
-    private static func durableCopyOfDroppedURL(_ url: URL) throws -> URL {
+    nonisolated private static func durableCopyOfDroppedURL(_ url: URL) throws -> URL {
         let fm = FileManager.default
         let directory = fm.temporaryDirectory
             .appendingPathComponent("DiffsplitterDrops", isDirectory: true)
@@ -4279,6 +4272,14 @@ final class DiffsplitterSession: ObservableObject {
             swapEmbeddedSides()
             return
         }
+        if comparisonKind == .directories, selectedRelativePath != nil {
+            directoryMemberSidesFlipped.toggle()
+            invertDisplayedComparisonSides()
+            return
+        }
+        swapDirectoryRootsAndRecompare()
+    }
+    private func swapDirectoryRootsAndRecompare() {
         let previousLeft = leftURL
         let previousRight = rightURL
         let previousLeftAccess = leftAccessing
@@ -4293,6 +4294,9 @@ final class DiffsplitterSession: ObservableObject {
         let previousLeftName = embeddedLeftName
         embeddedLeftName = embeddedRightName
         embeddedRightName = previousLeftName
+        invertDisplayedComparisonSides()
+    }
+    private func invertDisplayedComparisonSides() {
         if let dump = binaryDump {
             let sourceRows = dump.embeddedRows ?? dump.rows
             let swappedRows = sourceRows.enumerated().map { index, row -> DiffsplitterBinaryDump.HexRow in
@@ -4359,6 +4363,7 @@ final class DiffsplitterSession: ObservableObject {
             applyRows([])
             comparisonKind = nil
             selectedRelativePath = nil
+            directoryMemberSidesFlipped = false
         }
     }
     func clearSession(keepingDocument: Bool) {
@@ -4374,6 +4379,7 @@ final class DiffsplitterSession: ObservableObject {
         visibleRowCount = 0
         directoryEntries = []
         selectedRelativePath = nil
+        directoryMemberSidesFlipped = false
         directoryBrowsePrefix = ""
         directoryFilter = ""
         directoryStatusFilters = []
@@ -4415,16 +4421,19 @@ final class DiffsplitterSession: ObservableObject {
         rightSession?.unloadInspectMaterializations()
     }
     func openDirectoryMember(_ path: String) {
+        directoryMemberSidesFlipped = false
         selectedRelativePath = path
     }
     func enterDirectoryBrowsePrefix(_ prefix: String) {
         selectedRelativePath = nil
+        directoryMemberSidesFlipped = false
         clearBinaryDump()
         applyRows([])
         directoryBrowsePrefix = prefix
     }
     func leaveDirectoryBrowseLevel(toRoot: Bool = false) {
         selectedRelativePath = nil
+        directoryMemberSidesFlipped = false
         clearBinaryDump()
         applyRows([])
         guard !directoryBrowsePrefix.isEmpty else { return }
@@ -4439,10 +4448,15 @@ final class DiffsplitterSession: ObservableObject {
         compareTask?.cancel()
         clearBinaryDump()
         unloadInspectMaterializations()
+        let shouldCommitDirectorySwap = directoryMemberSidesFlipped
+        directoryMemberSidesFlipped = false
         selectedRelativePath = nil
         memberLoadProgress = nil
         isComparing = false
         applyRows([])
+        if shouldCommitDirectorySwap {
+            swapDirectoryRootsAndRecompare()
+        }
     }
 
     struct DirectoryBrowserItem: Identifiable, Hashable {
@@ -4669,6 +4683,7 @@ final class DiffsplitterSession: ObservableObject {
         let restoreDirectoryPath = selectedRelativePath
         let restoreBrowsePrefix = directoryBrowsePrefix
         selectedRelativePath = nil
+        directoryMemberSidesFlipped = false
         directoryBrowsePrefix = ""
         setupError = nil
         let ignoreWhitespace = self.ignoreWhitespace
@@ -4899,7 +4914,7 @@ final class DiffsplitterSession: ObservableObject {
                     } else {
                         self.applyRows(payload.rows)
                     }
-                    finishSuccessfulCompare(
+                    self.finishSuccessfulCompare(
                         label: "\(leftName) ↔ \(rightName)",
                         startedAt: compareStartedAt,
                         generation: generation
@@ -4913,6 +4928,7 @@ final class DiffsplitterSession: ObservableObject {
                     self.visibleRowCount = 0
                     self.directoryEntries = []
                     self.selectedRelativePath = nil
+                    self.directoryMemberSidesFlipped = false
                     self.expandedContainerPaths = []
                     self.skippedExpandPaths = []
                     self.memberLoadProgress = nil
@@ -5122,9 +5138,10 @@ final class DiffsplitterSession: ObservableObject {
                         self.isComparing = false
                         self.memberLoadProgress = nil
                         self.selectedRelativePath = nil
+                        self.directoryMemberSidesFlipped = false
                         self.applyRows([])
                         self.directoryBrowsePrefix = path
-                        finishSuccessfulCompare(
+                        self.finishSuccessfulCompare(
                             label: compareLabel,
                             startedAt: compareStartedAt,
                             generation: generation
@@ -5347,7 +5364,7 @@ final class DiffsplitterSession: ObservableObject {
                         self.rows = []
                         self.visibleRowCount = 0
                     }
-                    finishSuccessfulCompare(
+                    self.finishSuccessfulCompare(
                         label: compareLabel,
                         startedAt: compareStartedAt,
                         generation: generation
@@ -5464,7 +5481,7 @@ final class DiffsplitterSession: ObservableObject {
                 switch result {
                 case .success(let aligned):
                     self.applyRows(aligned)
-                    finishSuccessfulCompare(
+                    self.finishSuccessfulCompare(
                         label: compareLabel,
                         startedAt: compareStartedAt,
                         generation: generation
@@ -5581,7 +5598,7 @@ final class DiffsplitterSession: ObservableObject {
                     self.binaryDumpOffsetField = String(format: "%08x", sessionDump.windowStartLine * DiffsplitterBinaryDump.bytesPerLine)
                     self.rows = []
                     self.visibleRowCount = 0
-                    finishSuccessfulCompare(
+                    self.finishSuccessfulCompare(
                         label: compareLabel,
                         startedAt: compareStartedAt,
                         generation: generation

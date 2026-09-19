@@ -262,6 +262,7 @@ struct DeboogeyClientMCE: App {
 
 #elseif os(iOS)
 
+import Combine
 import Metal
 import UIKit
 
@@ -271,19 +272,47 @@ enum MCEIOSFeatureSupport {
         case chip
     }
 
+    final class Model: ObservableObject {
+        static let shared = Model()
+
+        @Published private(set) var hasDeviceHinge = false
+
+        var diffsplitter: Bool { diffsplitterBlocker == nil }
+
+        var diffsplitterBlocker: DiffsplitterBlocker? {
+            Self.blocker(hasDeviceHinge: hasDeviceHinge)
+        }
+
+        @available(iOS 27.1, *)
+        @MainActor
+        func update(from context: DeviceHingeContext) {
+            let next = context.hinge != nil
+            guard next != hasDeviceHinge else { return }
+            hasDeviceHinge = next
+            if diffsplitter {
+                DiffsplitterContinuedProcessing.registerAtLaunch()
+            }
+        }
+
+        static func blocker(hasDeviceHinge: Bool) -> DiffsplitterBlocker? {
+            let idiom = UIDevice.current.userInterfaceIdiom
+            if idiom != .pad && !hasDeviceHinge { return .phone }
+            #if targetEnvironment(simulator)
+            return nil
+            #else
+            guard let device = MTLCreateSystemDefaultDevice(),
+                  device.supportsFamily(.apple7) else { return .chip }
+            return nil
+            #endif
+        }
+    }
+
     static var diffsplitter: Bool {
-        diffsplitterBlocker == nil
+        Model.shared.diffsplitter
     }
 
     static var diffsplitterBlocker: DiffsplitterBlocker? {
-        guard UIDevice.current.userInterfaceIdiom == .pad else { return .phone }
-        #if targetEnvironment(simulator)
-        return nil
-        #else
-        guard let device = MTLCreateSystemDefaultDevice(),
-              device.supportsFamily(.apple7) else { return .chip }
-        return nil
-        #endif
+        Model.shared.diffsplitterBlocker
     }
 }
 
@@ -306,40 +335,62 @@ struct DeboogeyClientMCE: App {
 
     var body: some Scene {
         WindowGroup {
-            NavigationStack(path: $path) {
-                RootView()
-                    .navigationDestination(for: MCEIOSRoute.self) { route in
-                        switch route {
-                        case .loupe(let request):
-                            LoupeMachineView(request: request)
-                        case .diffsplitter(let request):
-                            if MCEIOSFeatureSupport.diffsplitter {
-                                DiffsplitterView(request: request)
-                            } else {
-                                EmptyView()
-                            }
+            MCEIOSRootHost(path: $path)
+        }
+    }
+}
+
+private struct MCEIOSRootHost: View {
+    @Binding var path: NavigationPath
+    @ObservedObject private var diffsplitterAvailability = MCEIOSFeatureSupport.Model.shared
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            RootView()
+                .navigationDestination(for: MCEIOSRoute.self) { route in
+                    switch route {
+                    case .loupe(let request):
+                        LoupeMachineView(request: request)
+                    case .diffsplitter(let request):
+                        if diffsplitterAvailability.diffsplitter {
+                            DiffsplitterView(request: request)
+                        } else {
+                            EmptyView()
                         }
                     }
-            }
-            .environment(\.locale, L10n.locale)
-            .environment(\.mceIOSNavigate) { route in
-                path.append(route)
-            }
-            .onOpenURL { url in
-                let ext = url.pathExtension.lowercased()
-                let route: MCEIOSRoute?
-                switch ext {
-                case "loum":
-                    route = .loupe(LoupeMachineWindowRequest(action: .open, documentURL: url))
-                case "dsplt", "dspltx":
-                    guard MCEIOSFeatureSupport.diffsplitter else { return }
-                    route = .diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: url))
-                default:
-                    return
                 }
-                _ = url.startAccessingSecurityScopedResource()
-                if let route { path.append(route) }
+        }
+        .environment(\.locale, L10n.locale)
+        .environment(\.mceIOSNavigate) { route in
+            path.append(route)
+        }
+        .modifier(MCEIOSHingeDiffsplitterSupport())
+        .onOpenURL { url in
+            let ext = url.pathExtension.lowercased()
+            let route: MCEIOSRoute?
+            switch ext {
+            case "loum":
+                route = .loupe(LoupeMachineWindowRequest(action: .open, documentURL: url))
+            case "dsplt", "dspltx":
+                guard diffsplitterAvailability.diffsplitter else { return }
+                route = .diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: url))
+            default:
+                return
             }
+            _ = url.startAccessingSecurityScopedResource()
+            if let route { path.append(route) }
+        }
+    }
+}
+
+private struct MCEIOSHingeDiffsplitterSupport: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 27.1, *) {
+            content.onHingeChange { _, newContext in
+                MCEIOSFeatureSupport.Model.shared.update(from: newContext)
+            }
+        } else {
+            content
         }
     }
 }

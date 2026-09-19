@@ -297,7 +297,7 @@ nonisolated enum DiffsplitterAEA {
     }
 
     private static func dataFromHex(_ hex: String) -> Data? {
-        var cleaned = hex
+        let cleaned = hex
         if cleaned.count % 2 != 0 { return nil }
         var data = Data()
         data.reserveCapacity(cleaned.count / 2)
