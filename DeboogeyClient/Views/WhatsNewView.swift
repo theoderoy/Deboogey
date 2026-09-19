@@ -22,7 +22,7 @@ struct WhatsNewView: View {
             icon: "DiffsplitterIconIPOSF",
             color: .accentColor,
             title: "Diffsplitter",
-            description: "Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on Mac, iPad, and Apple Vision."
+            description: "Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on iPhone Duo, Mac, iPad, and Apple Vision."
         ),
         WhatsNewEntry(
             scope: .unified,
