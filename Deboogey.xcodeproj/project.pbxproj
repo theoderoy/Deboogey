@@ -1097,7 +1097,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEBOOGEY_EDITION = "Marketplace Candidate Edition";
 				DEVELOPMENT_TEAM = 7Z88K9GUU8;
 				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
@@ -1203,7 +1203,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEBOOGEY_EDITION = "Marketplace Candidate Edition";
 				DEVELOPMENT_TEAM = 7Z88K9GUU8;
 				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
