@@ -22,14 +22,14 @@ struct WhatsNewView: View {
             icon: "DiffsplitterIconIPOSF",
             color: .accentColor,
             title: "Diffsplitter",
-            description: "Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on both Mac and iPad."
+            description: "Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on Mac, iPad, and Apple Vision."
         ),
         WhatsNewEntry(
             scope: .unified,
             icon: "loupe",
             color: .accentColor,
             title: "Loupe View",
-            description: "You'll now be able to view Loupe Machine documents on iPhone and iPad."
+            description: "You'll now be able to view Loupe Machine documents on iPhone, iPad, and Apple Vision."
         ),
         WhatsNewEntry(
             scope: .unified,

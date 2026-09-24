@@ -77,7 +77,6 @@ final class DiffsplitterCommandRouter: ObservableObject {
 }
 
 @MainActor
-
 enum DocumentSaveDispatcher {
     static var canSave: Bool {
         LoupeMachineCommandRouter.shared.canSave || DiffsplitterCommandRouter.shared.canSave
@@ -152,10 +151,21 @@ private struct DiffsplitterExportDocument: FileDocument {
 #endif
 
 struct DiffsplitterView: View {
+#if os(macOS)
+    private static let dropWellTypeIdentifiers = [UTType.fileURL.identifier]
+#else
+    private static let dropWellTypeIdentifiers = [
+        UTType.item.identifier,
+        UTType.folder.identifier,
+        UTType.fileURL.identifier
+    ]
+#endif
+
     let request: DiffsplitterWindowRequest
     @StateObject private var session = DiffsplitterSession()
     @State private var statusPriorityRaw = PersistentVariables.loadDiffsplitterStatusPriority()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 #if os(iOS)
     @Environment(\.dismiss) private var dismiss
     @State private var showDiscardConfirmation = false
@@ -176,6 +186,9 @@ struct DiffsplitterView: View {
 #else
         return false
 #endif
+    }
+    private var usesCompactSetupLayout: Bool {
+        horizontalSizeClass == .compact
     }
     var body: some View {
         VStack(spacing: 0) {
@@ -280,11 +293,7 @@ struct DiffsplitterView: View {
         ) { result in
             switch result {
             case .success(let urls):
-                let url = urls.first
-                if let url {
-                    _ = url.startAccessingSecurityScopedResource()
-                }
-                session.handlePickedSideURL(url)
+                session.handlePickedSideURL(urls.first)
             case .failure(let error):
                 session.setupError = error.localizedDescription
                 session.handlePickedSideURL(nil)
@@ -481,48 +490,69 @@ struct DiffsplitterView: View {
     private var setupView: some View {
         ZStack {
             DiffsplitterEmptyBackground()
-
-            VStack(spacing: 28) {
-                HStack(spacing: 14) {
-                    Image("DiffsplitterIdent")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 72, height: 72)
-                        .environment(\.colorScheme, .dark)
-                    Text(L10n.t("Diffsplitter"))
-                        .font(.largeTitle.weight(.semibold))
-                        .foregroundStyle(.white)
+            if usesCompactSetupLayout {
+                ScrollView {
+                    setupContent
+                        .padding(28)
+                        .frame(maxWidth: .infinity)
                 }
-                HStack(spacing: 20) {
-                    dropWell(
-                        title: L10n.t("Left"),
-                        url: session.leftURL,
-                        isTargeted: session.leftDropTargeted,
-                        side: .left
-                    )
-                    dropWell(
-                        title: L10n.t("Right"),
-                        url: session.rightURL,
-                        isTargeted: session.rightDropTargeted,
-                        side: .right
-                    )
-                }
-                .frame(maxWidth: 760)
-                if session.isComparing {
-                    indexingProgressChrome
-                        .frame(maxWidth: 420)
-                        .foregroundStyle(.white.opacity(0.75))
-                        .tint(.white)
-                } else {
-                    Text(L10n.t("Drop two text files, or two folders or archives — one on each side — to compare them."))
-                        .font(.body)
-                        .foregroundStyle(.white.opacity(0.65))
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: 560)
-                }
+            } else {
+                setupContent
+                    .padding(48)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding(48)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private var setupContent: some View {
+        VStack(spacing: 28) {
+            HStack(spacing: 14) {
+                Image("DiffsplitterIdent")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 72, height: 72)
+                    .environment(\.colorScheme, .dark)
+                Text(L10n.t("Diffsplitter"))
+                    .font(.largeTitle.weight(.semibold))
+                    .foregroundStyle(.white)
+            }
+            setupDropWells
+                .frame(maxWidth: usesCompactSetupLayout ? .infinity : 760)
+            if session.isComparing {
+                indexingProgressChrome
+                    .frame(maxWidth: 420)
+                    .foregroundStyle(.white.opacity(0.75))
+                    .tint(.white)
+            } else {
+                Text(L10n.t("Drop two text files, or two folders or archives — one on each side — to compare them."))
+                    .font(.body)
+                    .foregroundStyle(.white.opacity(0.65))
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 560)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var setupDropWells: some View {
+        let wells = Group {
+            dropWell(
+                title: L10n.t("Left"),
+                url: session.leftURL,
+                isTargeted: session.leftDropTargeted,
+                side: .left
+            )
+            dropWell(
+                title: L10n.t("Right"),
+                url: session.rightURL,
+                isTargeted: session.rightDropTargeted,
+                side: .right
+            )
+        }
+        if usesCompactSetupLayout {
+            VStack(spacing: 20) { wells }
+        } else {
+            HStack(spacing: 20) { wells }
         }
     }
     private var indexingProgressChrome: some View {
@@ -563,45 +593,61 @@ struct DiffsplitterView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
+        let tint = side == .left ? DiffsplitterPalette.leftAccent : DiffsplitterPalette.rightAccent
         let well = content()
             .padding(24)
             .frame(maxWidth: .infinity, minHeight: 220)
-            .background(.clear, in: shape)
             .overlay {
                 shape
                     .strokeBorder(
-                        isTargeted ? Color.accentColor : Color.white.opacity(0.35),
+                        isTargeted ? tint : tint.opacity(0.45),
                         style: StrokeStyle(lineWidth: isTargeted ? 3 : 1.5, dash: [9, 7])
                     )
             }
             .scaleEffect(isTargeted ? 1.015 : 1)
             .animation(.easeOut(duration: 0.15), value: isTargeted)
-            .onDrop(of: [UTType.fileURL.identifier], isTargeted: binding(for: side)) { providers in
-                session.handleDrop(providers, onto: side)
-            }
 
 #if os(macOS)
         if #available(macOS 26.0, *) {
-            well
-                .glassEffect(
-                    .clear.tint(.accentColor.opacity(0.15)).interactive(),
+            attachDropTarget(
+                to: well.glassEffect(
+                    .clear.tint(tint.opacity(isTargeted ? 0.28 : 0.16)),
                     in: shape
-                )
+                ),
+                side: side
+            )
         } else {
-            well
+            attachDropTarget(
+                to: well.background(tint.opacity(isTargeted ? 0.18 : 0.10), in: shape),
+                side: side
+            )
         }
 #else
-        well
+        attachDropTarget(
+            to: well.background(tint.opacity(isTargeted ? 0.18 : 0.10), in: shape),
+            side: side
+        )
 #endif
+    }
+
+    private func attachDropTarget<V: View>(to view: V, side: DiffsplitterSession.Side) -> some View {
+        view
+            .contentShape(Rectangle())
+            .onDrop(
+                of: Self.dropWellTypeIdentifiers,
+                isTargeted: binding(for: side)
+            ) { providers in
+                session.handleDrop(providers, onto: side)
+            }
     }
 
     @ViewBuilder
     private func dropWellContent(url: URL?, side: DiffsplitterSession.Side) -> some View {
         VStack(spacing: 12) {
-            Image(systemName: url.map { session.isDirectoryLike($0) ? "folder" : "doc.text" } ?? "plus.rectangle.on.folder")
-                .font(.system(size: 36, weight: .thin))
-                .foregroundStyle(.white.opacity(0.7))
             if let url {
+                Image(systemName: session.isDirectoryLike(url) ? "folder" : "doc.text")
+                    .font(.system(size: 36, weight: .thin))
+                    .foregroundStyle(.white.opacity(0.7))
                 Text(url.lastPathComponent)
                     .font(.body.weight(.medium))
                     .foregroundStyle(.white)
@@ -613,6 +659,10 @@ struct DiffsplitterView: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
             } else {
+                Image(importHintImageName(for: side))
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 72, height: 72)
                 Text(L10n.t("Drop a file, folder, or archive here"))
                     .foregroundStyle(.white.opacity(0.65))
                     .multilineTextAlignment(.center)
@@ -626,6 +676,19 @@ struct DiffsplitterView: View {
             .colorScheme(.dark)
         }
     }
+
+    private func importHintImageName(for side: DiffsplitterSession.Side) -> String {
+        let suffix = side == .left ? "Left" : "Right"
+        switch ProcessInfo.processInfo.operatingSystemVersion.majorVersion {
+        case 26:
+            return "ImportDAssetHint26\(suffix)"
+        case 27:
+            return "ImportDAssetHint27\(suffix)"
+        default:
+            return "ImportDAssetHintRaw\(suffix)"
+        }
+    }
+
     private func binding(for side: DiffsplitterSession.Side) -> Binding<Bool> {
         switch side {
         case .left: return $session.leftDropTargeted
@@ -822,27 +885,11 @@ struct DiffsplitterView: View {
         .help(L10n.t("Back"))
     }
     private var directoryListRoot: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                TextField(L10n.t("Search paths"), text: $session.directoryFilter)
-                    .textFieldStyle(.roundedBorder)
-                Text(L10n.f("%d changed", directoryBrowserItemCount))
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-            }
-            .padding(10)
-            if !session.directoryBrowsePrefix.isEmpty {
-                Text(session.directoryBrowsePrefix)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 8)
-                    .help(session.directoryBrowsePrefix)
-            }
+        let items = directoryBrowserItems
+        return VStack(alignment: .leading, spacing: 0) {
+            directoryListHeader(items: items)
             Divider()
-            List(directoryBrowserItems) { item in
+            List(items) { item in
                 Button {
                     session.activateDirectoryBrowserItem(item)
                 } label: {
@@ -857,6 +904,28 @@ struct DiffsplitterView: View {
         .navigationTitle(directoryListNavigationTitle)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+
+    private func directoryListHeader(items: [DiffsplitterSession.DirectoryBrowserItem]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                TextField(L10n.t("Search paths"), text: $session.directoryFilter)
+                    .textFieldStyle(.roundedBorder)
+                Text(L10n.f("%d changed", directoryBrowserItemCount(using: items)))
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+            }
+            if !session.directoryBrowsePrefix.isEmpty {
+                Text(session.directoryBrowsePrefix)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .help(session.directoryBrowsePrefix)
+            }
+        }
+        .padding(10)
+    }
+
     private var directoryListNavigationTitle: String {
         if session.directoryBrowsePrefix.isEmpty {
             return L10n.t("Changed Paths")
@@ -870,13 +939,15 @@ struct DiffsplitterView: View {
             statusPriority: statusPriority
         )
     }
-    private var directoryBrowserItemCount: Int {
+    private func directoryBrowserItemCount(
+        using items: [DiffsplitterSession.DirectoryBrowserItem]
+    ) -> Int {
         if session.directoryFilter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return directoryBrowserItems.reduce(0) { partial, item in
+            return items.reduce(0) { partial, item in
                 partial + (item.kind == .folder ? item.childCount : 1)
             }
         }
-        return directoryBrowserItems.count
+        return items.count
     }
     private func directoryBrowserRow(_ item: DiffsplitterSession.DirectoryBrowserItem) -> some View {
         HStack(spacing: 10) {
@@ -1337,20 +1408,52 @@ struct DiffsplitterView: View {
 
 private struct DiffsplitterEmptyBackground: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private let cycleDuration = 8.5
+
+    private let spawnInterval: TimeInterval = 0.16
+    private let sweepDuration: TimeInterval = 0.55
+    private var activeStripeSpan: Int { Int(ceil(sweepDuration / spawnInterval)) }
 
     var body: some View {
         ZStack {
             Color.black
 
+            LinearGradient(
+                stops: [
+                    .init(color: .clear, location: 0.55),
+                    .init(color: DiffsplitterPalette.brandGreen.opacity(0.22), location: 0.82),
+                    .init(color: DiffsplitterPalette.brandGreen.opacity(0.38), location: 1.0)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
             if reduceMotion {
-                orbs(primaryProgress: 0.58, secondaryProgress: 0.42)
+                Canvas { context, size in
+                    drawStripe(
+                        in: &context,
+                        size: size,
+                        color: DiffsplitterPalette.leftAccent,
+                        progress: 0.4,
+                        yFactor: 0.34,
+                        goesRight: true,
+                        peakOpacity: 0.10
+                    )
+                    drawStripe(
+                        in: &context,
+                        size: size,
+                        color: DiffsplitterPalette.rightAccent,
+                        progress: 0.62,
+                        yFactor: 0.66,
+                        goesRight: false,
+                        peakOpacity: 0.10
+                    )
+                }
             } else {
-                TimelineView(.animation) { timeline in
-                    let cycle = timeline.date.timeIntervalSinceReferenceDate / cycleDuration
-                    let primary = cycle.truncatingRemainder(dividingBy: 1)
-                    let secondary = (cycle + 0.5).truncatingRemainder(dividingBy: 1)
-                    orbs(primaryProgress: primary, secondaryProgress: secondary)
+                TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
+                    let t = timeline.date.timeIntervalSinceReferenceDate
+                    Canvas { context, size in
+                        drawActiveStripes(in: &context, size: size, at: t)
+                    }
                 }
             }
         }
@@ -1359,66 +1462,73 @@ private struct DiffsplitterEmptyBackground: View {
         .accessibilityHidden(true)
     }
 
-    private func orbs(primaryProgress: Double, secondaryProgress: Double) -> some View {
-        GeometryReader { geo in
-            let width = geo.size.width
-            let height = geo.size.height
-            let baseSize = max(width, height) * 1.05
+    private func drawActiveStripes(in context: inout GraphicsContext, size: CGSize, at time: TimeInterval) {
+        let newest = Int(floor(time / spawnInterval))
+        let oldest = newest - activeStripeSpan
+        guard newest >= oldest else { return }
 
-            orb(
-                color: Color(red: 1.0, green: 0.12, blue: 0.22),
-                progress: primaryProgress,
-                size: baseSize,
-                x: width * 0.26,
-                height: height
-            )
-            orb(
-                color: Color(red: 0.08, green: 0.92, blue: 0.38),
-                progress: secondaryProgress,
-                size: baseSize,
-                x: width * 0.74,
-                height: height
+        for index in oldest...newest {
+            let progress = (time - Double(index) * spawnInterval) / sweepDuration
+            guard (0...1).contains(progress) else { continue }
+            let traits = stripeTraits(for: index)
+            drawStripe(
+                in: &context,
+                size: size,
+                color: index & 1 == 0 ? DiffsplitterPalette.leftAccent : DiffsplitterPalette.rightAccent,
+                progress: progress,
+                yFactor: traits.yFactor,
+                goesRight: traits.goesRight,
+                peakOpacity: 0.15
             )
         }
-        .drawingGroup(opaque: false)
     }
 
-    private func orb(
+    private func stripeTraits(for index: Int) -> (yFactor: CGFloat, goesRight: Bool) {
+        var hash = UInt64(bitPattern: Int64(index &+ 0x9E37))
+        hash &*= 0x9E3779B97F4A7C15
+        hash ^= hash &>> 32
+        let unit = Double(hash % 10_000) / 10_000.0
+        return (CGFloat(0.12 + unit * 0.76), (hash & 1) == 0)
+    }
+
+    private func drawStripe(
+        in context: inout GraphicsContext,
+        size: CGSize,
         color: Color,
         progress: Double,
-        size: CGFloat,
-        x: CGFloat,
-        height: CGFloat
-    ) -> some View {
-        let travel = smoothstep(progress)
-        return Circle()
-            .fill(
-                RadialGradient(
-                    colors: [
-                        color.opacity(0.9),
-                        color.opacity(0.4),
-                        color.opacity(0.0)
-                    ],
-                    center: .center,
-                    startRadius: 0,
-                    endRadius: size * 0.5
-                )
+        yFactor: CGFloat,
+        goesRight: Bool,
+        peakOpacity: Double
+    ) {
+        let stripeHeight = max(size.height * 0.1, 28)
+        let stripeWidth = max(size.width * 0.36, 110)
+        let travel = size.width + stripeWidth
+        let eased = CGFloat(easeInOut(progress))
+        let x = goesRight
+            ? (-stripeWidth * 0.5 + eased * travel)
+            : (size.width - stripeWidth * 0.5 - eased * travel)
+        let y = size.height * yFactor - stripeHeight * 0.5
+        let envelope = sin(progress * .pi)
+        let opacity = peakOpacity * envelope * envelope
+        let band = Path(CGRect(x: x, y: y, width: stripeWidth, height: stripeHeight))
+
+        context.fill(
+            band,
+            with: .linearGradient(
+                Gradient(stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: color.opacity(opacity * 0.55), location: 0.22),
+                    .init(color: color.opacity(opacity), location: 0.5),
+                    .init(color: color.opacity(opacity * 0.55), location: 0.78),
+                    .init(color: .clear, location: 1)
+                ]),
+                startPoint: CGPoint(x: x, y: y + stripeHeight * 0.5),
+                endPoint: CGPoint(x: x + stripeWidth, y: y + stripeHeight * 0.5)
             )
-            .frame(width: size, height: size)
-            .scaleEffect(0.22 + travel * 1.05)
-            .opacity(orbOpacity(progress))
-            .position(
-                x: x,
-                y: height * (1.2 - travel * 0.7)
-            )
+        )
     }
 
-    private func orbOpacity(_ progress: Double) -> Double {
-        let wave = sin(progress * .pi)
-        return pow(wave, 2.2) * 0.88
-    }
-
-    private func smoothstep(_ t: Double) -> Double {
+    private func easeInOut(_ t: Double) -> Double {
         let x = min(max(t, 0), 1)
         return x * x * (3 - 2 * x)
     }
@@ -1461,6 +1571,10 @@ private struct DiffsplitterDirectoryBackToolbarModifier: ViewModifier {
 }
 
 private enum DiffsplitterPalette {
+    static let leftAccent = Color(red: 1.0, green: 0.18, blue: 0.26)
+    static let rightAccent = Color(red: 0.10, green: 0.88, blue: 0.42)
+    static let brandGreen = Color(red: 0.0, green: 0.435, blue: 0.243)
+
     static var windowBackground: Color {
 #if os(macOS)
         Color(nsColor: .windowBackgroundColor)
@@ -1732,37 +1846,20 @@ struct DiffsplitterEducationView: View {
     private var completionSoundStep: some View {
         VStack(spacing: 16) {
             VStack(spacing: 8) {
-#if os(iOS)
-                Image(systemName: "platter.filled.top.and.arrow.up.iphone")
+                Image(systemName: DiffsplitterCompletionFeedback.completionNotifySymbolName)
                     .font(.system(size: 72, weight: .thin))
                     .foregroundStyle(.secondary)
                     .symbolRenderingMode(.hierarchical)
-                Text(L10n.t("Notify with Live Activity when Diffsplitter finishes"))
+                Text(DiffsplitterCompletionFeedback.completionNotifyTitle)
                     .font(.title3)
                     .fontWeight(.medium)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(L10n.t("Live Activity when available, otherwise a banner. Plays a sound after the selected minimum duration."))
+                Text(DiffsplitterCompletionFeedback.completionNotifyCaption)
                     .padding(.top, 12)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-#else
-                Image(systemName: "speaker.wave.2")
-                    .font(.system(size: 72, weight: .thin))
-                    .foregroundStyle(.secondary)
-                    .symbolRenderingMode(.hierarchical)
-                Text(L10n.t("Play a sound when Diffsplitter finishes a comparison"))
-                    .font(.title3)
-                    .fontWeight(.medium)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(L10n.t("Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration."))
-                    .padding(.top, 12)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-#endif
             }
 
             Toggle(isOn: $vars.playDiffsplitterDoneSound) {

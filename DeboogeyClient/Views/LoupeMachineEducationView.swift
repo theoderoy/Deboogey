@@ -8,13 +8,24 @@
 import SwiftUI
 
 struct LoupeMachineEducationView: View {
-    var title: String = L10n.t("Loupe Machine")
+    var title: String? = nil
     var explanation: String? = nil
     let onDismiss: () -> Void
 
+    private var resolvedTitle: String {
+        if let title { return title }
+#if os(iOS)
+        return L10n.t("Loupe View")
+#else
+        return L10n.t("Loupe Machine")
+#endif
+    }
+
     private var resolvedExplanation: String {
         if let explanation { return explanation }
-#if DEBOOGEY_MCE
+#if os(iOS)
+        return L10n.t("Loupe View lets you open Loupe Machine documents on iPhone, iPad, and Apple Vision, inspect and edit their flags, and prepare a change set to apply elsewhere.")
+#elseif DEBOOGEY_MCE
         return L10n.t("Loupe Machine lets you select an application, discover binary preference flags, inspect and edit them, and prepare a change set to apply elsewhere.")
 #else
         return L10n.t("Loupe Machine lets you select an application, discover its system-modifiable flags, and inspect or edit them.")
@@ -30,7 +41,7 @@ struct LoupeMachineEducationView: View {
                     .frame(width: 128, height: 128)
                     .padding(.bottom, 12)
 
-                Text(title)
+                Text(resolvedTitle)
                     .font(.title2)
                     .fontWeight(.medium)
 

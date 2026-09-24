@@ -48,8 +48,12 @@ enum DiffsplitterContinuedProcessing {
     private static var pendingContinuation: CheckedContinuation<Handle?, Never>?
     private static var pendingOnExpire: (@Sendable () -> Void)?
 
+    static var isAvailable: Bool {
+        DiffsplitterCompletionFeedback.usesLiveActivityUX
+    }
+
     static func registerAtLaunch() {
-        guard #available(iOS 26.0, *) else { return }
+        guard isAvailable else { return }
         ensureRegistered()
     }
 
@@ -58,7 +62,7 @@ enum DiffsplitterContinuedProcessing {
         subtitle: String,
         onExpire: @escaping @Sendable () -> Void
     ) async -> Handle? {
-        guard #available(iOS 26.0, *) else { return nil }
+        guard isAvailable else { return nil }
         ensureRegistered()
         return await withCheckedContinuation { continuation in
             if let previous = pendingContinuation {

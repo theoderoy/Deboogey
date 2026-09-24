@@ -110,7 +110,7 @@ struct EntityTrackerView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Image(systemName: "binoculars")
+            Image(systemName: "eyeglasses")
                 .font(.system(size: 48, weight: .thin))
                 .foregroundColor(.secondary)
             Text(L10n.t("No modifications recorded yet."))

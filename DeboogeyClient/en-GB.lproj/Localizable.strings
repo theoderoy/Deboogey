@@ -114,7 +114,7 @@
 "Diffsplitter Error" = "Diffsplitter Error";
 "Diffsplitter Finished" = "Diffsplitter Finished";
 "Diffsplitter compares two text files, or two folders or archives side by side. Select a nested archive in the path list to expand it. Save a session to reopen the same pair later." = "Diffsplitter compares two text files, or two folders or archives side by side. Select a nested archive in the path list to expand it. Save a session to reopen the same pair later.";
-"Diffsplitter is only available on iPad." = "Diffsplitter is only available on iPad.";
+"Diffsplitter is only available on Mac, iPad and Apple Vision." = "Diffsplitter is only available on Mac, iPad and Apple Vision.";
 "Diffsplitter is unavailable on this device." = "Diffsplitter is unavailable on this device.";
 "Diffsplitter requires an Apple A14 or M1 chip, or later." = "Diffsplitter requires an Apple A14 or M1 chip, or later.";
 "Disable" = "Disable";
@@ -201,7 +201,7 @@
 "Internal" = "Internal";
 "Internal %@" = "Internal %@";
 "Internal builds contain experimental features and are not notarised by Apple." = "Internal builds contain experimental features and are not notarised by Apple.";
-"Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on both Mac and iPad." = "Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on both Mac and iPad.";
+"Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on Mac, iPad, and Apple Vision." = "Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on Mac, iPad, and Apple Vision.";
 "Invalid arguments. Expected: enable|disable <bundle-id|global> [--autokill]" = "Invalid arguments. Expected: enable|disable <bundle-id|global> [--autokill]";
 "Invalid arguments. First argument must be 'enable' or 'disable'" = "Invalid arguments. First argument must be 'enable' or 'disable'";
 "Invalid arguments. Unknown flag: %@" = "Invalid arguments. Unknown flag: %@";
@@ -228,6 +228,7 @@
 "Loupe Machine lets you select an application, discover its system-modifiable flags, and inspect or edit them." = "Loupe Machine lets you select an application, discover its system-modifiable flags, and inspect or edit them.";
 "Loupe Machine will apply %d value(s) to the selected application." = "Loupe Machine will apply %d value(s) to the selected application.";
 "Loupe View" = "Loupe View";
+"Loupe View lets you open Loupe Machine documents on iPhone, iPad, and Apple Vision, inspect and edit their flags, and prepare a change set to apply elsewhere." = "Loupe View lets you open Loupe Machine documents on iPhone, iPad, and Apple Vision, inspect and edit their flags, and prepare a change set to apply elsewhere.";
 "Maintenance" = "Maintenance";
 "Marketplace Candidate Edition" = "Marketplace Candidate Edition";
 "Mask: %@" = "Mask: %@";
@@ -261,6 +262,7 @@
 "No upgrade is present at this time." = "No upgrade is present at this time.";
 "Notices" = "Notices";
 "Notify with Live Activity when Diffsplitter finishes" = "Notify with Live Activity when Diffsplitter finishes";
+"Notify with a sound and banner when Loupe Machine finishes an index cycle." = "Notify with a sound and banner when Loupe Machine finishes an index cycle.";
 "Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration." = "Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration.";
 "OK" = "OK";
 "Off" = "Off";
@@ -282,9 +284,8 @@
 "Pending change" = "Pending change";
 "PlaceholderText1" = "G'day!";
 "PlaceholderText2" = "Strings, text, variables, placeholders and the sort.";
-"Play a sound after an application is completely indexed." = "Play a sound after an application is completely indexed.";
 "Play a sound when Diffsplitter finishes a comparison" = "Play a sound when Diffsplitter finishes a comparison";
-"Play a sound when indexing finishes" = "Play a sound when indexing finishes";
+"Play a sound when Loupe Machine finishes an index cycle" = "Play a sound when Loupe Machine finishes an index cycle";
 "Play sounds when Apple System Tools complete successfully or halt due to an error." = "Play sounds when Apple System Tools complete successfully or halt due to an error.";
 "Play sounds when Apple System Tools finish or fail" = "Play sounds when Apple System Tools finish or fail";
 "Play sounds when Cocoa Debug Menu completes successfully or halts due to an error." = "Play sounds when Cocoa Debug Menu completes successfully or halts due to an error.";
@@ -403,7 +404,7 @@
 "Window %@–%@ of %@ (%d lines in memory)" = "Window %@–%@ of %@ (%d lines in memory)";
 "Writing DiffsplitterX Document…" = "Writing DiffsplitterX Document…";
 "You might need to manually code-sign after upgrading." = "You might need to manually code-sign after upgrading.";
-"You'll now be able to view Loupe Machine documents on iPhone and iPad." = "You'll now be able to view Loupe Machine documents on iPhone and iPad.";
+"You'll now be able to view Loupe Machine documents on iPhone, iPad, and Apple Vision." = "You'll now be able to view Loupe Machine documents on iPhone, iPad, and Apple Vision.";
 "Your session pair will be lost if you don’t save it." = "Your session pair will be lost if you don’t save it.";
 "Your unapplied drafted value changes will be lost if you don’t save them." = "Your unapplied drafted value changes will be lost if you don’t save them.";
 "base64:… or hex:…" = "base64:… or hex:…";

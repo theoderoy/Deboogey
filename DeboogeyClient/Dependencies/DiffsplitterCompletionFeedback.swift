@@ -43,6 +43,34 @@ enum DiffsplitterCompletionFeedback {
         clampedMinimumSeconds(defaults.double(forKey: minimumSecondsKey))
     }
 
+    static var usesLiveActivityUX: Bool {
+#if os(iOS)
+        !ProcessInfo.processInfo.isiOSAppOnVision
+#else
+        false
+#endif
+    }
+
+    static var completionNotifySectionHeader: String {
+        usesLiveActivityUX ? "Live Activity" : "Sounds"
+    }
+
+    static var completionNotifySymbolName: String {
+        usesLiveActivityUX ? "platter.filled.top.and.arrow.up.iphone" : "speaker.wave.2"
+    }
+
+    static var completionNotifyTitle: String {
+        usesLiveActivityUX
+            ? L10n.t("Notify with Live Activity when Diffsplitter finishes")
+            : L10n.t("Play a sound when Diffsplitter finishes a comparison")
+    }
+
+    static var completionNotifyCaption: String {
+        usesLiveActivityUX
+            ? L10n.t("Live Activity when available, otherwise a banner. Plays a sound after the selected minimum duration.")
+            : L10n.t("Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration.")
+    }
+
     static func durationLabel(for seconds: Double) -> String {
         let value = Int(clampedMinimumSeconds(seconds).rounded())
         if value <= 0 {
@@ -71,7 +99,7 @@ enum DiffsplitterCompletionFeedback {
 
     private static func shouldBypassMinimumDuration(defaults: UserDefaults) -> Bool {
 #if os(iOS)
-        guard defaults.bool(forKey: notifyWhenBackgroundedKey) else { return false }
+        guard usesLiveActivityUX, defaults.bool(forKey: notifyWhenBackgroundedKey) else { return false }
         return UIApplication.shared.applicationState != .active
 #else
         return false
