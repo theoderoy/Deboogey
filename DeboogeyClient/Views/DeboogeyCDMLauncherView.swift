@@ -59,45 +59,19 @@ struct DeboogeyCDMLauncherView: View {
     }
 
     private var viewHeight: CGFloat {
-#if DEBOOGEY_MCE
-        480
-#else
-        650
-#endif
+        AppWindowSizing.cocoaDebugMenu.defaultSize.height
     }
 
     var body: some View {
         VStack(spacing: 0) {
         ScrollView {
             VStack(spacing: 24) {
-                VStack(spacing: 0) {
-                    Group {
-                        if EducationPlayerView.hasAsset(named: "DEBOOGEY_EDUCATION-DEBOOGEYCDM_h265") {
-                            EducationPlayerView(assetName: "DEBOOGEY_EDUCATION-DEBOOGEYCDM_h265")
-                        } else {
-                            Rectangle()
-                                .fill(Color.secondary.opacity(0.1))
-                                .overlay(
-                                    VStack(spacing: 12) {
-                                        Image(systemName: "wrench.and.screwdriver").font(.system(size: 48, weight: .thin))
-                                        Text(L10n.t("Cocoa Debug Menu")).font(.headline)
-                                    }.foregroundColor(.secondary)
-                                )
-                        }
-                    }
-                    .aspectRatio(16.0/9.0, contentMode: .fill)
-                    .frame(maxWidth: .infinity)
-                    .clipped()
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-
-                    Text(L10n.t(introduction))
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 16)
-                        .padding(.horizontal, 32)
-                }
+                HelperEducationHeader(
+                    assetName: "DEBOOGEY_EDUCATION-DEBOOGEYCDM_h265",
+                    fallbackSymbol: "wrench.and.screwdriver",
+                    fallbackTitle: "Cocoa Debug Menu",
+                    blurb: introduction
+                )
 
                 VStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -182,7 +156,7 @@ struct DeboogeyCDMLauncherView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         }
-        .frame(width: 520, height: viewHeight)
+        .frame(width: AppWindowSizing.cocoaDebugMenu.defaultSize.width, height: viewHeight)
         .navigationTitle(L10n.t("Cocoa Debug Menu"))
         .alert(isPresented: $showExecutionConfirmation) {
             Alert(

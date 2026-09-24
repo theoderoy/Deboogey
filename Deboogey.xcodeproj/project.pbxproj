@@ -156,7 +156,6 @@
 		F0ACE0073021B00000ACE001 /* Exceptions for "DeboogeyClient" folder in "DeboogeyClient" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				AppIconOld.icon,
 				MCE/DeboogeyClientMCE.swift,
 			);
 			target = F07EDA812E9CC3B200AE8D4A /* DeboogeyClient */;
@@ -164,7 +163,6 @@
 		F0ACE0083021B00000ACE001 /* Exceptions for "DeboogeyClient" folder in "DeboogeyClientMCE" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				AppIcon.icon,
 				Dependencies/DeboogeySDLauncher.swift,
 				NetworkMonitor.swift,
 				Root.swift,
@@ -856,19 +854,24 @@
 			buildSettings = {
 				APP_BUNDLE_DISPLAY_NAME = DeboogeyClient;
 				APP_BUNDLE_NAME = DeboogeyClient;
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon$(DEBOOGEY_APPICON_SUFFIX)";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				AUTOMATION_APPLE_EVENTS = NO;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6.2;
+				CURRENT_PROJECT_VERSION = 24;
+				DEBOOGEY_APPICON_SUFFIX = "$(DEBOOGEY_APPICON_SUFFIX_$(MARKETING_VERSION:c99extidentifier))";
+				DEBOOGEY_APPICON_SUFFIX_Security_Research_Preview = SRP;
+				DEBOOGEY_EXCLUDED_ICON = AppIconSRP.icon;
+				DEBOOGEY_EXCLUDED_ICONSRP = AppIcon.icon;
 				DEVELOPMENT_TEAM = 7Z88K9GUU8;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				EXCLUDED_SOURCE_FILE_NAMES = "$(DEBOOGEY_EXCLUDED_ICON$(DEBOOGEY_APPICON_SUFFIX))";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Config/DeboogeyClient-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Deboogey;
@@ -877,7 +880,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = Release;
+				MARKETING_VERSION = Internal;
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.DeboogeyClient;
 				PRODUCT_NAME = DeboogeyClient;
 				REGISTER_APP_GROUPS = YES;
@@ -890,7 +893,7 @@
 				SKIP_INSTALL = NO;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
@@ -902,19 +905,24 @@
 			buildSettings = {
 				APP_BUNDLE_DISPLAY_NAME = Deboogey;
 				APP_BUNDLE_NAME = Deboogey;
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon$(DEBOOGEY_APPICON_SUFFIX)";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				AUTOMATION_APPLE_EVENTS = NO;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6.2;
+				CURRENT_PROJECT_VERSION = 24;
+				DEBOOGEY_APPICON_SUFFIX = "$(DEBOOGEY_APPICON_SUFFIX_$(MARKETING_VERSION:c99extidentifier))";
+				DEBOOGEY_APPICON_SUFFIX_Security_Research_Preview = SRP;
+				DEBOOGEY_EXCLUDED_ICON = AppIconSRP.icon;
+				DEBOOGEY_EXCLUDED_ICONSRP = AppIcon.icon;
 				DEVELOPMENT_TEAM = 7Z88K9GUU8;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				EXCLUDED_SOURCE_FILE_NAMES = "$(DEBOOGEY_EXCLUDED_ICON$(DEBOOGEY_APPICON_SUFFIX))";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Config/DeboogeyClient-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Deboogey;
@@ -923,7 +931,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = Release;
+				MARKETING_VERSION = Internal;
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey;
 				PRODUCT_MODULE_NAME = DeboogeyClient;
 				PRODUCT_NAME = Deboogey;
@@ -937,7 +945,7 @@
 				SKIP_INSTALL = NO;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
@@ -1066,30 +1074,78 @@
 				APP_BUNDLE_DISPLAY_NAME = Deboogey;
 				APP_BUNDLE_NAME = Deboogey;
 				APP_COPYRIGHT = "Copyright © 2026 Théo De Roy. All rights reserved.";
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconOld;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				AUTOMATION_APPLE_EVENTS = NO;
-				CODE_SIGN_ENTITLEMENTS = Config/DeboogeyClientMCE.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "Config/DeboogeyClientMCE-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Config/DeboogeyClientMCE-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Config/DeboogeyClientMCE.entitlements;
 				CODE_SIGN_IDENTITY = "-";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
 				DEBOOGEY_EDITION = "Marketplace Candidate Edition";
 				DEVELOPMENT_TEAM = 7Z88K9GUU8;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
+				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
+				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				"EXCLUDED_SOURCE_FILE_NAMES[sdk=iphoneos*]" = (
+					DeboogeyCDMHelper/main.swift,
+					DeboogeyLoupe/main.swift,
+					DeboogeySDHelper/main.swift,
+					Dependencies/DeboogeyCDMLauncher.swift,
+					Dependencies/DeboogeyLoupeLauncher.swift,
+					Dependencies/DeboogeySDLauncher.swift,
+					Dependencies/DeboogeyWindowController.swift,
+					Dependencies/LoupeMachineWindowController.swift,
+					Dependencies/WindowLauncherCommands.swift,
+					NetworkMonitor.swift,
+					Root.swift,
+					UpgradeChecker.swift,
+					Views/DeboogeyCDMLauncherView.swift,
+					Views/DeboogeySDLauncherView.swift,
+					Views/EducationPlayerView.swift,
+					Views/EntityTrackerView.swift,
+				);
+				"EXCLUDED_SOURCE_FILE_NAMES[sdk=iphonesimulator*]" = (
+					DeboogeyCDMHelper/main.swift,
+					DeboogeyLoupe/main.swift,
+					DeboogeySDHelper/main.swift,
+					Dependencies/DeboogeyCDMLauncher.swift,
+					Dependencies/DeboogeyLoupeLauncher.swift,
+					Dependencies/DeboogeySDLauncher.swift,
+					Dependencies/DeboogeyWindowController.swift,
+					Dependencies/LoupeMachineWindowController.swift,
+					Dependencies/WindowLauncherCommands.swift,
+					NetworkMonitor.swift,
+					Root.swift,
+					UpgradeChecker.swift,
+					Views/DeboogeyCDMLauncherView.swift,
+					Views/DeboogeySDLauncherView.swift,
+					Views/EducationPlayerView.swift,
+					Views/EntityTrackerView.swift,
+				);
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "Config/DeboogeyClientMCE-Info.plist";
+				"INFOPLIST_FILE[sdk=iphoneos*]" = "Config/DeboogeyClientMCE-iOS-Info.plist";
+				"INFOPLIST_FILE[sdk=iphonesimulator*]" = "Config/DeboogeyClientMCE-iOS-Info.plist";
+				"INFOPLIST_FILE[sdk=macosx*]" = "Config/DeboogeyClientMCE-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Deboogey (Marketplace Candidate Edition)";
-				LD_RUNPATH_SEARCH_PATHS = (
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				"LD_RUNPATH_SEARCH_PATHS[sdk=iphoneos*]" = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=iphonesimulator*]" = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 2026.8.26;
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey.MCE;
 				PRODUCT_MODULE_NAME = DeboogeyClientMCE;
 				PRODUCT_NAME = Deboogey;
@@ -1099,13 +1155,19 @@
 				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
 				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
 				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
+				SDKROOT = auto;
 				SKIP_INSTALL = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG DEBOOGEY_MCE $(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -1115,30 +1177,78 @@
 				APP_BUNDLE_DISPLAY_NAME = Deboogey;
 				APP_BUNDLE_NAME = Deboogey;
 				APP_COPYRIGHT = "Copyright © 2026 Théo De Roy. All rights reserved.";
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconOld;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				AUTOMATION_APPLE_EVENTS = NO;
-				CODE_SIGN_ENTITLEMENTS = Config/DeboogeyClientMCE.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "Config/DeboogeyClientMCE-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Config/DeboogeyClientMCE-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Config/DeboogeyClientMCE.entitlements;
 				CODE_SIGN_IDENTITY = "-";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
 				DEBOOGEY_EDITION = "Marketplace Candidate Edition";
 				DEVELOPMENT_TEAM = 7Z88K9GUU8;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
+				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
+				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				"EXCLUDED_SOURCE_FILE_NAMES[sdk=iphoneos*]" = (
+					DeboogeyCDMHelper/main.swift,
+					DeboogeyLoupe/main.swift,
+					DeboogeySDHelper/main.swift,
+					Dependencies/DeboogeyCDMLauncher.swift,
+					Dependencies/DeboogeyLoupeLauncher.swift,
+					Dependencies/DeboogeySDLauncher.swift,
+					Dependencies/DeboogeyWindowController.swift,
+					Dependencies/LoupeMachineWindowController.swift,
+					Dependencies/WindowLauncherCommands.swift,
+					NetworkMonitor.swift,
+					Root.swift,
+					UpgradeChecker.swift,
+					Views/DeboogeyCDMLauncherView.swift,
+					Views/DeboogeySDLauncherView.swift,
+					Views/EducationPlayerView.swift,
+					Views/EntityTrackerView.swift,
+				);
+				"EXCLUDED_SOURCE_FILE_NAMES[sdk=iphonesimulator*]" = (
+					DeboogeyCDMHelper/main.swift,
+					DeboogeyLoupe/main.swift,
+					DeboogeySDHelper/main.swift,
+					Dependencies/DeboogeyCDMLauncher.swift,
+					Dependencies/DeboogeyLoupeLauncher.swift,
+					Dependencies/DeboogeySDLauncher.swift,
+					Dependencies/DeboogeyWindowController.swift,
+					Dependencies/LoupeMachineWindowController.swift,
+					Dependencies/WindowLauncherCommands.swift,
+					NetworkMonitor.swift,
+					Root.swift,
+					UpgradeChecker.swift,
+					Views/DeboogeyCDMLauncherView.swift,
+					Views/DeboogeySDLauncherView.swift,
+					Views/EducationPlayerView.swift,
+					Views/EntityTrackerView.swift,
+				);
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "Config/DeboogeyClientMCE-Info.plist";
+				"INFOPLIST_FILE[sdk=iphoneos*]" = "Config/DeboogeyClientMCE-iOS-Info.plist";
+				"INFOPLIST_FILE[sdk=iphonesimulator*]" = "Config/DeboogeyClientMCE-iOS-Info.plist";
+				"INFOPLIST_FILE[sdk=macosx*]" = "Config/DeboogeyClientMCE-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Deboogey (Marketplace Candidate Edition)";
-				LD_RUNPATH_SEARCH_PATHS = (
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				"LD_RUNPATH_SEARCH_PATHS[sdk=iphoneos*]" = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=iphonesimulator*]" = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 2026.8.26;
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey.MCE;
 				PRODUCT_MODULE_NAME = DeboogeyClientMCE;
 				PRODUCT_NAME = Deboogey;
@@ -1148,13 +1258,19 @@
 				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
 				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
 				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
+				SDKROOT = auto;
 				SKIP_INSTALL = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBOOGEY_MCE $(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};

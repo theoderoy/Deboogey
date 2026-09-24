@@ -6,6 +6,12 @@
 //
 
 import SwiftUI
+#if canImport(AppKit)
+import AppKit
+#endif
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct WhatsNewView: View {
     let onDismiss: () -> Void
@@ -13,10 +19,24 @@ struct WhatsNewView: View {
     private let entries: [WhatsNewEntry] = [
         WhatsNewEntry(
             scope: .unified,
+            icon: "DiffsplitterIconIPOSF",
+            color: .accentColor,
+            title: "Diffsplitter",
+            description: "Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on both Mac and iPad."
+        ),
+        WhatsNewEntry(
+            scope: .unified,
+            icon: "loupe",
+            color: .accentColor,
+            title: "Loupe View",
+            description: "You'll now be able to view Loupe Machine documents on iPhone and iPad."
+        ),
+        WhatsNewEntry(
+            scope: .unified,
             icon: "info.circle",
             color: .blue,
             title: "Improvements",
-            description: "Added audible feedback for Apple System Tools completions/failures, and made 'Deboogey' window spawning more reliable."
+            description: "A multi-step backend overhaul has resulted in major performance increases and more responsive interactions. Loupe Machine documents in Marketplace Candidate Edition now show more data when migrated from other versions of Deboogey."
         )
     ]
 
@@ -33,12 +53,19 @@ struct WhatsNewView: View {
     var body: some View {
         VStack(spacing: 30) {
             VStack(spacing: 8) {
+#if canImport(AppKit)
                 if let appIcon = NSImage(named: NSImage.applicationIconName) {
                     Image(nsImage: appIcon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 128, height: 128)
                 }
+#else
+                Image("DeboogeyIdent")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 128, height: 128)
+#endif
                 
                 Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "DeboogeyClient")
                     .font(.largeTitle)
@@ -100,48 +127,46 @@ private struct ContinueButton: View {
     var body: some View {
         Button(action: action) {
             Text(L10n.t(title))
-                .font(.headline)
-                .padding(8)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
+                .deboogeyOnboardingButtonLabel()
         }
-        .continueButtonStyle(tint: color)
+        .deboogeyProminentButtonStyle(tint: color)
     }
 }
 
-private extension View {
-    @ViewBuilder
-    func continueButtonStyle(tint color: Color) -> some View {
-        if #available(macOS 26.0, *) {
-            self
-                .buttonStyle(.glassProminent)
-                .buttonBorderShape(.capsule)
-                .controlSize(.large)
-                .tint(color)
-        } else {
-            self
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle)
-                .controlSize(.large)
-                .tint(color)
-        }
-    }
-}
 
 private struct FeatureRow: View {
     let entry: WhatsNewEntry
-    
+
+    private var usesAssetIcon: Bool {
+#if canImport(AppKit)
+        NSImage(named: entry.icon) != nil
+#else
+        UIImage(named: entry.icon) != nil
+#endif
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 15) {
-            Image(systemName: entry.icon)
-                .font(.system(size: 30))
-                .foregroundColor(entry.color)
-                .frame(width: 40)
-            
+            Group {
+                if usesAssetIcon {
+                    Image(entry.icon)
+                        .renderingMode(.template)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 30, height: 30)
+                        .foregroundColor(entry.color)
+                } else {
+                    Image(systemName: entry.icon)
+                        .font(.system(size: 30))
+                        .foregroundColor(entry.color)
+                }
+            }
+            .frame(width: 40)
+
             VStack(alignment: .leading, spacing: 5) {
                 Text(L10n.t(entry.title))
                     .font(.headline)
-                
+
                 Text(L10n.t(entry.description))
                     .font(.subheadline)
                     .foregroundColor(.secondary)

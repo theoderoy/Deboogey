@@ -52,7 +52,7 @@ struct EntityTrackerView: View {
     private var visibleEntities: [TrackedEntity] {
         tracker.entities.filter {
 #if DEBOOGEY_MCE
-            $0.source == .loupeMachine || $0.source == .deboogeyCDM
+            $0.source == .loupeMachine || $0.source == .deboogeyCDM || $0.source == .diffsplitter
 #else
             true
 #endif
@@ -69,31 +69,23 @@ struct EntityTrackerView: View {
             return visibleEntities.sorted { $0.summary < $1.summary }
         case .alphabeticalTarget:
             return visibleEntities.sorted {
-                let leftTarget: String
-                let rightTarget: String
-
-                switch $0.source {
-                case .wsOverlay:
-                    leftTarget = $0.overlayArgument ?? ""
-                case .deboogeyCDM:
-                    leftTarget = $0.deboogeyCDMDomain ?? ""
-                case .loupeMachine:
-                    leftTarget = $0.loupeApplicationIdentifier ?? $0.loupeActivityTarget ?? ""
-                }
-                
-                switch $1.source {
-                case .wsOverlay:
-                    rightTarget = $1.overlayArgument ?? ""
-                case .deboogeyCDM:
-                    rightTarget = $1.deboogeyCDMDomain ?? ""
-                case .loupeMachine:
-                    rightTarget = $1.loupeApplicationIdentifier ?? $1.loupeActivityTarget ?? ""
-                }
-                
-                return leftTarget < rightTarget
+                sortTarget(for: $0) < sortTarget(for: $1)
             }
         case .alphabeticalTool:
             return visibleEntities.sorted { $0.source.displayName < $1.source.displayName }
+        }
+    }
+
+    private func sortTarget(for entity: TrackedEntity) -> String {
+        switch entity.source {
+        case .wsOverlay:
+            return entity.overlayArgument ?? ""
+        case .deboogeyCDM:
+            return entity.deboogeyCDMDomain ?? ""
+        case .loupeMachine:
+            return entity.loupeApplicationIdentifier ?? entity.loupeActivityTarget ?? ""
+        case .diffsplitter:
+            return entity.diffsplitterActivityTarget ?? ""
         }
     }
 
@@ -105,7 +97,7 @@ struct EntityTrackerView: View {
                 entityList
             }
         }
-        .frame(width: 560, height: 480)
+        .frame(width: AppWindowSizing.entityTracker.defaultSize.width, height: AppWindowSizing.entityTracker.defaultSize.height)
         .navigationTitle(L10n.t("Entity Tracker"))
         .modifier(ToolbarModifier(
             tracker: tracker,
@@ -127,8 +119,8 @@ struct EntityTrackerView: View {
             Text(
                 L10n.t(
                     DebugVariables.isMarketplaceCandidateEditionBuild
-                        ? "Modifications made via Cocoa Debug Menu and Loupe Machine will appear here."
-                        : "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, and Loupe Machine will appear here."
+                        ? "Modifications made via Cocoa Debug Menu, Loupe Machine, and Diffsplitter will appear here."
+                        : "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, Loupe Machine, and Diffsplitter will appear here."
                 )
             )
                 .font(.caption)
@@ -213,6 +205,8 @@ struct EntityTrackerView: View {
                 } else {
                     seenLoupeTargets.insert(target)
                 }
+            case .diffsplitter:
+                continue
             }
         }
         return result
@@ -363,6 +357,13 @@ private struct AppIconImage: View {
                 Image(nsImage: icon)
                     .resizable()
                     .scaledToFit()
+            } else if NSImage(named: fallbackSystemImage) != nil {
+                Image(fallbackSystemImage)
+                    .renderingMode(.template)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 22 * iconScale, height: 22 * iconScale)
+                    .foregroundColor(.accentColor)
             } else {
                 Image(systemName: fallbackSystemImage)
                     .font(.system(size: 22 * iconScale))
@@ -377,6 +378,7 @@ private struct AppIconImage: View {
         case .wsOverlay: return entity.source.systemImage
         case .deboogeyCDM:   return entity.deboogeyCDMDomain == "global" ? "globe" : entity.source.systemImage
         case .loupeMachine: return entity.source.systemImage
+        case .diffsplitter: return entity.source.systemImage
         }
     }
 
@@ -388,7 +390,7 @@ private struct AppIconImage: View {
             domain = entity.loupeActivity == .applicationIndexed
                 ? entity.loupeIndexedApplicationIdentifier
                 : entity.loupeApplicationIdentifier
-        case .wsOverlay: domain = nil
+        case .wsOverlay, .diffsplitter: domain = nil
         }
         guard let domain,
               domain != "global" else { return }
@@ -487,11 +489,7 @@ private struct ToolbarModifier: ViewModifier {
                 }
             }
         } label: {
-            if iconOnly {
-                Image(systemName: "ellipsis.circle")
-            } else {
-                Image(systemName: "ellipsis.circle")
-            }
+            Image(systemName: "ellipsis.circle")
         }
         .if(!iconOnly) { view in
             view.frame(width: 42)

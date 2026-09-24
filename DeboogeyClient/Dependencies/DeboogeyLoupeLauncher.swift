@@ -122,7 +122,7 @@ struct LoupeApplicationData {
             .appendingPathComponent(source.lastPathComponent)
     }
 
-    private static func requiresPrivileges(_ error: Error) -> Bool {
+    nonisolated private static func requiresPrivileges(_ error: Error) -> Bool {
         let error = error as NSError
         if error.domain == NSCocoaErrorDomain,
            [NSFileWriteNoPermissionError, NSFileWriteVolumeReadOnlyError].contains(error.code) {
@@ -142,23 +142,13 @@ struct LoupeApplicationData {
         try data.write(to: temporaryURL, options: [.atomic, .completeFileProtection])
 
         let directory = destination.deletingLastPathComponent().path
-        let command = "/bin/mkdir -p \(shellQuoted(directory)) && "
-            + "/bin/cp -f \(shellQuoted(temporaryURL.path)) \(shellQuoted(destination.path))"
-        let source = "do shell script \(appleScriptString(command)) with administrator privileges"
-        var errorInfo: NSDictionary?
-        guard NSAppleScript(source: source)?.executeAndReturnError(&errorInfo) != nil else {
+        let command = "/bin/mkdir -p \(PrivilegedShell.quoted(directory)) && "
+            + "/bin/cp -f \(PrivilegedShell.quoted(temporaryURL.path)) \(PrivilegedShell.quoted(destination.path))"
+        do {
+            _ = try PrivilegedShell.runAdministrator(command: command)
+        } catch {
             throw LoupeApplicationDataError.writeFailed
         }
-    }
-
-    private static func shellQuoted(_ value: String) -> String {
-        "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
-    }
-
-    private static func appleScriptString(_ value: String) -> String {
-        "\"" + value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"") + "\""
     }
 
     private static func setting(
@@ -209,92 +199,6 @@ enum DeboogeyLoupeLauncherError: LocalizedError {
     }
 }
 
-struct LoupeFlag: Identifiable, Hashable {
-    enum Source: String, Hashable, Codable {
-        case defaults
-        case globalDefaults
-        case systemFeatureFlags
-        case binaryFlags
-        case other
-    }
-
-    let name: String
-    let source: Source?
-    let keyPath: [String]
-    let backingFilePath: String?
-    private let inlineValue: String?
-    let valueFileURL: URL?
-
-    init(
-        name: String,
-        value: String,
-        source: Source? = nil,
-        keyPath: [String]? = nil,
-        backingFilePath: String? = nil
-    ) {
-        self.name = name
-        let inferred = Self.inferredTarget(for: name)
-        self.source = source ?? inferred.source
-        self.keyPath = keyPath ?? inferred.keyPath
-        self.backingFilePath = backingFilePath ?? inferred.backingFilePath
-        inlineValue = value
-        valueFileURL = nil
-    }
-
-    init(
-        name: String,
-        valueFileURL: URL,
-        source: Source? = nil,
-        keyPath: [String]? = nil,
-        backingFilePath: String? = nil
-    ) {
-        self.name = name
-        let inferred = Self.inferredTarget(for: name)
-        self.source = source ?? inferred.source
-        self.keyPath = keyPath ?? inferred.keyPath
-        self.backingFilePath = backingFilePath ?? inferred.backingFilePath
-        inlineValue = nil
-        self.valueFileURL = valueFileURL
-    }
-
-    func replacingValue(with value: String) -> LoupeFlag {
-        LoupeFlag(
-            name: name,
-            value: value,
-            source: source,
-            keyPath: keyPath,
-            backingFilePath: backingFilePath
-        )
-    }
-
-    var value: String {
-        inlineValue ?? valueFileURL.flatMap(DeboogeyLoupeLauncher.displayValue(at:))
-            ?? L10n.t("DeboogeyLoupe returned an invalid result.")
-    }
-
-    var id: String { name }
-
-    private static func inferredTarget(for name: String) -> (
-        source: Source?, keyPath: [String], backingFilePath: String?
-    ) {
-        for source in [Source.defaults, .globalDefaults, .binaryFlags] {
-            let prefix = source.rawValue + "."
-            if name.hasPrefix(prefix) {
-                return (source, [String(name.dropFirst(prefix.count))], nil)
-            }
-        }
-        let prefix = Source.systemFeatureFlags.rawValue + "."
-        guard name.hasPrefix(prefix) else { return (.other, [name], nil) }
-        let remainder = String(name.dropFirst(prefix.count))
-        guard let plistRange = remainder.range(of: ".plist.") else {
-            return (.systemFeatureFlags, [], nil)
-        }
-        let path = String(remainder[..<plistRange.lowerBound]) + ".plist"
-        let key = String(remainder[plistRange.upperBound...])
-        return (.systemFeatureFlags, key.isEmpty ? [] : [key], path)
-    }
-}
-
 final class DeboogeyLoupeInspection: @unchecked Sendable {
     private let lock = NSLock()
     private var process: Process?
@@ -335,16 +239,30 @@ struct DeboogeyLoupeLauncher {
         didLoad: (([LoupeFlag]) -> Void)? = nil
     ) throws -> [LoupeFlag] {
 #if DEBOOGEY_MCE
-        let toolURL = Bundle.main.url(forAuxiliaryExecutable: "DeboogeyLoupeMCE")
-#else
-        let toolURL = Bundle.main.url(forResource: "DeboogeyLoupe", withExtension: nil)
-#endif
-        guard let toolURL else {
+        let toolPath: String
+        do {
+            toolPath = try BundleHelperTool.path(
+                resource: nil,
+                auxiliaryExecutable: "DeboogeyLoupeMCE",
+                expectedDirectory: "/Contents/MacOS/"
+            )
+        } catch {
             throw DeboogeyLoupeLauncherError.toolNotFound
         }
-        guard FileManager.default.isExecutableFile(atPath: toolURL.path) else {
+#else
+        let toolPath: String
+        do {
+            toolPath = try BundleHelperTool.path(
+                resource: "DeboogeyLoupe",
+                expectedDirectory: "/Contents/Resources/"
+            )
+        } catch BundleHelperTool.ResolveError.notExecutable {
             throw DeboogeyLoupeLauncherError.toolNotExecutable
+        } catch {
+            throw DeboogeyLoupeLauncherError.toolNotFound
         }
+#endif
+        let toolURL = URL(fileURLWithPath: toolPath)
 
         let process = Process()
         process.executableURL = toolURL

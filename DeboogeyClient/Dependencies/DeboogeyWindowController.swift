@@ -45,7 +45,7 @@ final class DeboogeyWindowController: NSWindowController, NSWindowDelegate {
             window = NSWindow(contentViewController: NSHostingController(rootView: content))
             window.title = L10n.t("Cocoa Debug Menu")
             window.styleMask = [.titled, .closable, .miniaturizable]
-            window.setContentSize(NSSize(width: 520, height: 650))
+            window.setContentSize(AppWindowSizing.cocoaDebugMenu.defaultSize)
 
         case .skyLightDiagnostics:
             let content = NavigationView {

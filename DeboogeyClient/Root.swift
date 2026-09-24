@@ -51,87 +51,47 @@ private struct UpgradeCommands: Commands {
     
     var body: some Commands {
         CommandGroup(after: .appInfo) {
-            if #available(macOS 13.0, *) {
-                Button(
-                    upgradeChecker.upgradeAvailable ? L10n.f("Upgrade to %@", upgradeChecker.formattedLatestVersion) : L10n.t("Check for Upgrades..."),
-                    systemImage: networkMonitor.isConnected ? "network" : "network.slash"
-                ) { 
-                    UpgradeChecker.shared.requestManualCheck() 
-                }
-                .disabled(!networkMonitor.isConnected)
-                
-                if !networkMonitor.isConnected {
-                    Text(L10n.t("Network connection required"))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            } else {
-                Button(upgradeChecker.upgradeAvailable ? L10n.f("Upgrade to %@", upgradeChecker.formattedLatestVersion) : L10n.t("Check for Upgrades...")) {
-                    UpgradeChecker.shared.requestManualCheck() 
-                }
-                .disabled(!networkMonitor.isConnected)
-                
-                if !networkMonitor.isConnected {
-                    Text(L10n.t("Network connection required"))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+            if !DebugVariables.areUpdatesDisabled {
+                if #available(macOS 13.0, *) {
+                    Button(
+                        upgradeChecker.upgradeAvailable ? L10n.f("Upgrade to %@", upgradeChecker.formattedLatestVersion) : L10n.t("Check for Upgrades..."),
+                        systemImage: networkMonitor.isConnected ? "network" : "network.slash"
+                    ) { 
+                        UpgradeChecker.shared.requestManualCheck() 
+                    }
+                    .disabled(!networkMonitor.isConnected)
+                    
+                    if !networkMonitor.isConnected {
+                        Text(L10n.t("Network connection required"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    Button(upgradeChecker.upgradeAvailable ? L10n.f("Upgrade to %@", upgradeChecker.formattedLatestVersion) : L10n.t("Check for Upgrades...")) {
+                        UpgradeChecker.shared.requestManualCheck() 
+                    }
+                    .disabled(!networkMonitor.isConnected)
+                    
+                    if !networkMonitor.isConnected {
+                        Text(L10n.t("Network connection required"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
         }
-    }
-}
-
-@available(macOS 13.0, *)
-private struct LoupeMachineCommands: Commands {
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some Commands {
-        LoupeMachineCommandSet(
-            createDocument: { LoupeMachineNavigation.open(documentAt: nil, using: openWindow) },
-            openDocument: { LoupeMachineNavigation.chooseDocument(using: openWindow) }
-        )
     }
 }
 
 private struct LoupeMachineLegacyCommands: Commands {
     var body: some Commands {
-        LoupeMachineCommandSet(
-            createDocument: { LoupeMachineNavigation.openLegacy(documentAt: nil) },
-            openDocument: LoupeMachineNavigation.chooseDocumentLegacy
+        DocumentToolCommandSet(
+            createLoupeDocument: { LoupeMachineNavigation.openLegacy(documentAt: nil) },
+            openLoupeDocument: LoupeMachineNavigation.chooseDocumentLegacy,
+            createDiffsplitterDocument: { DiffsplitterNavigation.openLegacy(documentAt: nil) },
+            openDiffsplitterDocument: DiffsplitterNavigation.chooseDocumentLegacy,
+            openMain: DeboogeyWindowController.openMain
         )
-    }
-}
-
-private struct LoupeMachineCommandSet: Commands {
-    let createDocument: () -> Void
-    let openDocument: () -> Void
-    @ObservedObject private var router = LoupeMachineCommandRouter.shared
-
-    var body: some Commands {
-        CommandGroup(replacing: .newItem) {
-            Button(L10n.t("New Window"), action: DeboogeyWindowController.openMain)
-                .keyboardShortcut("n", modifiers: [.command, .shift])
-
-            Button(L10n.t("New Loupe Machine Document")) {
-                createDocument()
-            }
-            .keyboardShortcut("n", modifiers: .command)
-
-            Button(L10n.t("Open Loupe Machine Document…")) {
-                openDocument()
-            }
-            .keyboardShortcut("o", modifiers: .command)
-
-            Divider()
-
-            Button(L10n.t("Save")) { router.save(saveAs: false) }
-                .keyboardShortcut("s", modifiers: .command)
-                .disabled(!router.canSave)
-
-            Button(L10n.t("Save As…")) { router.save(saveAs: true) }
-                .keyboardShortcut("s", modifiers: [.command, .shift])
-                .disabled(!router.canSave)
-        }
     }
 }
 
@@ -148,6 +108,7 @@ private struct SceneSwitcher: Scene {
 
         if #available(macOS 13.0, *) {
             DeboogeyLoupeScene()
+            DeboogeyDiffsplitterScene()
             DeboogeyCDMLauncherScene()
             EntityTrackerScene()
         }
@@ -174,12 +135,34 @@ private struct DeboogeyLoupeScene: Scene {
             }
             .environment(\.locale, L10n.locale)
         }
-        .commands {
-            LoupeMachineCommands()
-        }
+        .commandsRemoved()
         .defaultSize(
             width: AppWindowSizing.loupeMachine.defaultSize.width,
             height: AppWindowSizing.loupeMachine.defaultSize.height
+        )
+        .windowResizability(.contentMinSize)
+    }
+}
+
+@available(macOS 13.0, *)
+private struct DeboogeyDiffsplitterScene: Scene {
+    var body: some Scene {
+        WindowGroup(
+            L10n.t("Diffsplitter"),
+            id: DiffsplitterNavigation.windowID,
+            for: DiffsplitterWindowRequest.self
+        ) { request in
+            Group {
+                if let request = request.wrappedValue {
+                    DiffsplitterView(request: request)
+                }
+            }
+            .environment(\.locale, L10n.locale)
+        }
+        .commandsRemoved()
+        .defaultSize(
+            width: AppWindowSizing.diffsplitter.defaultSize.width,
+            height: AppWindowSizing.diffsplitter.defaultSize.height
         )
         .windowResizability(.contentMinSize)
     }
@@ -197,7 +180,7 @@ private struct DeboogeyCDMLauncherScene: Scene {
             .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
-        .defaultSize(width: 520, height: 650)
+        .defaultSize(width: AppWindowSizing.cocoaDebugMenu.defaultSize.width, height: AppWindowSizing.cocoaDebugMenu.defaultSize.height)
         .windowResizability(.contentSize)
     }
 }
@@ -231,7 +214,7 @@ private struct DeboogeySDLauncherScene: Scene {
             .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
-        .defaultSize(width: 520, height: 540)
+        .defaultSize(width: AppWindowSizing.skyLightDiagnostics.defaultSize.width, height: AppWindowSizing.skyLightDiagnostics.defaultSize.height)
         .windowResizability(.contentSize)
     }
 }
@@ -246,7 +229,7 @@ private struct EntityTrackerScene: Scene {
             .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
-        .defaultSize(width: 560, height: 480)
+        .defaultSize(width: AppWindowSizing.entityTracker.defaultSize.width, height: AppWindowSizing.entityTracker.defaultSize.height)
         .windowResizability(.contentSize)
     }
 }
@@ -294,7 +277,6 @@ struct Root: App {
         self._sipSatisfied = State(
             initialValue: DebugVariables.pseudoSystemIntegrityProtection ? false : isSIPSatisfied
         )
-        print("csrutil: \(isSIPSatisfied)")
 
         PersistentVariables.registerDefaults()
         EntityTracker.shared.performConfiguredAutoRemoval()
@@ -308,58 +290,28 @@ struct Root: App {
         }
         .commands {
             AboutCommands()
-            if !DebugVariables.isMarketplaceCandidateEditionBuild {
-                UpgradeCommands()
-            }
-            if #available(macOS 13.0, *) {
-                WindowLauncherCommands(
-                    openMain: DeboogeyWindowController.openMain,
-                    includesCocoaDebugMenu: true,
-                    includesSkyLightDiagnostics: !DebugVariables.isMarketplaceCandidateEditionBuild,
-                    skyLightDiagnosticsDisabled: sipSatisfied
-                )
-            } else {
-                LoupeMachineLegacyCommands()
-                LegacyWindowLauncherCommands(
-                    openMain: DeboogeyWindowController.openMain,
-                    openCocoaDebugMenu: {
-                        DeboogeyWindowController.open(.cocoaDebugMenu, sipSatisfied: sipSatisfied)
+#if !DEBOOGEY_MCE
+            UpgradeCommands()
+#endif
+            LoupeMachineLegacyCommands()
+            LegacyWindowLauncherCommands(
+                openMain: DeboogeyWindowController.openMain,
+                openCocoaDebugMenu: {
+                    DeboogeyWindowController.open(.cocoaDebugMenu, sipSatisfied: sipSatisfied)
+                },
+                openSkyLightDiagnostics: DebugVariables.isMarketplaceCandidateEditionBuild
+                    ? nil
+                    : {
+                        DeboogeyWindowController.open(
+                            .skyLightDiagnostics,
+                            sipSatisfied: sipSatisfied
+                        )
                     },
-                    openSkyLightDiagnostics: DebugVariables.isMarketplaceCandidateEditionBuild
-                        ? nil
-                        : {
-                            DeboogeyWindowController.open(
-                                .skyLightDiagnostics,
-                                sipSatisfied: sipSatisfied
-                            )
-                        },
-                    skyLightDiagnosticsDisabled: sipSatisfied
-                )
-            }
+                skyLightDiagnosticsDisabled: sipSatisfied
+            )
         }
 
         SceneSwitcher(sipSatisfied: sipSatisfied)
-    }
-}
-
-@available(macOS 13.0, *)
-private struct LoupeMachineExternalDocumentHandler: ViewModifier {
-    @Environment(\.openWindow) private var openWindow
-
-    func body(content: Content) -> some View {
-        content.onOpenURL { url in
-            guard url.pathExtension.lowercased() == "loum" else { return }
-            LoupeMachineNavigation.open(documentAt: url, using: openWindow)
-        }
-    }
-}
-
-private struct LoupeMachineLegacyExternalDocumentHandler: ViewModifier {
-    func body(content: Content) -> some View {
-        content.onOpenURL { url in
-            guard url.pathExtension.lowercased() == "loum" else { return }
-            LoupeMachineNavigation.openLegacy(documentAt: url)
-        }
     }
 }
 
@@ -367,9 +319,12 @@ private struct RootContentView: View {
     @ViewBuilder
     var body: some View {
         if #available(macOS 13.0, *) {
-            RootView().modifier(LoupeMachineExternalDocumentHandler())
+            RootView().modifier(ExternalDocumentWindowHandler())
         } else {
-            RootView().modifier(LoupeMachineLegacyExternalDocumentHandler())
+            RootView().modifier(ExternalDocumentHandler(
+                openLoupe: { LoupeMachineNavigation.openLegacy(documentAt: $0) },
+                openDiffsplitter: { DiffsplitterNavigation.openLegacy(documentAt: $0) }
+            ))
         }
     }
 }

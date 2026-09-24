@@ -5,9 +5,12 @@
 //  Created by Théo De Roy on 26/08/2026.
 //
 
+import Foundation
+#if canImport(AppKit)
 import AppKit
+#endif
 
-enum ToolCycleFeedback {
+nonisolated enum ToolCycleFeedback {
     private static let preferenceKey = "theoderoy.Deboogey.Tools.playCycleSound"
     private static let soundVolume: Float = 0.3
 
@@ -28,30 +31,23 @@ enum ToolCycleFeedback {
     }
 
     private static func play(named name: String, bundle: Bundle, waitUntilFinished: Bool) {
+#if canImport(AppKit)
         let prepareAndStart: () -> (NSSound, TimeInterval)? = {
-            let soundURL = bundle.url(forResource: name, withExtension: "aif")
-                ?? bundle.url(
-                    forResource: name,
-                    withExtension: "aif",
-                    subdirectory: "Resources"
-                )
-            guard let soundURL, let sound = NSSound(contentsOf: soundURL, byReference: true) else {
+            guard let sound = BundleAIFSound.load(named: name, bundle: bundle, volume: soundVolume) else {
                 return nil
             }
-            sound.volume = soundVolume
             let duration = sound.duration
             sound.play()
             return (sound, duration)
         }
 
         if !waitUntilFinished {
-            let fireAndForget = {
-                _ = prepareAndStart()
-            }
             if Thread.isMainThread {
-                fireAndForget()
+                _ = prepareAndStart()
             } else {
-                DispatchQueue.main.async(execute: fireAndForget)
+                DispatchQueue.main.async {
+                    _ = prepareAndStart()
+                }
             }
             return
         }
@@ -60,7 +56,9 @@ enum ToolCycleFeedback {
         if Thread.isMainThread {
             started = prepareAndStart()
         } else {
-            started = DispatchQueue.main.sync(execute: prepareAndStart)
+            started = DispatchQueue.main.sync {
+                prepareAndStart()
+            }
         }
 
         guard let (sound, duration) = started else { return }
@@ -73,5 +71,6 @@ enum ToolCycleFeedback {
         while sound.isPlaying {
             Thread.sleep(forTimeInterval: 0.05)
         }
+#endif
     }
 }

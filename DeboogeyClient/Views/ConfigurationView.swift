@@ -7,6 +7,29 @@
 
 import SwiftUI
 import Combine
+#if canImport(AppKit)
+import AppKit
+#elseif canImport(UIKit)
+import UIKit
+#endif
+
+#if os(iOS)
+private var configurationShowsDiffsplitter: Bool {
+    MCEIOSFeatureSupport.diffsplitter
+}
+#else
+private var configurationShowsDiffsplitter: Bool { true }
+#endif
+
+private var platformGroupedBackground: Color {
+#if canImport(AppKit)
+    Color(NSColor.controlBackgroundColor)
+#elseif canImport(UIKit)
+    Color(.secondarySystemBackground)
+#else
+    Color.secondary.opacity(0.12)
+#endif
+}
 
 private struct LegacyGroupedSection<Content: View>: View {
     let header: String
@@ -29,7 +52,7 @@ private struct LegacyGroupedSection<Content: View>: View {
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(NSColor.controlBackgroundColor))
+            .background(platformGroupedBackground)
             .cornerRadius(10)
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
@@ -40,43 +63,180 @@ private struct LegacyGroupedSection<Content: View>: View {
     }
 }
 
-private struct GeneralPanelView: View {
-    @ObservedObject var vm: ConfigurationViewModel
-#if !DEBOOGEY_MCE
-    @Environment(\.sipSatisfied) private var sipSatisfied
-#endif
-    @State private var showResetAlert = false
-    
+@ViewBuilder
+private func configurationSection<Content: View>(
+    header: String? = nil,
+    @ViewBuilder content: () -> Content
+) -> some View {
+    if #available(macOS 13.0, *) {
+        if let header {
+            Section(header: Text(L10n.t(header))) {
+                content()
+            }
+        } else {
+            Section {
+                content()
+            }
+        }
+    } else if let header {
+        LegacyGroupedSection(header: header) {
+            content()
+        }
+    } else {
+        VStack(alignment: .leading, spacing: 12) {
+            content()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(platformGroupedBackground)
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+        )
+        .padding(.horizontal)
+    }
+}
+
+private struct ConfigurationPanelContainer<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
     var body: some View {
         Group {
-            if #available(macOS 13.0, *) {
+            if #available(iOS 16.0, macOS 13.0, *) {
                 Form {
-                    panels
+                    content()
                 }
+#if os(macOS)
                 .formStyle(.grouped)
+#endif
             } else {
                 ScrollView {
                     VStack(spacing: 20) {
-                        panels
+                        content()
                     }
                     .padding(.vertical)
                 }
             }
         }
-        .alert(isPresented: $showResetAlert) {
-            Alert(
-                title: Text(L10n.t("Delete Persistent Storage?")),
-                message: Text(L10n.t("This will clear all preferences and then quit the app.")),
-                primaryButton: .destructive(Text(L10n.t("Delete"))) {
-                    vm.theThirdImpact()
-                },
-                secondaryButton: .cancel()
-            )
+    }
+}
+
+private enum ConfigurationMaintenanceAction {
+    case resetPreferences
+    case deleteStorage
+
+    var title: String {
+        switch self {
+        case .resetPreferences: return L10n.t("Reset Preference Values?")
+        case .deleteStorage: return L10n.t("Delete Persistent Storage?")
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .resetPreferences:
+            return L10n.t("This will restore settings to their defaults without clearing other stored data, then quit the app.")
+        case .deleteStorage:
+            return L10n.t("This will clear all preferences and then quit the app.")
+        }
+    }
+
+    var confirmTitle: String {
+        switch self {
+        case .resetPreferences: return L10n.t("Reset")
+        case .deleteStorage: return L10n.t("Delete")
+        }
+    }
+}
+
+private struct ConfigurationMaintenanceRows: View {
+    let onSelect: (ConfigurationMaintenanceAction) -> Void
+
+    var body: some View {
+        maintenanceRow(
+            title: L10n.t("Reset Preference Values"),
+            systemImage: "arrow.counterclockwise",
+            detail: L10n.t("Restores settings defaults without clearing other stored data, then quits the app."),
+            action: { onSelect(.resetPreferences) }
+        )
+        maintenanceRow(
+            title: L10n.t("Delete Persistent Storage"),
+            systemImage: "trash",
+            detail: L10n.t("Clears all preferences and then quits the app."),
+            action: { onSelect(.deleteStorage) }
+        )
+    }
+
+    private func maintenanceRow(
+        title: String,
+        systemImage: String,
+        detail: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button(action: action) {
+                Label(title, systemImage: systemImage)
+            }
+            Text(detail)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private extension View {
+    func configurationMaintenanceAlert(
+        pending: Binding<ConfigurationMaintenanceAction?>,
+        onConfirm: @escaping (ConfigurationMaintenanceAction) -> Void
+    ) -> some View {
+        modifier(ConfigurationMaintenanceAlertModifier(pending: pending, onConfirm: onConfirm))
+    }
+}
+
+private struct ConfigurationMaintenanceAlertModifier: ViewModifier {
+    @Binding var pending: ConfigurationMaintenanceAction?
+    let onConfirm: (ConfigurationMaintenanceAction) -> Void
+
+    func body(content: Content) -> some View {
+        content.alert(
+            pending?.title ?? "",
+            isPresented: Binding(
+                get: { pending != nil },
+                set: { if !$0 { pending = nil } }
+            ),
+            presenting: pending
+        ) { action in
+            Button(action.confirmTitle, role: .destructive) {
+                onConfirm(action)
+            }
+            Button(L10n.t("Cancel"), role: .cancel) {}
+        } message: { action in
+            Text(action.message)
+        }
+    }
+}
+
+private struct GeneralPanelView: View {
+    @ObservedObject var vm: ConfigurationViewModel
+#if !DEBOOGEY_MCE
+    @Environment(\.sipSatisfied) private var sipSatisfied
+#endif
+    @State private var pendingMaintenanceAction: ConfigurationMaintenanceAction?
+
+    var body: some View {
+        ConfigurationPanelContainer {
+            panels
+        }
+        .configurationMaintenanceAlert(pending: $pendingMaintenanceAction) {
+            vm.performMaintenance($0)
         }
     }
     
     @ViewBuilder
     private var panels: some View {
+#if os(macOS)
         section(header: "Sounds") {
             Toggle(isOn: $vm.playIndexingDoneSound) {
                 Text(L10n.t("Play a sound when indexing finishes"))
@@ -100,6 +260,138 @@ private struct GeneralPanelView: View {
             Text(L10n.t("Play sounds when Apple System Tools complete successfully or halt due to an error."))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+#endif
+
+            diffsplitterSoundControls
+        }
+#else
+        if configurationShowsDiffsplitter {
+            section(header: "Live Activity") {
+                diffsplitterSoundControls
+            }
+        }
+#endif
+
+        if configurationShowsDiffsplitter {
+            section(header: "Diffsplitter") {
+                Picker(
+                    L10n.t("Offload Large Dumps to Temporary Storage"),
+                    selection: $vm.diffsplitterPreferDiskTempForLargeFiles
+                ) {
+                    Text(L10n.t("Session Disk Space")).tag(true)
+                    Text(L10n.t("Memory (RAM)")).tag(false)
+                }
+                Text(L10n.t("Choose where Diffsplitter stores large dumps while you inspect them. Storing on disk demands less horsepower, while memory (RAM) can be faster on powerful machines."))
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            
+            section() {
+                Toggle(isOn: $vm.diffsplitterIncludeHiddenFiles) {
+                    Text(L10n.t("Include Hidden Files"))
+                }
+                Text(L10n.t("When off, Diffsplitter skips hidden files while walking folders."))
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            section {
+                diffsplitterLabeledSlider(
+                    title: L10n.t("Hex Dump Window"),
+                    valueLabel: L10n.f("%d lines", Int(vm.diffsplitterHexWindowLines.rounded())),
+                    isDefault: Int(vm.diffsplitterHexWindowLines.rounded())
+                        == DiffsplitterSettings.defaultHexWindowLines,
+                    range: Double(DiffsplitterSettings.hexWindowLinesRange.lowerBound)
+                        ... Double(DiffsplitterSettings.hexWindowLinesRange.upperBound),
+                    value: $vm.diffsplitterHexWindowLines
+                ) {
+                    vm.diffsplitterHexWindowLines = Double(DiffsplitterSettings.defaultHexWindowLines)
+                }
+                Text(L10n.t("How many hex lines stay in memory for the visible dump window."))
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                Toggle(isOn: $vm.diffsplitterLargeFileHexConversionEnabled) {
+                    Text(L10n.t("Large File Hex Conversion"))
+                }
+                Text(L10n.t("When on, oversized files that are not content-detected binaries open as a windowed hex dump instead of text. Binary status is only for recognised binary content and is unaffected."))
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                diffsplitterLabeledSlider(
+                    title: L10n.t("Large File Size Threshold"),
+                    valueLabel: L10n.f("%d MB", Int(vm.diffsplitterMaxTextMegabytes.rounded())),
+                    isDefault: Int(vm.diffsplitterMaxTextMegabytes.rounded())
+                        == DiffsplitterSettings.defaultMaxTextMegabytes,
+                    range: Double(DiffsplitterSettings.maxTextMegabytesRange.lowerBound)
+                        ... Double(DiffsplitterSettings.maxTextMegabytesRange.upperBound),
+                    value: $vm.diffsplitterMaxTextMegabytes,
+                    enabled: vm.diffsplitterLargeFileHexConversionEnabled
+                ) {
+                    vm.diffsplitterMaxTextMegabytes = Double(DiffsplitterSettings.defaultMaxTextMegabytes)
+                }
+                Text(L10n.t("Files larger than this use windowed hex conversion when Large File Hex Conversion is on."))
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .opacity(vm.diffsplitterLargeFileHexConversionEnabled ? 1 : 0.45)
+
+                diffsplitterLabeledSlider(
+                    title: L10n.t("Archive Nest Depth"),
+                    valueLabel: L10n.f("%d levels", Int(vm.diffsplitterMaxNestDepth.rounded())),
+                    isDefault: Int(vm.diffsplitterMaxNestDepth.rounded())
+                        == DiffsplitterSettings.defaultMaxNestDepth,
+                    range: Double(DiffsplitterSettings.maxNestDepthRange.lowerBound)
+                        ... Double(DiffsplitterSettings.maxNestDepthRange.upperBound),
+                    value: $vm.diffsplitterMaxNestDepth,
+                    step: 1
+                ) {
+                    vm.diffsplitterMaxNestDepth = Double(DiffsplitterSettings.defaultMaxNestDepth)
+                }
+                Text(L10n.t("Maximum nested archive depth Diffsplitter will expand."))
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                diffsplitterLabeledSlider(
+                    title: L10n.t("Archive Entry Limit"),
+                    valueLabel: L10n.f("%d entries", Int(vm.diffsplitterMaxEntries.rounded())),
+                    isDefault: Int(vm.diffsplitterMaxEntries.rounded())
+                        == DiffsplitterSettings.defaultMaxEntries,
+                    range: DiffsplitterSettings.maxEntriesStopIndexRange,
+                    value: Binding(
+                        get: {
+                            Double(
+                                DiffsplitterSettings.maxEntriesStopIndex(
+                                    for: Int(vm.diffsplitterMaxEntries.rounded())
+                                )
+                            )
+                        },
+                        set: { index in
+                            vm.diffsplitterMaxEntries = Double(
+                                DiffsplitterSettings.maxEntriesStop(atIndex: Int(index.rounded()))
+                            )
+                        }
+                    ),
+                    step: 1
+                ) {
+                    vm.diffsplitterMaxEntries = Double(DiffsplitterSettings.defaultMaxEntries)
+                }
+                Text(L10n.t("Maximum files Diffsplitter will index from folders and archives."))
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+#if os(macOS)
+            section {
+                Text(L10n.t("Folder Status Dot Priority"))
+                Text(L10n.t("Drag to reorder. Items nearer the top win when a folder contains mixed changes."))
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                DiffsplitterStatusPriorityEditor(
+                    order: $vm.diffsplitterStatusPriority,
+                    onMove: vm.moveDiffsplitterStatusPriority
+                )
+            }
 #endif
         }
         
@@ -149,70 +441,111 @@ private struct GeneralPanelView: View {
                 .foregroundColor(.secondary)
         }
         
-        section(header: "Upgrades") {
-            Picker("Upgrade Channel", selection: $vm.upgradeChannel) {
-                Text("Release").tag("Release")
-                Text("Internal").tag("Internal")
-            }
-            if vm.upgradeChannel == "Internal" {
-                Text("Internal builds contain experimental features and are not notarised by Apple.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
+        if !DebugVariables.areUpdatesDisabled {
+            section(header: "Upgrades") {
+                Picker("Upgrade Channel", selection: $vm.upgradeChannel) {
+                    Text("Release").tag("Release")
+                    Text("Internal").tag("Internal")
+                }
+                if vm.upgradeChannel == "Internal" {
+                    Text("Internal builds contain experimental features and are not notarised by Apple.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
 
-            Toggle("Hide Automatic Notices", isOn: $vm.hideUpgradeAlerts)
-            Toggle("Delete Backup on Startup", isOn: $vm.deleteBackupOnStartup)
+                Toggle("Hide Automatic Notices", isOn: $vm.hideUpgradeAlerts)
+                Toggle("Delete Backup on Startup", isOn: $vm.deleteBackupOnStartup)
+            }
         }
 #endif
 
         section(header: "Maintenance") {
-            VStack(alignment: .leading, spacing: 12) {
-                Button(action: { showResetAlert = true }) {
-                    Label("Delete Persistent Storage", systemImage: "trash")
-                }
-                Text("Clears all preferences and then quits the app.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            ConfigurationMaintenanceRows { pendingMaintenanceAction = $0 }
         }
     }
     
     @ViewBuilder
-    private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
-        if #available(macOS 13.0, *) {
-            if let header = header {
-                Section(header: Text(L10n.t(header))) {
-                    content()
-                }
-            } else {
-                Section {
-                    content()
-                }
-            }
-        } else {
-            if let header = header {
-                LegacyGroupedSection(header: header) {
-                    content()
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    content()
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
-                )
-                .padding(.horizontal)
-            }
+    private var diffsplitterSoundControls: some View {
+#if os(iOS)
+        Toggle(isOn: $vm.playDiffsplitterDoneSound) {
+            Text(L10n.t("Notify with Live Activity when Diffsplitter finishes"))
+        }
+        Text(L10n.t("Live Activity when available, otherwise a banner. Plays a sound after the selected minimum duration."))
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+#else
+        Toggle(isOn: $vm.playDiffsplitterDoneSound) {
+            Text(L10n.t("Play a sound when Diffsplitter finishes a comparison"))
+        }
+        Text(L10n.t("Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration."))
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+#endif
+
+        if vm.playDiffsplitterDoneSound {
+            DiffsplitterCompletionDurationControls(
+                minimumSeconds: $vm.diffsplitterNotifyMinimumSeconds,
+                notifyWhenBackgrounded: $vm.diffsplitterNotifyWhenBackgrounded,
+                showsResetButton: true
+            )
         }
     }
+
+    @ViewBuilder
+    private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
+        configurationSection(header: header, content: content)
+    }
+
+    private func diffsplitterLabeledSlider(
+        title: String,
+        valueLabel: String,
+        isDefault: Bool,
+        range: ClosedRange<Double>,
+        value: Binding<Double>,
+        step: Double? = nil,
+        enabled: Bool = true,
+        reset: @escaping () -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(title)
+                Spacer()
+                Text(valueLabel)
+                    .monospacedDigit()
+                    .foregroundColor(.secondary)
+            }
+            HStack(spacing: 8) {
+                diffsplitterSliderResetButton(isDefault: isDefault, action: reset)
+                    .disabled(!enabled)
+                if let step {
+                    Slider(value: value, in: range, step: step)
+                        .disabled(!enabled)
+                } else {
+                    Slider(value: value, in: range)
+                        .disabled(!enabled)
+                }
+            }
+        }
+        .opacity(enabled ? 1 : 0.45)
+    }
+
+    private func diffsplitterSliderResetButton(
+        isDefault: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: "arrow.counterclockwise")
+        }
+        .buttonStyle(.borderless)
+        .disabled(isDefault)
+        .help(L10n.t("Reset to Default"))
+        .accessibilityLabel(L10n.t("Reset to Default"))
+    }
+
 }
 
+
+#if os(macOS)
 private struct EntityTrackerPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
     @AppStorage("theoderoy.Deboogey.EntityTracker.rowScale") private var rowScale: Double = 1.0
@@ -276,7 +609,7 @@ private struct EntityTrackerPanelView: View {
 #endif
                 if DebugVariables.isMarketplaceCandidateEditionBuild
                     || vm.entityTrackerAutoDeleteScope == "all" {
-                    Picker("File and indexing entries", selection: $vm.entityTrackerAutoDeleteLoupeActivities) {
+                    Picker("File, compare, and indexing entries", selection: $vm.entityTrackerAutoDeleteLoupeActivities) {
                         Text("Remove these entries").tag(true)
                         Text("Leave these entries out").tag(false)
                     }
@@ -317,15 +650,11 @@ private struct EntityTrackerPanelView: View {
     private var descriptionForAutoDelete: String {
         let what = !DebugVariables.isMarketplaceCandidateEditionBuild
             && vm.entityTrackerAutoDeleteScope == "ephemerals"
-            ? L10n.t(
-                DebugVariables.isMarketplaceCandidateEditionBuild
-                    ? "Removes ephemeral entries from the log"
-                    : "Removes ephemeral entries (e.g. SkyLight Diagnostics) from the log"
-            )
+            ? L10n.t("Removes ephemeral entries (e.g. SkyLight Diagnostics) from the log")
             : L10n.t(
                 vm.entityTrackerAutoDeleteLoupeActivities
                     ? "Clears the entire Entity Tracker log"
-                    : "Clears the Entity Tracker log except file and indexing entries"
+                    : "Clears the Entity Tracker log except file, compare, and indexing entries"
             )
         let when = vm.entityTrackerAutoDeleteTrigger == "login"
             ? L10n.t("once per login session.")
@@ -335,59 +664,19 @@ private struct EntityTrackerPanelView: View {
     
     @ViewBuilder
     private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
-        if #available(macOS 13.0, *) {
-            if let header = header {
-                Section(header: Text(L10n.t(header))) {
-                    content()
-                }
-            } else {
-                Section {
-                    content()
-                }
-            }
-        } else {
-            if let header = header {
-                LegacyGroupedSection(header: header) {
-                    content()
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    content()
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
-                )
-                .padding(.horizontal)
-            }
-        }
+        configurationSection(header: header, content: content)
     }
 }
 
+#endif
+
 private struct AcknowledgementsPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
-    @State private var showResetAlert = false
     @Environment(\.openURL) private var openURL
     
     var body: some View {
-        Group {
-            if #available(macOS 13.0, *) {
-                Form {
-                    panels
-                }
-                .formStyle(.grouped)
-            } else {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        panels
-                    }
-                    .padding(.vertical)
-                }
-            }
+        ConfigurationPanelContainer {
+            panels
         }
     }
     
@@ -395,102 +684,49 @@ private struct AcknowledgementsPanelView: View {
     private var panels: some View {
 #if !DEBOOGEY_MCE
         section(header: "Sources") {
-            Button(action: {
-                openURL(
-                    URL(
-                        string:
-                            "https://mjtsai.com/blog/2024/03/22/_eventfirstresponderchaindescription/"
-                    )!)
-            }) {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Cocoa Debug Menu").font(.headline)
-                        Text("Sourced Article").font(.subheadline).foregroundColor(
-                            .secondary)
-                    }
-                } icon: {
-                    Image(systemName: "link").foregroundColor(.blue)
-                }
-            }
-            .buttonStyle(.plain)
-            
-            Button(action: {
-                openURL(
-                    URL(
-                        string:
-                            "https://x.com/khanhduytran0/status/1951637277760999628?s=61")!)
-            }) {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("enable_overlay").font(.headline)
-                        Text("Sourced Article").font(.subheadline).foregroundColor(
-                            .secondary)
-                    }
-                } icon: {
-                    Image(systemName: "link").foregroundColor(.blue)
-                }
-            }
-            .buttonStyle(.plain)
+            creditRows([
+                (
+                    "Cocoa Debug Menu",
+                    "Sourced Article",
+                    "https://mjtsai.com/blog/2024/03/22/_eventfirstresponderchaindescription/",
+                    "link",
+                    .blue
+                ),
+                (
+                    "enable_overlay",
+                    "Sourced Article",
+                    "https://x.com/khanhduytran0/status/1951637277760999628?s=61",
+                    "link",
+                    .blue
+                ),
+            ])
         }
 #endif
         
         section(header: "Special Thanks") {
-            Button(action: { openURL(URL(string: "https://github.com/ogui-775")!) }) {
+            creditRows([
+                ("Salty", "Insight", "https://github.com/ogui-775", "star.fill", .yellow),
+                ("1davi", "Tester", "https://github.com/1davi", "gearshape", .green),
+                ("Alex Spaulding", "Tester", "https://github.com/aspauldingcode", "gearshape", .green),
+                ("MTACS", "Tester", "https://github.com/MTACS", "gearshape", .green),
+                ("Olivia Iacovou", "Tester", "https://github.com/oliviaiacovou", "gearshape", .green),
+            ])
+        }
+    }
+
+    @ViewBuilder
+    private func creditRows(
+        _ rows: [(name: String, role: String, url: String, symbol: String, tint: Color)]
+    ) -> some View {
+        ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+            Button(action: { openURL(URL(string: row.url)!) }) {
                 Label {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Salty").font(.headline)
-                        Text("Insight").font(.subheadline).foregroundColor(.secondary)
+                        Text(row.name).font(.headline)
+                        Text(row.role).font(.subheadline).foregroundColor(.secondary)
                     }
                 } icon: {
-                    Image(systemName: "star.fill").foregroundColor(.yellow)
-                }
-            }
-            .buttonStyle(.plain)
-            
-            Button(action: { openURL(URL(string: "https://github.com/1davi")!) }) {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("1davi").font(.headline)
-                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
-                    }
-                } icon: {
-                    Image(systemName: "gearshape").foregroundColor(.green)
-                }
-            }
-            .buttonStyle(.plain)
-            
-            Button(action: { openURL(URL(string: "https://github.com/aspauldingcode")!) }) {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Alex Spaulding").font(.headline)
-                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
-                    }
-                } icon: {
-                    Image(systemName: "gearshape").foregroundColor(.green)
-                }
-            }
-            .buttonStyle(.plain)
-            
-            Button(action: { openURL(URL(string: "https://github.com/MTACS")!) }) {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("MTACS").font(.headline)
-                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
-                    }
-                } icon: {
-                    Image(systemName: "gearshape").foregroundColor(.green)
-                }
-            }
-            .buttonStyle(.plain)
-            
-            Button(action: { openURL(URL(string: "https://github.com/oliviaiacovou")!) }) {
-                Label {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Olivia Iacovou").font(.headline)
-                        Text("Tester").font(.subheadline).foregroundColor(.secondary)
-                    }
-                } icon: {
-                    Image(systemName: "gearshape").foregroundColor(.green)
+                    Image(systemName: row.symbol).foregroundColor(row.tint)
                 }
             }
             .buttonStyle(.plain)
@@ -499,47 +735,32 @@ private struct AcknowledgementsPanelView: View {
     
     @ViewBuilder
     private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
-        if #available(macOS 13.0, *) {
-            if let header = header {
-                Section(header: Text(L10n.t(header))) {
-                    content()
-                }
-            } else {
-                Section {
-                    content()
-                }
-            }
-        } else {
-            if let header = header {
-                LegacyGroupedSection(header: header) {
-                    content()
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    content()
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
-                )
-                .padding(.horizontal)
-            }
-        }
+        configurationSection(header: header, content: content)
     }
 }
 
-enum Panel: CaseIterable, Identifiable, Hashable, Codable {
+enum Panel: Identifiable, Hashable, Codable {
     case general
+    case about
     case entityTracker
     case acknowledge
+
+    static var allCases: [Panel] {
+#if os(iOS)
+        if configurationShowsDiffsplitter {
+            [.general, .about, .acknowledge]
+        } else {
+            [.about, .acknowledge]
+        }
+#else
+        [.general, .entityTracker, .acknowledge]
+#endif
+    }
     
     var id: String {
         switch self {
         case .general: return "general"
+        case .about: return "about"
         case .entityTracker: return "entityTracker"
         case .acknowledge: return "acknowledge"
         }
@@ -548,6 +769,8 @@ enum Panel: CaseIterable, Identifiable, Hashable, Codable {
         switch self {
         case .general:
             return L10n.t("General")
+        case .about:
+            return L10n.t("About Deboogey")
         case .entityTracker:
             return L10n.t("Entity Tracker")
         case .acknowledge:
@@ -557,6 +780,7 @@ enum Panel: CaseIterable, Identifiable, Hashable, Codable {
     var systemImage: String {
         switch self {
         case .general: return "gear"
+        case .about: return "info.circle"
         case .entityTracker: return "binoculars"
         case .acknowledge: return "star"
         }
@@ -621,9 +845,62 @@ final class ConfigurationViewModel: ObservableObject {
         didSet { vars.playToolCycleSound = playToolCycleSound }
     }
 
+    @Published var playDiffsplitterDoneSound: Bool {
+        didSet { vars.playDiffsplitterDoneSound = playDiffsplitterDoneSound }
+    }
+
+    @Published var diffsplitterNotifyWhenBackgrounded: Bool {
+        didSet { vars.diffsplitterNotifyWhenBackgrounded = diffsplitterNotifyWhenBackgrounded }
+    }
+
+    @Published var diffsplitterNotifyMinimumSeconds: Double {
+        didSet { vars.diffsplitterNotifyMinimumSeconds = diffsplitterNotifyMinimumSeconds }
+    }
+
+    @Published var diffsplitterStatusPriority: [String] {
+        didSet { vars.diffsplitterStatusPriority = diffsplitterStatusPriority }
+    }
+
+    @Published var diffsplitterIncludeHiddenFiles: Bool {
+        didSet { vars.diffsplitterIncludeHiddenFiles = diffsplitterIncludeHiddenFiles }
+    }
+
+    @Published var diffsplitterPreferDiskTempForLargeFiles: Bool {
+        didSet { vars.diffsplitterPreferDiskTempForLargeFiles = diffsplitterPreferDiskTempForLargeFiles }
+    }
+
+    @Published var diffsplitterHexWindowLines: Double {
+        didSet { vars.diffsplitterHexWindowLines = diffsplitterHexWindowLines }
+    }
+
+    @Published var diffsplitterLargeFileHexConversionEnabled: Bool {
+        didSet { vars.diffsplitterLargeFileHexConversionEnabled = diffsplitterLargeFileHexConversionEnabled }
+    }
+
+    @Published var diffsplitterMaxTextMegabytes: Double {
+        didSet { vars.diffsplitterMaxTextMegabytes = diffsplitterMaxTextMegabytes }
+    }
+
+    @Published var diffsplitterMaxNestDepth: Double {
+        didSet { vars.diffsplitterMaxNestDepth = diffsplitterMaxNestDepth }
+    }
+
+    @Published var diffsplitterMaxEntries: Double {
+        didSet { vars.diffsplitterMaxEntries = diffsplitterMaxEntries }
+    }
+
     private let vars: PersistentVariables
     
-    init(initialSelection: Panel? = .general, vars: PersistentVariables = PersistentVariables()) {
+    init(
+        initialSelection: Panel? = {
+#if os(iOS)
+            .about
+#else
+            .general
+#endif
+        }(),
+        vars: PersistentVariables = PersistentVariables()
+    ) {
         self.vars = vars
         self.selection = initialSelection
         self.pesterMeWithSipping = vars.pesterMeWithSipping
@@ -639,6 +916,27 @@ final class ConfigurationViewModel: ObservableObject {
         self.entityTrackerAutoDeleteLoupeActivities = vars.entityTrackerAutoDeleteLoupeActivities
         self.playIndexingDoneSound = vars.playIndexingDoneSound
         self.playToolCycleSound = vars.playToolCycleSound
+        self.playDiffsplitterDoneSound = vars.playDiffsplitterDoneSound
+        self.diffsplitterNotifyWhenBackgrounded = vars.diffsplitterNotifyWhenBackgrounded
+        self.diffsplitterNotifyMinimumSeconds = vars.diffsplitterNotifyMinimumSeconds
+        self.diffsplitterStatusPriority = vars.diffsplitterStatusPriority
+        self.diffsplitterIncludeHiddenFiles = vars.diffsplitterIncludeHiddenFiles
+        self.diffsplitterPreferDiskTempForLargeFiles = vars.diffsplitterPreferDiskTempForLargeFiles
+        self.diffsplitterHexWindowLines = vars.diffsplitterHexWindowLines
+        self.diffsplitterLargeFileHexConversionEnabled = vars.diffsplitterLargeFileHexConversionEnabled
+        self.diffsplitterMaxTextMegabytes = vars.diffsplitterMaxTextMegabytes
+        self.diffsplitterMaxNestDepth = vars.diffsplitterMaxNestDepth
+        self.diffsplitterMaxEntries = vars.diffsplitterMaxEntries
+    }
+
+    func moveDiffsplitterStatusPriority(from source: IndexSet, to destination: Int) {
+        var order = diffsplitterStatusPriority
+        order.move(fromOffsets: source, toOffset: destination)
+        diffsplitterStatusPriority = order
+    }
+
+    func resetDiffsplitterStatusPriority() {
+        diffsplitterStatusPriority = PersistentVariables.defaultDiffsplitterStatusPriority
     }
     
     func goBack() {
@@ -667,6 +965,45 @@ final class ConfigurationViewModel: ObservableObject {
     var canGoBack: Bool { !backStack.isEmpty }
     var canGoForward: Bool { !forwardStack.isEmpty }
     
+    func resetPreferenceValues() {
+        vars.resetPreferenceValues()
+        reloadFromVars()
+    }
+
+    fileprivate func performMaintenance(_ action: ConfigurationMaintenanceAction) {
+        switch action {
+        case .resetPreferences: resetPreferenceValues()
+        case .deleteStorage: theThirdImpact()
+        }
+    }
+
+    private func reloadFromVars() {
+        pesterMeWithSipping = vars.pesterMeWithSipping
+        showNetworkNotices = vars.showNetworkNotices
+        showCLTNotices = vars.showCLTNotices
+        showLoupeApplyVerification = vars.showLoupeApplyVerification
+        upgradeChannel = vars.upgradeChannel
+        hideUpgradeAlerts = vars.hideUpgradeAlerts
+        deleteBackupOnStartup = vars.deleteBackupOnStartup
+        entityTrackerAutoDeleteEnabled = vars.entityTrackerAutoDeleteEnabled
+        entityTrackerAutoDeleteScope = vars.entityTrackerAutoDeleteScope
+        entityTrackerAutoDeleteTrigger = vars.entityTrackerAutoDeleteTrigger
+        entityTrackerAutoDeleteLoupeActivities = vars.entityTrackerAutoDeleteLoupeActivities
+        playIndexingDoneSound = vars.playIndexingDoneSound
+        playToolCycleSound = vars.playToolCycleSound
+        playDiffsplitterDoneSound = vars.playDiffsplitterDoneSound
+        diffsplitterNotifyWhenBackgrounded = vars.diffsplitterNotifyWhenBackgrounded
+        diffsplitterNotifyMinimumSeconds = vars.diffsplitterNotifyMinimumSeconds
+        diffsplitterStatusPriority = vars.diffsplitterStatusPriority
+        diffsplitterIncludeHiddenFiles = vars.diffsplitterIncludeHiddenFiles
+        diffsplitterPreferDiskTempForLargeFiles = vars.diffsplitterPreferDiskTempForLargeFiles
+        diffsplitterHexWindowLines = vars.diffsplitterHexWindowLines
+        diffsplitterLargeFileHexConversionEnabled = vars.diffsplitterLargeFileHexConversionEnabled
+        diffsplitterMaxTextMegabytes = vars.diffsplitterMaxTextMegabytes
+        diffsplitterMaxNestDepth = vars.diffsplitterMaxNestDepth
+        diffsplitterMaxEntries = vars.diffsplitterMaxEntries
+    }
+
     func theThirdImpact() {
         vars.theThirdImpact()
     }
@@ -715,8 +1052,14 @@ private struct PanelDetail: View {
             switch vm.selection {
             case .general:
                 GeneralPanelView(vm: vm)
+            case .about:
+                AboutView()
             case .entityTracker:
+#if os(macOS)
                 EntityTrackerPanelView(vm: vm)
+#else
+                EmptyView()
+#endif
             case .acknowledge:
                 AcknowledgementsPanelView(vm: vm)
             case .none:
@@ -729,8 +1072,49 @@ private struct PanelDetail: View {
 
 struct ConfigurationRootView: View {
     @StateObject private var vm = ConfigurationViewModel()
-    
+#if os(iOS)
+    @State private var pendingMaintenanceAction: ConfigurationMaintenanceAction?
+#endif
+
     var body: some View {
+#if os(iOS)
+        List {
+            Section {
+                if configurationShowsDiffsplitter {
+                    NavigationLink {
+                        GeneralPanelView(vm: vm)
+                            .navigationTitle(Panel.general.title)
+                            .navigationBarTitleDisplayMode(.inline)
+                    } label: {
+                        Label(Panel.general.title, systemImage: Panel.general.systemImage)
+                    }
+                }
+                NavigationLink {
+                    AboutView()
+                        .navigationTitle(Panel.about.title)
+                        .navigationBarTitleDisplayMode(.inline)
+                } label: {
+                    Label(Panel.about.title, systemImage: Panel.about.systemImage)
+                }
+                NavigationLink {
+                    AcknowledgementsPanelView(vm: vm)
+                        .navigationTitle(Panel.acknowledge.title)
+                        .navigationBarTitleDisplayMode(.inline)
+                } label: {
+                    Label(Panel.acknowledge.title, systemImage: Panel.acknowledge.systemImage)
+                }
+            }
+            if !configurationShowsDiffsplitter {
+                Section(header: Text(L10n.t("Maintenance"))) {
+                    ConfigurationMaintenanceRows { pendingMaintenanceAction = $0 }
+                }
+            }
+        }
+        .navigationTitle(L10n.t("Settings"))
+        .configurationMaintenanceAlert(pending: $pendingMaintenanceAction) {
+            vm.performMaintenance($0)
+        }
+#else
         if #available(macOS 14.0, *) {
             ModernNavigationView(vm: vm)
                 .minimumWindowContentSize(AppWindowSizing.Configuration.modern)
@@ -753,6 +1137,7 @@ struct ConfigurationRootView: View {
             }
             .minimumWindowContentSize(AppWindowSizing.Configuration.legacy)
         }
+#endif
     }
 }
 

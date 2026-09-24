@@ -8,10 +8,12 @@
 import Foundation
 import UniformTypeIdentifiers
 import SwiftUI
+#if os(macOS)
 import AppKit
+#endif
 
 extension UTType {
-    static let loupeMachineDocument = UTType(exportedAs: "theoderoy.Deboogey.LoupeMachine", conformingTo: .json)
+    static let loupeMachineDocument = UTType(exportedAs: "theoderoy.Deboogey.LoupeMachine", conformingTo: .data)
 }
 
 struct LoupeMachineDocument: Codable {
@@ -67,6 +69,24 @@ struct LoupeMachineDocument: Codable {
         }
         return document
     }
+
+    var containsNonMCECategories: Bool {
+        flags.contains { flag in
+            if let source = flag.source {
+                switch source {
+                case .defaults, .globalDefaults, .other:
+                    return true
+                case .systemFeatureFlags, .binaryFlags:
+                    break
+                }
+            }
+            let name = flag.name
+            if name.hasPrefix("defaults.") || name.hasPrefix("globalDefaults.") {
+                return true
+            }
+            return !name.hasPrefix("systemFeatureFlags.") && !name.hasPrefix("binaryFlags.")
+        }
+    }
 }
 
 struct LoupeMachineWindowRequest: Codable, Hashable {
@@ -91,6 +111,7 @@ struct LoupeMachineWindowRequest: Codable, Hashable {
 enum LoupeMachineNavigation {
     static let windowID = "deboogey-loupe"
 
+#if os(macOS)
     static func openLegacy(documentAt url: URL?) {
         LoupeMachineWindowController.open(LoupeMachineWindowRequest(
             action: url == nil ? .create : .open,
@@ -129,14 +150,11 @@ enum LoupeMachineNavigation {
     }
 
     private static func chooseDocument(open: @escaping (URL) -> Void) {
-        let panel = NSOpenPanel()
-        panel.title = L10n.t("Open Loupe Machine Document")
-        panel.allowedContentTypes = [.loupeMachineDocument]
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.begin { response in
-            guard response == .OK, let url = panel.url else { return }
-            open(url)
-        }
+        DocumentOpenPanel.choose(
+            title: L10n.t("Open Loupe Machine Document"),
+            contentTypes: [.loupeMachineDocument],
+            open: open
+        )
     }
+#endif
 }

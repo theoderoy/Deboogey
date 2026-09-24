@@ -22,6 +22,14 @@ struct AppWindowSize {
 enum AppWindowSizing {
     static let root = AppWindowSize(width: 620, height: 520)
     static let loupeMachine = AppWindowSize(width: 960, height: 720)
+    static let diffsplitter = AppWindowSize(width: 960, height: 720)
+    static let entityTracker = AppWindowSize(width: 560, height: 480)
+    static let skyLightDiagnostics = AppWindowSize(width: 520, height: 540)
+#if DEBOOGEY_MCE
+    static let cocoaDebugMenu = AppWindowSize(width: 520, height: 480)
+#else
+    static let cocoaDebugMenu = AppWindowSize(width: 520, height: 650)
+#endif
 
     enum Configuration {
         static let sidebarWidth: CGFloat = 200
@@ -33,7 +41,12 @@ enum AppWindowSizing {
 }
 
 extension View {
+    @ViewBuilder
     func minimumWindowContentSize(_ sizing: AppWindowSize) -> some View {
+#if os(macOS)
         frame(minWidth: sizing.minimumSize.width, minHeight: sizing.minimumSize.height)
+#else
+        self
+#endif
     }
 }

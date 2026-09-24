@@ -5,8 +5,14 @@
 //  Created by Théo De Roy on 13/10/2025.
 //
 
-import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
+#if os(macOS)
+import AppKit
+#endif
+#if os(iOS)
+import UIKit
+#endif
 
 let appName =
 Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
@@ -15,6 +21,7 @@ let shortVersion =
 Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
 let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
 
+#if os(macOS)
 private struct WindowDefaultSizeApplier: NSViewRepresentable {
     let sizing: AppWindowSize
     let onWindowPrepared: () -> Void
@@ -80,6 +87,7 @@ private extension CGSize {
         width < other.width || height < other.height
     }
 }
+#endif
 
 struct IdentifiableString: Identifiable {
     let id = UUID()
@@ -90,6 +98,7 @@ struct LauncherButton: View {
     let title: String
     let icon: String
     let color: Color
+    var prominent: Bool = false
     let action: () -> Void
     
     var body: some View {
@@ -97,28 +106,179 @@ struct LauncherButton: View {
             Label {
                 Text(L10n.t(title))
             } icon: {
-                Image(systemName: icon)
+                LauncherIcon(name: icon)
             }
-            .font(.headline)
-            .frame(width: 220)
-            .contentShape(Rectangle())
+            .deboogeyStandardButtonLabel()
         }
-        .launcherButtonStyle(tint: color)
+        .deboogeyButtonStyle(tint: color, prominent: prominent)
     }
 }
 
-private extension View {
-    func launcherButtonStyle(tint color: Color) -> some View {
-        self
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.roundedRectangle)
-            .controlSize(.large)
-            .tint(color)
+private struct LauncherIcon: View {
+    let name: String
+
+    private var usesAssetIcon: Bool {
+#if os(macOS)
+        NSImage(named: name) != nil
+#else
+        UIImage(named: name) != nil
+#endif
+    }
+
+    var body: some View {
+        if usesAssetIcon {
+            Image(name)
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 18, height: 18)
+        } else {
+            Image(systemName: name)
+        }
     }
 }
+
+#if os(macOS)
+private struct DisabledSkyLightLauncher: View {
+    var usesTertiaryStyle: Bool = false
+    let onHelp: () -> Void
+
+    var body: some View {
+        HStack {
+            LauncherButton(
+                title: "SkyLight Diagnostics",
+                icon: "macwindow",
+                color: .accentColor
+            ) { }
+            .disabled(true)
+
+            Button(action: onHelp) {
+                Image(systemName: "questionmark.circle")
+                    .font(.title2)
+                    .modifier(DisabledSkyLightHelpForeground(usesTertiaryStyle: usesTertiaryStyle))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+private struct DisabledSkyLightHelpForeground: ViewModifier {
+    let usesTertiaryStyle: Bool
+
+    func body(content: Content) -> some View {
+        if usesTertiaryStyle {
+            content.foregroundStyle(.tertiary)
+        } else {
+            content.foregroundColor(.secondary)
+        }
+    }
+}
+#endif
 
 struct RootView: View {
 #if DEBOOGEY_MCE
+#if os(iOS)
+    @Environment(\.mceIOSNavigate) private var navigate
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var showingSettings = false
+    @State private var showingDiffsplitterUnavailable = false
+
+    var body: some View {
+        VStack {
+            if horizontalSizeClass == .compact {
+                VStack(spacing: 24) {
+                    branding
+                    actions
+                }
+            } else {
+                HStack {
+                    branding
+                    actions
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack {
+                ConfigurationRootView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button {
+                                showingSettings = false
+                            } label: {
+                                Image(systemName: "xmark")
+                            }
+                            .accessibilityLabel(L10n.t("Close"))
+                        }
+                    }
+            }
+        }
+        .alert(
+            L10n.t("Diffsplitter is unavailable on this device."),
+            isPresented: $showingDiffsplitterUnavailable
+        ) {
+            Button(L10n.t("OK"), role: .cancel) {}
+        } message: {
+            Text(L10n.t(diffsplitterUnavailableMessage))
+        }
+    }
+
+    private var branding: some View {
+        VStack(spacing: 8) {
+            Image("DeboogeyIdent")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 120, height: 120)
+
+            Text(appName ?? "Deboogey")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+        }
+    }
+
+    private var actions: some View {
+        VStack(spacing: 12) {
+            if MCEIOSFeatureSupport.diffsplitter {
+                DeboogeyDiffsplitterIOSLauncher(navigate: navigate)
+            } else if MCEIOSFeatureSupport.diffsplitterBlocker == .chip {
+                HStack {
+                    LauncherButton(
+                        title: "Diffsplitter",
+                        icon: "DiffsplitterIconIPOSF",
+                        color: .accentColor,
+                        prominent: true
+                    ) { }
+                    .disabled(true)
+
+                    Button {
+                        showingDiffsplitterUnavailable = true
+                    } label: {
+                        Image(systemName: "questionmark.circle")
+                            .font(.title2)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L10n.t("Why is Diffsplitter unavailable?"))
+                }
+            }
+
+            DeboogeyLoupeIOSLauncher(navigate: navigate)
+
+            LauncherButton(
+                title: "Settings",
+                icon: "gear",
+                color: .gray
+            ) {
+                showingSettings = true
+            }
+        }
+        .padding()
+    }
+
+    private var diffsplitterUnavailableMessage: String {
+        "Diffsplitter requires an Apple A14 or M1 chip, or later."
+    }
+#else
     @StateObject private var vars = PersistentVariables()
 
     @State private var showingDeboogeyCDMLauncher = false
@@ -147,6 +307,12 @@ struct RootView: View {
                         DeboogeyLoupeLegacyWindowLauncher()
                     }
 
+                    if #available(macOS 13.0, *) {
+                        DeboogeyDiffsplitterWindowLauncher()
+                    } else {
+                        DeboogeyDiffsplitterLegacyWindowLauncher()
+                    }
+
                     LauncherButton(
                         title: "Cocoa Debug Menu",
                         icon: "wrench.and.screwdriver",
@@ -156,7 +322,7 @@ struct RootView: View {
                     }
 
                     Divider()
-                        .frame(width: 220)
+                        .frame(width: DeboogeyButtonMetrics.standardWidth)
 
                     if #available(macOS 13.0, *) {
                         EntityTrackerWindowLauncher()
@@ -196,13 +362,13 @@ struct RootView: View {
             NavigationView {
                 EntityTrackerView()
             }
-            .frame(width: 560, height: 480)
+            .frame(width: AppWindowSizing.entityTracker.defaultSize.width, height: AppWindowSizing.entityTracker.defaultSize.height)
         }
         .sheet(isPresented: $showingDeboogeyCDMLauncher) {
             DeboogeyCDMLauncherView { arguments in
                 EntityTracker.shared.record(source: .deboogeyCDM, arguments: arguments)
             }
-            .frame(width: 520, height: 480)
+            .frame(width: AppWindowSizing.cocoaDebugMenu.defaultSize.width, height: AppWindowSizing.cocoaDebugMenu.defaultSize.height)
         }
         .sheet(isPresented: $showingWhatsNew) {
             WhatsNewView {
@@ -220,6 +386,7 @@ struct RootView: View {
             WindowDefaultSizeApplier(sizing: AppWindowSizing.root) {}
         )
     }
+#endif
 #else
     @Environment(\.openURL) private var openURL
     @Environment(\.sipSatisfied) private var sipSatisfied
@@ -261,7 +428,7 @@ struct RootView: View {
     }
 
     private var shouldShowUpdateCard: Bool {
-        !DebugVariables.isMarketplaceCandidateEditionBuild
+        !DebugVariables.areUpdatesDisabled
         && (upgradeChecker.isUpdating
         || (upgradeChecker.upgradeAvailable && (!vars.hideUpgradeAlerts || showUpdateCardOverride) && (!hideUpdateCard || showUpdateCardOverride))
         || (!networkMonitor.isConnected && !vars.hideUpgradeAlerts && !hideUpdateCard && vars.showNetworkNotices))
@@ -334,6 +501,12 @@ struct RootView: View {
                     }
 
                     if #available(macOS 13.0, *) {
+                        DeboogeyDiffsplitterWindowLauncher()
+                    } else {
+                        DeboogeyDiffsplitterLegacyWindowLauncher()
+                    }
+
+                    if #available(macOS 13.0, *) {
                         DeboogeyCDMWindowLauncher()
                     } else {
                         LauncherButton(
@@ -348,80 +521,24 @@ struct RootView: View {
                     if !DebugVariables.isMarketplaceCandidateEditionBuild {
                         if #available(macOS 13.0, *) {
                             if sipSatisfied {
-                                HStack {
-                                    LauncherButton(
-                                        title: "SkyLight Diagnostics",
-                                        icon: "macwindow",
-                                        color: .accentColor
-                                    ) { }
-                                        .disabled(true)
-
-                                    Button(action: {
-                                        activeAlert = .sipNotice
-                                    }) {
-                                        Image(systemName: "questionmark.circle")
-                                            .font(.title2)
-                                            .foregroundStyle(.tertiary)
-                                    }
-                                    .buttonStyle(.plain)
+                                DisabledSkyLightLauncher(usesTertiaryStyle: true) {
+                                    activeAlert = .sipNotice
                                 }
                             } else if !cltInstalled {
-                                HStack {
-                                    LauncherButton(
-                                        title: "SkyLight Diagnostics",
-                                        icon: "macwindow",
-                                        color: .accentColor
-                                    ) { }
-                                        .disabled(true)
-
-                                    Button(action: {
-                                        activeAlert = .cltNotice
-                                    }) {
-                                        Image(systemName: "questionmark.circle")
-                                            .font(.title2)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .buttonStyle(.plain)
+                                DisabledSkyLightLauncher {
+                                    activeAlert = .cltNotice
                                 }
                             } else {
                                 DeboogeySDWindowLauncher()
                             }
                         } else {
                             if sipSatisfied {
-                                HStack {
-                                    LauncherButton(
-                                        title: "SkyLight Diagnostics",
-                                        icon: "macwindow",
-                                        color: .accentColor
-                                    ) { }
-                                        .disabled(true)
-
-                                    Button(action: {
-                                        activeAlert = .sipNotice
-                                    }) {
-                                        Image(systemName: "questionmark.circle")
-                                            .font(.title2)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .buttonStyle(.plain)
+                                DisabledSkyLightLauncher {
+                                    activeAlert = .sipNotice
                                 }
                             } else if !cltInstalled {
-                                HStack {
-                                    LauncherButton(
-                                        title: "SkyLight Diagnostics",
-                                        icon: "macwindow",
-                                        color: .accentColor
-                                    ) { }
-                                        .disabled(true)
-
-                                    Button(action: {
-                                        activeAlert = .cltNotice
-                                    }) {
-                                        Image(systemName: "questionmark.circle")
-                                            .font(.title2)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .buttonStyle(.plain)
+                                DisabledSkyLightLauncher {
+                                    activeAlert = .cltNotice
                                 }
                             } else {
                                 LauncherButton(
@@ -436,7 +553,7 @@ struct RootView: View {
                     }
                     
                     Divider()
-                        .frame(width: 220)
+                        .frame(width: DeboogeyButtonMetrics.standardWidth)
                     
                     if #available(macOS 13.0, *) {
                         EntityTrackerWindowLauncher()
@@ -586,7 +703,7 @@ struct RootView: View {
                     EntityTracker.shared.record(source: .wsOverlay, arguments: [argument])
                 }
             }
-            .frame(width: 520, height: 540)
+            .frame(width: AppWindowSizing.skyLightDiagnostics.defaultSize.width, height: AppWindowSizing.skyLightDiagnostics.defaultSize.height)
         }
         .sheet(isPresented: $showingDeboogeyCDMLauncher) {
             NavigationView {
@@ -594,13 +711,13 @@ struct RootView: View {
                     EntityTracker.shared.record(source: .deboogeyCDM, arguments: arguments)
                 }
             }
-            .frame(width: 520, height: 650)
+            .frame(width: AppWindowSizing.cocoaDebugMenu.defaultSize.width, height: AppWindowSizing.cocoaDebugMenu.defaultSize.height)
         }
         .sheet(isPresented: $showingEntityTracker) {
             NavigationView {
                 EntityTrackerView()
             }
-            .frame(width: 560, height: 480)
+            .frame(width: AppWindowSizing.entityTracker.defaultSize.width, height: AppWindowSizing.entityTracker.defaultSize.height)
         }
         .sheet(isPresented: $showingWhatsNew) {
             WhatsNewView {
@@ -725,14 +842,14 @@ struct RootView: View {
                 activeAlert = .cltNotice
             }
         }
-        if !DebugVariables.isMarketplaceCandidateEditionBuild {
+        if !DebugVariables.areUpdatesDisabled {
             upgradeChecker.cleanUpOldApp()
             upgradeChecker.checkForUpdates()
         }
     }
     
     private func runManualCheck() {
-        guard !DebugVariables.isMarketplaceCandidateEditionBuild else { return }
+        guard !DebugVariables.areUpdatesDisabled else { return }
         if !networkMonitor.isConnected && !upgradeChecker.upgradeAvailable {
             if vars.showNetworkNotices {
                 showUpdateCardOverride = true
@@ -771,11 +888,18 @@ struct RootView: View {
 #endif
 }
 
-private struct DeboogeyLoupeLauncherMenu: View {
+private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
+    let title: String
+    let icon: String
+    let prominent: Bool
+    let openLabel: String
+    let openIcon: String
     let openDocument: () -> Void
     let createDocument: () -> Void
-    @AppStorage("theoderoy.Deboogey.LoupeMachine.hasShownEducation")
-    private var hasShownEducation = false
+    @Binding var hasShownEducation: Bool
+    var forceEducation: Bool = false
+    @ViewBuilder let education: (@escaping () -> Void) -> Education
+
     @State private var showingEducation = false
     @State private var showingActions = false
     @State private var pendingAction: Action = .open
@@ -787,9 +911,10 @@ private struct DeboogeyLoupeLauncherMenu: View {
 
     var body: some View {
         LauncherButton(
-            title: "Loupe Machine",
-            icon: "loupe",
-            color: .accentColor
+            title: title,
+            icon: icon,
+            color: .accentColor,
+            prominent: prominent
         ) {
             showingActions = true
         }
@@ -798,7 +923,7 @@ private struct DeboogeyLoupeLauncherMenu: View {
                 Button {
                     request(.open)
                 } label: {
-                    Label(L10n.t("Open Loupe Machine Document"), systemImage: "doc.text.magnifyingglass")
+                    Label(L10n.t(openLabel), systemImage: openIcon)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                 }
@@ -822,7 +947,7 @@ private struct DeboogeyLoupeLauncherMenu: View {
             .frame(minWidth: 280)
         }
         .sheet(isPresented: $showingEducation) {
-            LoupeMachineEducationView {
+            education {
                 hasShownEducation = true
                 showingEducation = false
                 DispatchQueue.main.async {
@@ -835,7 +960,7 @@ private struct DeboogeyLoupeLauncherMenu: View {
     private func request(_ action: Action) {
         showingActions = false
         pendingAction = action
-        if hasShownEducation && !DebugVariables.alwaysShowLMEducation {
+        if hasShownEducation && !forceEducation {
             perform(action)
         } else {
             showingEducation = true
@@ -850,6 +975,136 @@ private struct DeboogeyLoupeLauncherMenu: View {
     }
 }
 
+private struct DeboogeyLoupeLauncherMenu: View {
+    let openDocument: () -> Void
+    let createDocument: () -> Void
+    @AppStorage("theoderoy.Deboogey.LoupeMachine.hasShownEducation")
+    private var hasShownEducation = false
+
+    var body: some View {
+        DeboogeyDocumentToolLauncherMenu(
+            title: "Loupe Machine",
+            icon: "loupe",
+            prominent: true,
+            openLabel: "Open Loupe Machine Document",
+            openIcon: "doc.text.magnifyingglass",
+            openDocument: openDocument,
+            createDocument: createDocument,
+            hasShownEducation: $hasShownEducation,
+            forceEducation: DebugVariables.alwaysShowLMEducation
+        ) { onContinue in
+            LoupeMachineEducationView(onDismiss: onContinue)
+        }
+    }
+}
+
+private struct DeboogeyDiffsplitterLauncherMenu: View {
+    let openDocument: () -> Void
+    let createDocument: () -> Void
+    var prominent: Bool = false
+    @AppStorage("theoderoy.Deboogey.Diffsplitter.hasShownEducation")
+    private var hasShownEducation = false
+
+    var body: some View {
+        DeboogeyDocumentToolLauncherMenu(
+            title: "Diffsplitter",
+            icon: "DiffsplitterIconIPOSF",
+            prominent: prominent,
+            openLabel: "Open Diffsplitter Document",
+            openIcon: "doc.text",
+            openDocument: openDocument,
+            createDocument: createDocument,
+            hasShownEducation: $hasShownEducation
+        ) { onContinue in
+            DiffsplitterEducationView(onDismiss: onContinue)
+        }
+    }
+}
+
+#if os(iOS)
+private extension View {
+    func mceDocumentImporter(
+        isPresented: Binding<Bool>,
+        contentTypes: [UTType],
+        onOpen: @escaping (URL) -> Void
+    ) -> some View {
+        fileImporter(
+            isPresented: isPresented,
+            allowedContentTypes: contentTypes,
+            allowsMultipleSelection: false
+        ) { result in
+            guard case .success(let urls) = result, let url = urls.first else { return }
+            _ = url.startAccessingSecurityScopedResource()
+            onOpen(url)
+        }
+    }
+}
+
+private struct DeboogeyLoupeIOSLauncher: View {
+    let navigate: (MCEIOSRoute) -> Void
+    @AppStorage("theoderoy.Deboogey.LoupeMachine.hasShownEducation")
+    private var hasShownEducation = false
+    @State private var showingEducation = false
+    @State private var isOpeningDocument = false
+
+    var body: some View {
+        LauncherButton(
+            title: "Loupe View",
+            icon: "loupe",
+            color: .accentColor,
+            prominent: true
+        ) {
+            requestOpen()
+        }
+        .sheet(isPresented: $showingEducation) {
+            LoupeMachineEducationView {
+                hasShownEducation = true
+                showingEducation = false
+                DispatchQueue.main.async {
+                    isOpeningDocument = true
+                }
+            }
+        }
+        .mceDocumentImporter(
+            isPresented: $isOpeningDocument,
+            contentTypes: [.loupeMachineDocument]
+        ) { url in
+            navigate(.loupe(LoupeMachineWindowRequest(action: .open, documentURL: url)))
+        }
+    }
+
+    private func requestOpen() {
+        if hasShownEducation && !DebugVariables.alwaysShowLMEducation {
+            isOpeningDocument = true
+        } else {
+            showingEducation = true
+        }
+    }
+}
+
+private struct DeboogeyDiffsplitterIOSLauncher: View {
+    let navigate: (MCEIOSRoute) -> Void
+    @State private var isOpeningDocument = false
+
+    var body: some View {
+        DeboogeyDiffsplitterLauncherMenu(
+            openDocument: { isOpeningDocument = true },
+            createDocument: {
+                navigate(.diffsplitter(DiffsplitterWindowRequest(action: .create, documentURL: nil)))
+            },
+            prominent: true
+        )
+        .mceDocumentImporter(
+            isPresented: $isOpeningDocument,
+            contentTypes: [.diffsplitterDocument, .diffsplitterXDocument]
+        ) { url in
+            navigate(.diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: url)))
+        }
+    }
+}
+#endif
+
+#if os(macOS)
 @available(macOS 13.0, *)
 private struct DeboogeyLoupeWindowLauncher: View {
     @Environment(\.openWindow) private var openWindow
@@ -867,6 +1122,27 @@ private struct DeboogeyLoupeLegacyWindowLauncher: View {
         DeboogeyLoupeLauncherMenu(
             openDocument: LoupeMachineNavigation.chooseDocumentLegacy,
             createDocument: { LoupeMachineNavigation.openLegacy(documentAt: nil) }
+        )
+    }
+}
+
+@available(macOS 13.0, *)
+private struct DeboogeyDiffsplitterWindowLauncher: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        DeboogeyDiffsplitterLauncherMenu(
+            openDocument: { DiffsplitterNavigation.chooseDocument(using: openWindow) },
+            createDocument: { DiffsplitterNavigation.open(documentAt: nil, using: openWindow) }
+        )
+    }
+}
+
+private struct DeboogeyDiffsplitterLegacyWindowLauncher: View {
+    var body: some View {
+        DeboogeyDiffsplitterLauncherMenu(
+            openDocument: DiffsplitterNavigation.chooseDocumentLegacy,
+            createDocument: { DiffsplitterNavigation.openLegacy(documentAt: nil) }
         )
     }
 }
@@ -915,6 +1191,7 @@ private struct ModernSettingsLauncher: View {
         }
     }
 }
+#endif
 
 #Preview {
     RootView()
