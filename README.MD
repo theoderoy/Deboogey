@@ -12,7 +12,7 @@
 
 </div>
 
-![Deboogey](Assets/banner.jpeg)
+<video src="https://github.com/user-attachments/assets/c0797bbb-d8ce-49b6-ae3b-aa4a474ea1c0" poster="https://github.com/user-attachments/assets/4e4a9339-260d-44da-b558-428f3fc47ac5" autoplay loop muted playsinline width="100%" aria-label="Deboogey"></video>
 
 ## Overview
 
