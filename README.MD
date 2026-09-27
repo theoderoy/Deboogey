@@ -1,12 +1,10 @@
 
 
-![Deboogey icon](Assets/icon.png)
+<img src="Assets/icon.png" alt="Deboogey icon" width="128">
 
 # Deboogey
 
 ![Download Deboogey on the App Store](https://upload.wikimedia.org/wikipedia/commons/5/51/Download_on_the_App_Store_Badge_US-UK_RGB_blk.svg)
-
-**Dig into what should be yours.**
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
