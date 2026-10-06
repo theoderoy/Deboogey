@@ -866,7 +866,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = "7 (Golden Master 2)";
 				DEBOOGEY_APPICON_SUFFIX = "$(DEBOOGEY_APPICON_SUFFIX_$(MARKETING_VERSION:c99extidentifier))";
 				DEBOOGEY_APPICON_SUFFIX_Security_Research_Preview = SRP;
 				DEBOOGEY_EXCLUDED_ICON = AppIconSRP.icon;
@@ -917,7 +917,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = "7 (Golden Master 2)";
 				DEBOOGEY_APPICON_SUFFIX = "$(DEBOOGEY_APPICON_SUFFIX_$(MARKETING_VERSION:c99extidentifier))";
 				DEBOOGEY_APPICON_SUFFIX_Security_Research_Preview = SRP;
 				DEBOOGEY_EXCLUDED_ICON = AppIconSRP.icon;
@@ -1097,7 +1097,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 9;
 				DEBOOGEY_EDITION = "Marketplace Candidate Edition";
 				DEVELOPMENT_TEAM = 7Z88K9GUU8;
 				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
@@ -1160,7 +1160,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 2026.9.18;
+				MARKETING_VERSION = 2026.9.19;
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey.MCE;
 				PRODUCT_MODULE_NAME = DeboogeyClientMCE;
 				PRODUCT_NAME = Deboogey;
@@ -1203,7 +1203,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 9;
 				DEBOOGEY_EDITION = "Marketplace Candidate Edition";
 				DEVELOPMENT_TEAM = 7Z88K9GUU8;
 				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
@@ -1266,7 +1266,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 2026.9.18;
+				MARKETING_VERSION = 2026.9.19;
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey.MCE;
 				PRODUCT_MODULE_NAME = DeboogeyClientMCE;
 				PRODUCT_NAME = Deboogey;

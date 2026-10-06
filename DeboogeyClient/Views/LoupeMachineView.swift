@@ -206,6 +206,7 @@ struct LoupeMachineView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showsSidebar = true
+    @State private var hingeMidX: CGFloat?
     @State private var isExportingDocument = false
     @State private var exportDocument: LoupeMachineExportDocument?
     @State private var exportCompletion: ((Bool) -> Void)?
@@ -239,42 +240,42 @@ struct LoupeMachineView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                if !usesColumnLayout && selectedFlagID != nil {
-                    Button {
-                        selectedFlagID = nil
-                    } label: {
-                        Label(L10n.t("Flags"), systemImage: "chevron.backward")
-                    }
-                } else {
-                    Button {
-                        if hasUnsavedDocumentChanges {
-                            showDiscardConfirmation = true
-                        } else {
-                            dismiss()
+                HStack(spacing: 12) {
+                    if !usesColumnLayout && selectedFlagID != nil {
+                        Button {
+                            selectedFlagID = nil
+                        } label: {
+                            Label(L10n.t("Flags"), systemImage: "chevron.backward")
                         }
-                    } label: {
-                        Label(L10n.t("Back"), systemImage: "chevron.backward")
+                    } else {
+                        Button {
+                            if hasUnsavedDocumentChanges {
+                                showDiscardConfirmation = true
+                            } else {
+                                dismiss()
+                            }
+                        } label: {
+                            Label(L10n.t("Back"), systemImage: "chevron.backward")
+                        }
                     }
-                }
-            }
-            if usesColumnLayout {
-                ToolbarItem(placement: .topBarLeading) {
-                    sidebarVisibilityButton
+
+                    if usesColumnLayout && hasFlags {
+                        sidebarVisibilityButton
+                    }
                 }
             }
             if hasFlags {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        saveDocument(forceSaveAs: false)
-                    } label: {
-                        Label(L10n.t("Save Change Set"), systemImage: "square.and.arrow.down")
-                    }
-                    .labelStyle(.iconOnly)
-                    .disabled(!hasUnsavedDocumentChanges)
+                    saveChangeSetButton
+                        .padding(.trailing, 10)
                 }
             }
         }
-        .onChange(of: horizontalSizeClass) { _, _ in
+        .onChange(of: horizontalSizeClass) { _, newSizeClass in
+            if newSizeClass == .compact {
+                hingeMidX = nil
+                showsSidebar = true
+            }
             guard usesColumnLayout, hasFlags, selectedFlagID == nil else { return }
             selectedFlagID = flagStore.names.first
         }
@@ -408,13 +409,17 @@ struct LoupeMachineView: View {
             HStack(spacing: 0) {
                 if showsSidebar {
                     flagSidebar
-                        .frame(minWidth: 240, idealWidth: 300, maxWidth: 340)
                         .frame(maxHeight: .infinity)
-                    Divider()
+                        .modifier(LoupeSidebarColumnWidth(hingeMidX: hingeMidX))
+                    if hingeMidX == nil {
+                        Divider()
+                    }
                 }
                 flagDetail
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .modifier(BookFoldHingeSplitObserver(hingeMidX: $hingeMidX))
         } else {
             Group {
                 if selectedFlagID != nil {
@@ -422,6 +427,9 @@ struct LoupeMachineView: View {
                 } else {
                     flagSidebar
                 }
+            }
+            .onAppear {
+                hingeMidX = nil
             }
         }
 #else
@@ -482,12 +490,24 @@ struct LoupeMachineView: View {
 
 #if os(iOS)
     private var sidebarVisibilityButton: some View {
-        Button {
+        let title = L10n.t(showsSidebar ? "Hide Sidebar" : "Show Sidebar")
+        return Button {
             showsSidebar.toggle()
         } label: {
-            Label(L10n.t("Show Sidebar"), systemImage: "sidebar.left")
+            Label(title, systemImage: "sidebar.left")
         }
         .labelStyle(.iconOnly)
+        .accessibilityLabel(title)
+    }
+
+    private var saveChangeSetButton: some View {
+        Button {
+            saveDocument(forceSaveAs: false)
+        } label: {
+            Label(L10n.t("Save Change Set"), systemImage: "square.and.arrow.down")
+        }
+        .labelStyle(.iconOnly)
+        .disabled(!hasUnsavedDocumentChanges)
     }
 #endif
 
@@ -1419,6 +1439,9 @@ private struct LoupeFlagSidebar: View {
                             .tag(name)
                     }
                 }
+                .listStyle(.sidebar)
+                .contentMargins(.top, 0)
+                .contentMargins(.horizontal, 0)
             } else {
                 List {
                     iosFlagSection(rowNames: rowNames, countLabel: countLabel) { name in
@@ -1430,10 +1453,10 @@ private struct LoupeFlagSidebar: View {
                         .buttonStyle(.plain)
                     }
                 }
+                .listStyle(.insetGrouped)
+                .contentMargins(.top, 0)
             }
         }
-        .listStyle(.insetGrouped)
-        .contentMargins(.top, 0)
         .searchable(text: $searchText, prompt: L10n.t("Search Flags"))
         .onAppear {
             clampCategoryIfNeeded()
@@ -1582,7 +1605,12 @@ private struct LoupeFlagSidebar: View {
         }
         .pickerStyle(.segmented)
         .labelsHidden()
-        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+        .listRowInsets(EdgeInsets(
+            top: 8,
+            leading: usesColumnLayout ? 8 : 16,
+            bottom: 8,
+            trailing: usesColumnLayout ? 8 : 16
+        ))
     }
 
     private func flagRow(name: String, dirtyIDs: Set<String>, showsChevron: Bool) -> some View {
@@ -1621,6 +1649,20 @@ private struct LoupeFlagSidebar: View {
     }
 #endif
 }
+
+#if os(iOS)
+private struct LoupeSidebarColumnWidth: ViewModifier {
+    let hingeMidX: CGFloat?
+
+    func body(content: Content) -> some View {
+        if let hingeMidX {
+            content.frame(width: hingeMidX, alignment: .leading)
+        } else {
+            content.frame(minWidth: 240, idealWidth: 300, maxWidth: 340)
+        }
+    }
+}
+#endif
 
 #if os(macOS)
 private struct LoupeFlagListVersion: Equatable {
@@ -1810,9 +1852,15 @@ private struct LoupeValueEditor: View {
             .background(Color(nsColor: .textBackgroundColor))
 #endif
             .clipShape(RoundedRectangle(cornerRadius: 8))
+#if os(iOS)
+            .onChange(of: value) { _, newValue in
+                updateDraft(newValue)
+            }
+#else
             .onChange(of: value) { newValue in
                 updateDraft(newValue)
             }
+#endif
 
 #if !os(iOS) && DEBOOGEY_MCE
         HStack {

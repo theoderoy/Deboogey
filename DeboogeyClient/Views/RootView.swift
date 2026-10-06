@@ -180,6 +180,7 @@ struct RootView: View {
 #if os(iOS)
     @Environment(\.mceIOSNavigate) private var navigate
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @ObservedObject private var diffsplitterAvailability = MCEIOSFeatureSupport.Model.shared
     @State private var showingSettings = false
     @State private var showingDiffsplitterUnavailable = false
 
@@ -238,9 +239,9 @@ struct RootView: View {
 
     private var actions: some View {
         VStack(spacing: 12) {
-            if MCEIOSFeatureSupport.diffsplitter {
+            if diffsplitterAvailability.diffsplitter {
                 DeboogeyDiffsplitterIOSLauncher(navigate: navigate)
-            } else if MCEIOSFeatureSupport.diffsplitterBlocker == .chip {
+            } else if diffsplitterAvailability.diffsplitterBlocker == .chip {
                 HStack {
                     LauncherButton(
                         title: "Diffsplitter",
@@ -900,6 +901,7 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
     var forceEducation: Bool = false
     @ViewBuilder let education: (@escaping () -> Void) -> Education
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingEducation = false
     @State private var showingActions = false
     @State private var pendingAction: Action = .open
@@ -907,6 +909,21 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
     private enum Action {
         case open
         case create
+    }
+
+    private var prefersActionAlert: Bool {
+        #if os(iOS)
+        horizontalSizeClass == .compact
+        #else
+        false
+        #endif
+    }
+
+    private func showingActionsPresentation(_ matchesAlertPreference: Bool) -> Binding<Bool> {
+        Binding(
+            get: { showingActions && prefersActionAlert == matchesAlertPreference },
+            set: { if prefersActionAlert == matchesAlertPreference { showingActions = $0 } }
+        )
     }
 
     var body: some View {
@@ -918,7 +935,10 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
         ) {
             showingActions = true
         }
-        .popover(isPresented: $showingActions, arrowEdge: .bottom) {
+        .popover(
+            isPresented: showingActionsPresentation(false),
+            arrowEdge: .bottom
+        ) {
             VStack(alignment: .leading, spacing: 0) {
                 Button {
                     request(.open)
@@ -945,6 +965,18 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
                 .padding(.horizontal, 4)
             }
             .frame(minWidth: 280)
+        }
+        .alert(
+            "",
+            isPresented: showingActionsPresentation(true)
+        ) {
+            Button(L10n.t(openLabel)) {
+                request(.open)
+            }
+            Button(L10n.t("Create New Document…")) {
+                request(.create)
+            }
+            Button(L10n.t("Cancel"), role: .cancel) {}
         }
         .sheet(isPresented: $showingEducation) {
             education {

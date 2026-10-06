@@ -1094,6 +1094,7 @@ private struct PanelDetail: View {
 struct ConfigurationRootView: View {
     @StateObject private var vm = ConfigurationViewModel()
 #if os(iOS)
+    @ObservedObject private var diffsplitterAvailability = MCEIOSFeatureSupport.Model.shared
     @State private var pendingMaintenanceAction: ConfigurationMaintenanceAction?
 #endif
 
@@ -1101,7 +1102,7 @@ struct ConfigurationRootView: View {
 #if os(iOS)
         List {
             Section {
-                if configurationShowsDiffsplitter {
+                if diffsplitterAvailability.diffsplitter {
                     NavigationLink {
                         GeneralPanelView(vm: vm)
                             .navigationTitle(Panel.general.title)
@@ -1132,7 +1133,7 @@ struct ConfigurationRootView: View {
                     Panel.acknowledge.label
                 }
             }
-            if !configurationShowsDiffsplitter {
+            if !diffsplitterAvailability.diffsplitter {
                 Section(header: Text(L10n.t("Maintenance"))) {
                     ConfigurationMaintenanceRows { pendingMaintenanceAction = $0 }
                 }

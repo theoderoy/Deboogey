@@ -164,6 +164,8 @@ struct DiffsplitterView: View {
     let request: DiffsplitterWindowRequest
     @StateObject private var session = DiffsplitterSession()
     @State private var statusPriorityRaw = PersistentVariables.loadDiffsplitterStatusPriority()
+    @State private var copySucceededFlash = false
+    @State private var copySucceededResetTask: Task<Void, Never>?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 #if os(iOS)
@@ -175,6 +177,7 @@ struct DiffsplitterView: View {
     @State private var isExporting = false
     @State private var saveSucceededFlash = false
     @State private var saveSucceededResetTask: Task<Void, Never>?
+    @State private var hingeMidX: CGFloat?
 #endif
     private var statusPriority: [DiffsplitterEngine.DirEntryStatus] {
         DiffsplitterEngine.statusPriority(fromRawValues: statusPriorityRaw)
@@ -254,7 +257,7 @@ struct DiffsplitterView: View {
             session.presentAEAKeyPromptIfNeeded()
         }
 #else
-        .navigationTitle(L10n.t("Diffsplitter"))
+        .navigationTitle(showsBookFoldNavTitleSwap ? "" : L10n.t("Diffsplitter"))
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -271,11 +274,33 @@ struct DiffsplitterView: View {
                     Label(L10n.t("Back"), systemImage: "chevron.backward")
                 }
             }
+            if showsBookFoldNavTitleSwap {
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 8) {
+                        Text(fileCompareNavigationTitle)
+                            .font(.headline)
+                            .lineLimit(1)
+                        Button {
+                            session.swapSides()
+                        } label: {
+                            Image(systemName: "arrow.left.arrow.right")
+                        }
+                        .help(L10n.t("Swap Sides"))
+                        .accessibilityLabel(L10n.t("Swap Sides"))
+                    }
+                    .accessibilityElement(children: .contain)
+                }
+            }
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if session.isReady {
                     documentToolbarControls
                     toolbarActionControls
                 }
+            }
+        }
+        .onChange(of: horizontalSizeClass) { _, sizeClass in
+            if sizeClass == .compact {
+                hingeMidX = nil
             }
         }
         .fileImporter(
@@ -308,7 +333,7 @@ struct DiffsplitterView: View {
             session.consumePendingExportResult(result)
             exportDocument = nil
         }
-        .onChange(of: session.pendingExport?.id) { _ in
+        .onChange(of: session.pendingExport?.id) { _, _ in
             presentPendingExportIfNeeded()
         }
         .alert(
@@ -407,9 +432,15 @@ struct DiffsplitterView: View {
             }
         }
 #endif
+#if os(iOS)
+        .onChange(of: session.ignoreWhitespace) { _, _ in
+            session.applyIgnoreWhitespaceChange()
+        }
+#else
         .onChange(of: session.ignoreWhitespace) { _ in
             session.applyIgnoreWhitespaceChange()
         }
+#endif
         .onAppear {
             session.reduceMotion = reduceMotion
             session.handleDocumentRequest(request)
@@ -764,12 +795,8 @@ struct DiffsplitterView: View {
             guard session.saveDocument(forceSaveAs: false) else { return }
             flashSaveSucceeded()
         } label: {
-            Label(
-                L10n.t("Save Diffsplitter Document"),
-                systemImage: saveSucceededFlash ? "checkmark.circle.fill" : "square.and.arrow.down"
-            )
+            Image(systemName: saveSucceededFlash ? "checkmark.circle.fill" : "square.and.arrow.down")
         }
-        .labelStyle(.iconOnly)
         .foregroundStyle(saveSucceededFlash ? Color.green : Color.primary)
         .disabled(!session.hasBothSides || session.isTransferringDocument)
         .help(L10n.t("Save Diffsplitter Document"))
@@ -816,6 +843,22 @@ struct DiffsplitterView: View {
         }
     }
 #endif
+    private func flashCopySucceeded() {
+        copySucceededResetTask?.cancel()
+        withAnimation(.easeInOut(duration: 0.15)) {
+            copySucceededFlash = true
+        }
+#if os(iOS)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+#endif
+        copySucceededResetTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeInOut(duration: 0.2)) {
+                copySucceededFlash = false
+            }
+        }
+    }
     @ViewBuilder
     private var toolbarActionControls: some View {
         if isShowingDirectoryList {
@@ -843,12 +886,18 @@ struct DiffsplitterView: View {
         if isShowingFileDiffChrome {
             Button {
                 session.copyUnifiedDiff()
+                flashCopySucceeded()
             } label: {
-                Image(systemName: "doc.on.doc")
+                Image(systemName: copySucceededFlash ? "checkmark.circle.fill" : "doc.on.doc")
             }
+            .foregroundStyle(copySucceededFlash ? Color.green : Color.primary)
             .disabled(session.rows.isEmpty)
             .help(L10n.t("Copy Unified Diff"))
-            .accessibilityLabel(L10n.t("Copy Unified Diff"))
+            .accessibilityLabel(
+                copySucceededFlash
+                    ? L10n.t("Unified Diff Copied")
+                    : L10n.t("Copy Unified Diff")
+            )
 #if os(macOS)
             Button {
                 session.exportDiffsplitterXDocument()
@@ -997,7 +1046,11 @@ struct DiffsplitterView: View {
             }
             evenColumns
         }
-        .navigationTitle((path as NSString).lastPathComponent)
+        .navigationTitle(
+            showsBookFoldNavTitleSwap
+                ? ""
+                : (path as NSString).lastPathComponent
+        )
         .onAppear {
             session.loadSelectedDirectoryFile()
         }
@@ -1057,21 +1110,157 @@ struct DiffsplitterView: View {
     ) -> String {
         L10n.f("%@ — %d", status.title, count)
     }
+    @ViewBuilder
     private var evenColumns: some View {
+#if os(iOS)
+        if horizontalSizeClass == .compact {
+            compactRightOnlyColumns
+        } else {
+            classicEvenColumns
+        }
+#else
+        classicEvenColumns
+#endif
+    }
+
+    private var classicEvenColumns: some View {
+        compareColumnStack(
+            strip: comparisonStrip,
+            textRows: { textDiffRows },
+            binaryRows: { binaryDumpRows($0) }
+        )
+#if os(iOS)
+        .modifier(BookFoldHingeSplitObserver(hingeMidX: $hingeMidX))
+#endif
+    }
+
+    @ViewBuilder
+    private func pairedCompareColumns<Left: View, Right: View>(
+        alignment: VerticalAlignment = .top,
+        @ViewBuilder left: () -> Left,
+        @ViewBuilder right: () -> Right
+    ) -> some View {
+#if os(iOS)
+        if let mid = hingeMidX {
+            HStack(alignment: alignment, spacing: 0) {
+                left()
+                    .frame(width: mid, alignment: .leading)
+                right()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        } else {
+            equalPairedCompareColumns(alignment: alignment, left: left, right: right)
+        }
+#else
+        equalPairedCompareColumns(alignment: alignment, left: left, right: right)
+#endif
+    }
+
+    private func equalPairedCompareColumns<Left: View, Right: View>(
+        alignment: VerticalAlignment,
+        @ViewBuilder left: () -> Left,
+        @ViewBuilder right: () -> Right
+    ) -> some View {
+        HStack(alignment: alignment, spacing: 0) {
+            left()
+                .frame(maxWidth: .infinity, alignment: .leading)
+            columnHairline
+            right()
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func compareColumnStack<Strip: View, TextRows: View, BinaryRows: View>(
+        strip: Strip,
+        @ViewBuilder textRows: () -> TextRows,
+        @ViewBuilder binaryRows: (DiffsplitterBinaryDump.Session) -> BinaryRows
+    ) -> some View {
         VStack(spacing: 0) {
-            comparisonStrip
+            strip
                 .fixedSize(horizontal: false, vertical: true)
             Divider()
             if let dump = session.binaryDump {
                 binaryDumpChrome(dump)
                 Divider()
-                binaryDumpRows(dump)
+                binaryRows(dump)
             } else {
-                textDiffRows
+                textRows()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+
+#if os(iOS)
+    private var compactRightOnlyColumns: some View {
+        compareColumnStack(
+            strip: compactTrailingComparisonStrip,
+            textRows: { compactRightTextDiffRows },
+            binaryRows: { compactRightBinaryDumpRows($0) }
+        )
+        .onAppear { hingeMidX = nil }
+    }
+
+    private var compactTrailingComparisonStrip: some View {
+        columnHeader(
+            url: session.directoryMemberSidesFlipped ? session.leftURL : session.rightURL,
+            side: .right,
+            showsSideLabel: showsCompareSideLabels,
+            showsSwapBesideTitle: true
+        )
+        .padding(.vertical, 6)
+        .background(DiffsplitterPalette.controlBackground)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L10n.t("Comparison"))
+    }
+
+    private var compactRightTextDiffRows: some View {
+        Group {
+            if session.rows.isEmpty {
+                emptyColumnMessage
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(0..<session.visibleRowCount, id: \.self) { index in
+                            rowView(session.rows[index], side: .right)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .transition(rowRevealTransition)
+                        }
+                    }
+                    .animation(rowRevealAnimation, value: session.visibleRowCount)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func compactRightBinaryDumpRows(_ dump: DiffsplitterBinaryDump.Session) -> some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                ForEach(dump.rows) { row in
+                    binaryDumpCell(row.rightText, kind: row.kind, side: .right)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+#endif
+
+    private var rowRevealTransition: AnyTransition {
+        reduceMotion
+            ? .opacity
+            : .asymmetric(
+                insertion: .opacity.combined(with: .move(edge: .bottom)),
+                removal: .opacity
+            )
+    }
+
+    private var rowRevealAnimation: Animation {
+        reduceMotion
+            ? .easeOut(duration: 0.12)
+            : .spring(response: 0.38, dampingFraction: 0.86)
+    }
+
     private func binaryDumpChrome(_ dump: DiffsplitterBinaryDump.Session) -> some View {
         HStack(spacing: 12) {
             Text(L10n.t("Hex dump"))
@@ -1127,12 +1316,10 @@ struct DiffsplitterView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(dump.rows) { row in
-                    HStack(alignment: .top, spacing: 0) {
+                    pairedCompareColumns {
                         binaryDumpCell(row.leftText, kind: row.kind, side: .left)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        columnHairline
+                    } right: {
                         binaryDumpCell(row.rightText, kind: row.kind, side: .right)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }
@@ -1200,10 +1387,10 @@ struct DiffsplitterView: View {
     private var textDiffRows: some View {
         Group {
             if session.rows.isEmpty {
-                HStack(spacing: 0) {
+                pairedCompareColumns(alignment: .center) {
                     emptyColumnMessage
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    columnHairline
+                } right: {
                     emptyColumnMessage
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -1212,72 +1399,136 @@ struct DiffsplitterView: View {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(0..<session.visibleRowCount, id: \.self) { index in
                             let row = session.rows[index]
-                            HStack(alignment: .top, spacing: 0) {
+                            pairedCompareColumns {
                                 rowView(row, side: .left)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                columnHairline
+                            } right: {
                                 rowView(row, side: .right)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            .transition(reduceMotion
-                                ? .opacity
-                                : .asymmetric(
-                                    insertion: .opacity.combined(with: .move(edge: .bottom)),
-                                    removal: .opacity
-                                ))
+                            .transition(rowRevealTransition)
                         }
                     }
-                    .animation(
-                        reduceMotion
-                            ? .easeOut(duration: 0.12)
-                            : .spring(response: 0.38, dampingFraction: 0.86),
-                        value: session.visibleRowCount
-                    )
+                    .animation(rowRevealAnimation, value: session.visibleRowCount)
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     private var comparisonStrip: some View {
-        HStack(spacing: 0) {
-            columnHeader(url: session.leftURL, side: .left)
-            ZStack {
-                columnHairline
-                Button {
-                    session.swapSides()
-                } label: {
-                    Image(systemName: "arrow.left.arrow.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
-                        .background(DiffsplitterPalette.windowBackground)
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(DiffsplitterPalette.separator, lineWidth: 1))
+        Group {
+#if os(iOS)
+            if hingeMidX != nil {
+                let leftHeaderURL = session.directoryMemberSidesFlipped ? session.rightURL : session.leftURL
+                let rightHeaderURL = session.directoryMemberSidesFlipped ? session.leftURL : session.rightURL
+                pairedCompareColumns {
+                    columnHeader(
+                        url: leftHeaderURL,
+                        side: .left,
+                        showsSideLabel: showsCompareSideLabels
+                    )
+                } right: {
+                    columnHeader(
+                        url: rightHeaderURL,
+                        side: .right,
+                        showsSideLabel: showsCompareSideLabels
+                    )
                 }
-                .buttonStyle(.plain)
-                .help(L10n.t("Swap Sides"))
-                .accessibilityLabel(L10n.t("Swap Sides"))
+            } else {
+                equalComparisonStrip
             }
-            .frame(width: 28)
-            columnHeader(url: session.rightURL, side: .right)
+#else
+            equalComparisonStrip
+#endif
         }
         .padding(.vertical, 6)
         .background(DiffsplitterPalette.controlBackground)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.t("Comparison"))
     }
+
+    private var equalComparisonStrip: some View {
+        let leftHeaderURL = session.directoryMemberSidesFlipped ? session.rightURL : session.leftURL
+        let rightHeaderURL = session.directoryMemberSidesFlipped ? session.leftURL : session.rightURL
+        return HStack(spacing: 0) {
+            columnHeader(
+                url: leftHeaderURL,
+                side: .left,
+                showsSideLabel: showsCompareSideLabels
+            )
+            ZStack {
+                columnHairline
+                swapSidesControl
+            }
+            .frame(width: 28)
+            columnHeader(
+                url: rightHeaderURL,
+                side: .right,
+                showsSideLabel: showsCompareSideLabels
+            )
+        }
+    }
+
+    private var showsCompareSideLabels: Bool {
+#if os(iOS)
+        false
+#else
+        true
+#endif
+    }
+
+    private var showsBookFoldNavTitleSwap: Bool {
+#if os(iOS)
+        session.isReady
+            && isShowingFileDiffChrome
+            && horizontalSizeClass != .compact
+            && hingeMidX != nil
+#else
+        false
+#endif
+    }
+
+#if os(iOS)
+    private var fileCompareNavigationTitle: String {
+        if let path = session.selectedRelativePath {
+            return (path as NSString).lastPathComponent
+        }
+        return L10n.t("Diffsplitter")
+    }
+#endif
+
+    private var swapSidesControl: some View {
+        Button {
+            session.swapSides()
+        } label: {
+            Image(systemName: "arrow.left.arrow.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .background(DiffsplitterPalette.windowBackground)
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(DiffsplitterPalette.separator, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .help(L10n.t("Swap Sides"))
+        .accessibilityLabel(L10n.t("Swap Sides"))
+    }
     private var columnHairline: some View {
         Rectangle()
             .fill(DiffsplitterPalette.separator)
             .frame(width: 1)
     }
-    private func columnHeader(url: URL?, side: DiffsplitterSession.Side) -> some View {
+    private func columnHeader(
+        url: URL?,
+        side: DiffsplitterSession.Side,
+        showsSideLabel: Bool = true,
+        showsSwapBesideTitle: Bool = false
+    ) -> some View {
         let embeddedName = side == .left ? session.embeddedLeftName : session.embeddedRightName
         let title = url?.lastPathComponent
             ?? embeddedName
             ?? (side == .left ? L10n.t("Left") : L10n.t("Right"))
         let subtitle = columnSubtitle(for: url)
+        let sideTitle = side == .left ? L10n.t("Left") : L10n.t("Right")
         return HStack(spacing: 10) {
 #if os(macOS)
             let icon = url.map { NSWorkspace.shared.icon(forFile: $0.path) }
@@ -1294,10 +1545,12 @@ struct DiffsplitterView: View {
                 .frame(width: 28, height: 28)
 #endif
             VStack(alignment: .leading, spacing: 1) {
-                Text(side == .left ? L10n.t("Left") : L10n.t("Right"))
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
+                if showsSideLabel {
+                    Text(sideTitle)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                }
                 Text(title)
                     .font(.headline)
                     .lineLimit(1)
@@ -1310,6 +1563,9 @@ struct DiffsplitterView: View {
                         .truncationMode(.middle)
                         .help(subtitle)
                 }
+            }
+            if showsSwapBesideTitle {
+                swapSidesControl
             }
             Spacer(minLength: 8)
             if session.selectedRelativePath == nil {
@@ -1325,13 +1581,11 @@ struct DiffsplitterView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: showsSwapBesideTitle ? .contain : .combine)
         .accessibilityLabel(
-            L10n.f(
-                "%@ — %@",
-                side == .left ? L10n.t("Left") : L10n.t("Right"),
-                title
-            )
+            showsSideLabel
+                ? L10n.f("%@ — %@", sideTitle, title)
+                : title
         )
     }
     private func columnSubtitle(for url: URL?) -> String? {

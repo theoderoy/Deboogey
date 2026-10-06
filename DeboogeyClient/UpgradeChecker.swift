@@ -33,28 +33,34 @@ class UpgradeChecker: ObservableObject {
             case .release:
                 if lhs.major != rhs.major { return lhs.major < rhs.major }
                 if lhs.minor != rhs.minor { return lhs.minor < rhs.minor }
-                if lhs.patch != rhs.patch { return lhs.patch < rhs.patch }
-                return lhs.buildNumber < rhs.buildNumber
+                return lhs.patch < rhs.patch
             default: return false
             }
         }
         static func parse(from string: String) -> AppVersion {
             let clean = string.trimmingCharacters(in: .whitespacesAndNewlines)
-            if clean.lowercased().starts(with: "internal") || clean.lowercased().starts(with: "int-") {
-                let components = clean.components(separatedBy: CharacterSet.decimalDigits.inverted)
-                let numStr = components.first(where: { !$0.isEmpty }) ?? "0"
+            let lower = clean.lowercased()
+            if lower.hasPrefix("internal") || lower.hasPrefix("int-") {
+                let numStr = clean.components(separatedBy: CharacterSet.decimalDigits.inverted).first(where: { !$0.isEmpty }) ?? "0"
                 return AppVersion(channel: .internal, major: 0, minor: 0, patch: 0, buildNumber: Int(numStr) ?? 0, originalString: clean)
             }
-            var verStr = clean; let lower = verStr.lowercased()
+            var verStr = clean
             if lower.hasPrefix("release") { verStr = String(verStr.dropFirst(7)) }
             else if lower.hasPrefix("rel-") { verStr = String(verStr.dropFirst(4)) }
             else if lower.hasPrefix("v") { verStr = String(verStr.dropFirst(1)) }
-            verStr = verStr.trimmingCharacters(in: .whitespaces)
-            let parts = verStr.split(separator: ".")
-            let maj = parts.count > 0 ? Int(parts[0]) ?? 0 : 0
-            let min = parts.count > 1 ? Int(parts[1]) ?? 0 : 0
-            let pat = parts.count > 2 ? Int(parts[2]) ?? 0 : 0
-            return AppVersion(channel: .release, major: maj, minor: min, patch: pat, buildNumber: 0, originalString: clean)
+            let nums = verStr
+                .prefix { $0 != "(" }
+                .trimmingCharacters(in: .whitespaces)
+                .split(separator: ".")
+                .map { Int($0.prefix(while: \.isNumber)) ?? 0 }
+            return AppVersion(
+                channel: .release,
+                major: nums.indices.contains(0) ? nums[0] : 0,
+                minor: nums.indices.contains(1) ? nums[1] : 0,
+                patch: nums.indices.contains(2) ? nums[2] : 0,
+                buildNumber: 0,
+                originalString: clean
+            )
         }
     }
 
@@ -88,84 +94,75 @@ class UpgradeChecker: ObservableObject {
         guard !DebugVariables.areUpdatesDisabled else { return }
         manualCheck.send()
     }
-    
+
     func checkForUpdates(force: Bool = false, clearIfNone: Bool = false, completion: ((Bool)->Void)? = nil) {
-        guard !DebugVariables.areUpdatesDisabled else {
-            completion?(false)
-            return
-        }
+        guard !DebugVariables.areUpdatesDisabled else { completion?(false); return }
         guard NetworkMonitor.shared.isConnected else {
-            DispatchQueue.main.async {
-                if clearIfNone {
-                    self.latestVersion = ""
-                    self.pendingUpdateURL = nil
-                    self.upgradeAvailable = false
-                }
-                completion?(false)
-            }
+            DispatchQueue.main.async { self.finishCheck(found: false, clearIfNone: clearIfNone, completion: completion) }
             return
         }
-        
-        if !force && UserDefaults.standard.bool(forKey: "hideUpgradeAlerts") { DispatchQueue.main.async { completion?(false) }; return }
-        
+        if !force && UserDefaults.standard.bool(forKey: "hideUpgradeAlerts") {
+            DispatchQueue.main.async { completion?(false) }
+            return
+        }
+
         let local = currentAppVersion
-        let desiredChannelRaw = UserDefaults.standard.string(forKey: "upgradeChannel")
         var targetChannel = local.channel
-        if let raw = desiredChannelRaw {
+        if let raw = UserDefaults.standard.string(forKey: "upgradeChannel") {
             if raw.caseInsensitiveCompare("Internal") == .orderedSame { targetChannel = .internal }
             else if raw.caseInsensitiveCompare("Release") == .orderedSame { targetChannel = .release }
         }
-        
+
         guard let url = URL(string: "https://api.github.com/repos/theoderoy/Deboogey/releases") else { return }
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             guard let self = self, let data = data, error == nil else {
                 DispatchQueue.main.async {
-                    if clearIfNone { self?.latestVersion = ""; self?.pendingUpdateURL = nil; self?.upgradeAvailable = false }
-                    completion?(false)
+                    guard let self = self else { completion?(false); return }
+                    self.finishCheck(found: false, clearIfNone: clearIfNone, completion: completion)
                 }
                 return
             }
             do {
-                if let jsonArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
-                    
-                    let releases = jsonArray.compactMap { r -> (AppVersion, [String: Any])? in
-                        guard let t = r["tag_name"] as? String else { return nil }
-                        let v = AppVersion.parse(from: t)
-                        return v.channel == targetChannel ? (v, r) : nil
-                    }
-
-                    if let (latest, json) = releases.sorted(by: { $0.0 < $1.0 }).last, latest > local {
-                        DispatchQueue.main.async {
-                            self.latestVersion = latest.originalString
-                            if let assets = json["assets"] as? [[String: Any]],
-                               let asset = assets.first(where: { ($0["name"] as? String) == "Deboogey.aar" }),
-                               let dlStr = asset["browser_download_url"] as? String, let dlUrl = URL(string: dlStr) {
-                                self.pendingUpdateURL = dlUrl; self.upgradeAvailable = true; completion?(true)
-                            } else {
-                                if clearIfNone { self.latestVersion = ""; self.pendingUpdateURL = nil; self.upgradeAvailable = false }
-                                completion?(false)
-                            }
-                        }
+                guard let jsonArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+                    DispatchQueue.main.async { self.finishCheck(found: false, clearIfNone: clearIfNone, completion: completion) }
+                    return
+                }
+                let releases = jsonArray.compactMap { r -> (AppVersion, [String: Any])? in
+                    guard let t = r["tag_name"] as? String else { return nil }
+                    let v = AppVersion.parse(from: t)
+                    return v.channel == targetChannel ? (v, r) : nil
+                }
+                guard let (latest, json) = releases.sorted(by: { $0.0 < $1.0 }).last, latest > local else {
+                    DispatchQueue.main.async { self.finishCheck(found: false, clearIfNone: clearIfNone, completion: completion) }
+                    return
+                }
+                DispatchQueue.main.async {
+                    self.latestVersion = latest.originalString
+                    if let assets = json["assets"] as? [[String: Any]],
+                       let asset = assets.first(where: { ($0["name"] as? String) == "Deboogey.aar" }),
+                       let dlStr = asset["browser_download_url"] as? String,
+                       let dlUrl = URL(string: dlStr) {
+                        self.pendingUpdateURL = dlUrl
+                        self.upgradeAvailable = true
+                        completion?(true)
                     } else {
-                        DispatchQueue.main.async {
-                            if clearIfNone { self.latestVersion = ""; self.pendingUpdateURL = nil; self.upgradeAvailable = false }
-                            completion?(false)
-                        }
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        if clearIfNone { self.latestVersion = ""; self.pendingUpdateURL = nil; self.upgradeAvailable = false }
-                        completion?(false)
+                        self.finishCheck(found: false, clearIfNone: clearIfNone, completion: completion)
                     }
                 }
             } catch {
-                DispatchQueue.main.async {
-                    if clearIfNone { self.latestVersion = ""; self.pendingUpdateURL = nil; self.upgradeAvailable = false }
-                    completion?(false)
-                }
+                DispatchQueue.main.async { self.finishCheck(found: false, clearIfNone: clearIfNone, completion: completion) }
                 print("Check failed: \(error)")
             }
         }.resume()
+    }
+
+    private func finishCheck(found: Bool, clearIfNone: Bool, completion: ((Bool)->Void)?) {
+        if !found && clearIfNone {
+            latestVersion = ""
+            pendingUpdateURL = nil
+            upgradeAvailable = false
+        }
+        completion?(found)
     }
 
     func proceedWithUpdate() {

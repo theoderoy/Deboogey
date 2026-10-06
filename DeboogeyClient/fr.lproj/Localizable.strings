@@ -114,7 +114,7 @@
 "Diffsplitter Error" = "Erreur Diffsplitter";
 "Diffsplitter Finished" = "Diffsplitter terminé";
 "Diffsplitter compares two text files, or two folders or archives side by side. Select a nested archive in the path list to expand it. Save a session to reopen the same pair later." = "Diffsplitter compare deux fichiers texte, ou deux dossiers ou archives côte à côte. Sélectionnez une archive imbriquée dans la liste des chemins pour l’ouvrir. Enregistrez une session pour rouvrir la même paire plus tard.";
-"Diffsplitter is only available on Mac, iPad and Apple Vision." = "Diffsplitter est uniquement disponible sur Mac, iPad et Apple Vision.";
+"Diffsplitter is only available on iPhone Duo, Mac, iPad and Apple Vision." = "Diffsplitter est uniquement disponible sur iPhone Duo, Mac, iPad et Apple Vision.";
 "Diffsplitter is unavailable on this device." = "Diffsplitter n’est pas disponible sur cet appareil.";
 "Diffsplitter requires an Apple A14 or M1 chip, or later." = "Diffsplitter nécessite une puce Apple A14 ou M1, ou une puce plus récente.";
 "Disable" = "Désactiver";
@@ -174,6 +174,7 @@
 "Hex Dump Window" = "Fenêtre du dump hexadécimal";
 "Hex dump" = "Dump hexa";
 "Hide Automatic Notices" = "Masquer les avis automatiques";
+"Hide Sidebar" = "Masquer la barre latérale";
 "How many hex lines stay in memory for the visible dump window." = "Nombre de lignes hexadécimales conservées en mémoire pour la fenêtre de dump visible.";
 "Icon" = "Icône";
 "Identical" = "Identique";
@@ -201,7 +202,7 @@
 "Internal" = "Internal";
 "Internal %@" = "Internal %@";
 "Internal builds contain experimental features and are not notarised by Apple." = "Les builds Internal contiennent des fonctionnalités expérimentales et ne sont pas notarisées par Apple.";
-"Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on Mac, iPad, and Apple Vision." = "Présentation d’un outil de comparaison polyvalent et facile à utiliser, de classe bureau, intégré à Deboogey, avec une architecture entièrement personnalisée, puissante et suffisamment légère pour fonctionner à pleine vitesse sur Mac, iPad et Apple Vision.";
+"Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on iPhone Duo, Mac, iPad, and Apple Vision." = "Présentation d’un outil de comparaison polyvalent et facile à utiliser, de classe bureau, intégré à Deboogey, avec une architecture entièrement personnalisée, puissante et suffisamment légère pour fonctionner à pleine vitesse sur iPhone Duo, Mac, iPad et Apple Vision.";
 "Invalid arguments. Expected: enable|disable <bundle-id|global> [--autokill]" = "Arguments invalides. Format attendu : enable|disable <bundle-id|global> [--autokill]";
 "Invalid arguments. First argument must be 'enable' or 'disable'" = "Arguments invalides. Le premier argument doit être « enable » ou « disable »";
 "Invalid arguments. Unknown flag: %@" = "Arguments invalides. Option inconnue : %@";
@@ -385,6 +386,7 @@
 "This will restore settings to their defaults without clearing other stored data, then quit the app." = "Cela rétablira les préférences par défaut sans effacer les autres données stockées, puis quittera l’app.";
 "Trigger" = "Déclencheur";
 "Unassigned" = "Non assigné";
+"Unified Diff Copied" = "Diff unifié copié";
 "Unknown AppleScript error" = "Erreur AppleScript inconnue";
 "Untitled — Diffsplitter" = "Sans titre — Diffsplitter";
 "Untitled — Loupe Machine" = "Sans titre — Loupe Machine";
