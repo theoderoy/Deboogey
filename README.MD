@@ -6,7 +6,7 @@
 
 # Deboogey
 
-![Download Deboogey on the App Store](https://upload.wikimedia.org/wikipedia/commons/5/51/Download_on_the_App_Store_Badge_US-UK_RGB_blk.svg)
+[![Download Deboogey on the App Store](https://upload.wikimedia.org/wikipedia/commons/5/51/Download_on_the_App_Store_Badge_US-UK_RGB_blk.svg)](https://apps.apple.com/us/app/deboogey/id6796843694)
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
