@@ -6,9 +6,6 @@
 //
 
 import SwiftUI
-#if canImport(AppKit)
-import AppKit
-#endif
 
 struct AboutView: View {
     private var clientVersion: String {
@@ -21,17 +18,10 @@ struct AboutView: View {
 
     var body: some View {
         VStack(spacing: 10) {
-#if canImport(AppKit)
-            Image(nsImage: NSImage(named: NSImage.applicationIconName) ?? NSImage())
-                .resizable()
-                .scaledToFit()
-                .frame(width: 112, height: 112)
-#else
             Image("DeboogeyIdent")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 112, height: 112)
-#endif
+                .frame(width: 96, height: 96)
 
             Text(L10n.t("Deboogey"))
                 .font(.title.bold())

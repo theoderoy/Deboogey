@@ -291,10 +291,10 @@ struct RootView: View {
         VStack {
             HStack {
                 VStack(spacing: 8) {
-                    Image(nsImage: NSImage(named: NSImage.applicationIconName) ?? NSImage())
+                    Image("DeboogeyIdent")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 120, height: 120)
+                        .frame(width: 96, height: 96)
 
                     Text(appName ?? "DEBOOGEY_DEVELOPMENT_STATE")
                         .font(.largeTitle)
@@ -485,10 +485,10 @@ struct RootView: View {
             
             HStack {
                 VStack(spacing: 8) {
-                    Image(nsImage: NSImage(named: NSImage.applicationIconName) ?? NSImage())
+                    Image("DeboogeyIdent")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 120, height: 120)
+                        .frame(width: 96, height: 96)
                     
                     Text(appName ?? "DEBOOGEY_DEVELOPMENT_STATE")
                         .font(.largeTitle)

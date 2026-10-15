@@ -39,6 +39,7 @@
 "Alphabetical (Target)" = "Alphabetical (Target)";
 "Alphabetical (Tool)" = "Alphabetical (Tool)";
 "Also notify immediately in the background" = "Also notify immediately in the background";
+"Appearance" = "Appearance";
 "Apply" = "Apply";
 "Apply All Pending" = "Apply All Pending";
 "Apply Currently Viewed" = "Apply Currently Viewed";
@@ -287,6 +288,7 @@
 "PlaceholderText2" = "Strings, text, variables, placeholders and the sort.";
 "Play a sound when Diffsplitter finishes a comparison" = "Play a sound when Diffsplitter finishes a comparison";
 "Play a sound when Loupe Machine finishes an index cycle" = "Play a sound when Loupe Machine finishes an index cycle";
+"Play background animations on new document creation" = "Play background animations on new document creation";
 "Play sounds when Apple System Tools complete successfully or halt due to an error." = "Play sounds when Apple System Tools complete successfully or halt due to an error.";
 "Play sounds when Apple System Tools finish or fail" = "Play sounds when Apple System Tools finish or fail";
 "Play sounds when Cocoa Debug Menu completes successfully or halts due to an error." = "Play sounds when Cocoa Debug Menu completes successfully or halts due to an error.";
@@ -403,6 +405,7 @@
 "When off, Diffsplitter skips hidden files while walking folders." = "When off, Diffsplitter skips hidden files while walking folders.";
 "When on, oversized files that are not content-detected binaries open as a windowed hex dump instead of text. Binary status is only for recognised binary content and is unaffected." = "When on, oversized files that are not content-detected binaries open as a windowed hex dump instead of text. Binary status is only for recognised binary content and is unaffected.";
 "Why is Diffsplitter unavailable?" = "Why is Diffsplitter unavailable?";
+"Will not be honored when Reduce Motion is turned on in Accessibility." = "Will not be honoured when Reduce Motion is turned on in Accessibility.";
 "Window %@–%@ of %@ (%d lines in memory)" = "Window %@–%@ of %@ (%d lines in memory)";
 "Writing DiffsplitterX Document…" = "Writing DiffsplitterX Document…";
 "You might need to manually code-sign after upgrading." = "You might need to manually code-sign after upgrading.";
