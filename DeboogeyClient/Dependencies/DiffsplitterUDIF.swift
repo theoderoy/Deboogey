@@ -313,24 +313,16 @@ nonisolated final class DiffsplitterUDIFDisk: @unchecked Sendable {
     }
 
     private static func decompress(_ data: Data, algorithm: compression_algorithm, expectedSize: Int) throws -> Data {
-        var destination = Data(count: max(expectedSize, data.count))
-        let written: Int = destination.withUnsafeMutableBytes { dst in
-            data.withUnsafeBytes { src in
-                guard let dstBase = dst.bindMemory(to: UInt8.self).baseAddress,
-                      let srcBase = src.bindMemory(to: UInt8.self).baseAddress else {
-                    return 0
-                }
-                return compression_decode_buffer(
-                    dstBase, dst.count, srcBase, src.count, nil, algorithm
-                )
-            }
+        do {
+            return try DiffsplitterBinaryIO.decompressCompression(
+                data,
+                algorithm: algorithm,
+                expectedSize: expectedSize,
+                padToExpected: true
+            )
+        } catch {
+            throw UDIFError.decompressFailed
         }
-        guard written > 0 else { throw UDIFError.decompressFailed }
-        destination.count = min(written, expectedSize)
-        if destination.count < expectedSize {
-            destination.append(Data(count: expectedSize - destination.count))
-        }
-        return destination
     }
 
     private static func decodeADC(_ data: Data, expectedSize: Int) throws -> Data {

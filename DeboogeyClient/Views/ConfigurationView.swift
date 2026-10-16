@@ -196,10 +196,15 @@ private enum ConfigurationMaintenanceAction {
 
 private struct ConfigurationMaintenanceRows: View {
     let onSelect: (ConfigurationMaintenanceAction) -> Void
+#if os(iOS)
+    @ObservedObject private var diffsplitterAvailability = MCEIOSFeatureSupport.Model.shared
+#endif
 
     var body: some View {
 #if os(iOS)
-        if UIDevice.current.userInterfaceIdiom != .phone {
+        if UIDevice.current.userInterfaceIdiom != .phone
+            || diffsplitterAvailability.hasDeviceHinge
+        {
             resetPreferencesRow
         }
 #else

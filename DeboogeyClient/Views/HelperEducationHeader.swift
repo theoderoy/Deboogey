@@ -55,3 +55,35 @@ struct HelperEducationHeader: View {
             )
     }
 }
+
+extension View {
+    func helperToolSectionThing() -> some View {
+        self
+            .padding(12)
+            .background(Color.secondary.opacity(0.05))
+            .cornerRadius(12)
+    }
+}
+
+struct HelperToolSheetFooter: View {
+    let isRunning: Bool
+    let runDisabled: Bool
+    let onCancel: () -> Void
+    let onRun: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Divider()
+            HStack {
+                Button(L10n.t("Cancel"), action: onCancel)
+                    .disabled(isRunning)
+                Spacer()
+                Button(L10n.t("Run"), action: onRun)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(runDisabled)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+    }
+}

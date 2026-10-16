@@ -30,22 +30,16 @@ extension View {
     func deboogeyButtonStyle(tint color: Color, prominent: Bool = false) -> some View {
         if #available(macOS 26.0, iOS 26.0, *) {
             Group {
-                if prominent {
-                    self.buttonStyle(.glassProminent)
-                } else {
-                    self.buttonStyle(.glass)
-                }
+                if prominent { self.buttonStyle(.glassProminent) }
+                else { self.buttonStyle(.glass) }
             }
             .buttonBorderShape(.capsule)
             .controlSize(.large)
             .tint(color)
         } else {
             Group {
-                if prominent {
-                    self.buttonStyle(.borderedProminent)
-                } else {
-                    self.buttonStyle(.bordered)
-                }
+                if prominent { self.buttonStyle(.borderedProminent) }
+                else { self.buttonStyle(.bordered) }
             }
             .buttonBorderShape(.roundedRectangle)
             .controlSize(.large)

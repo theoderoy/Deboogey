@@ -2398,7 +2398,7 @@ nonisolated enum DiffsplitterContainer {
         expectedBytes: Int? = nil,
         progress: DiffsplitterContent.MaterializeProgress? = nil
     ) throws {
-        do {
+        try mapZipError {
             try DiffsplitterZip.extractMember(
                 archive: archive,
                 memberPath: memberPath,
@@ -2406,8 +2406,6 @@ nonisolated enum DiffsplitterContainer {
                 expectedBytes: expectedBytes,
                 progress: progress
             )
-        } catch let error as DiffsplitterZip.ZipError {
-            throw ContainerError.expandFailed(error.localizedDescription)
         }
     }
     static func extractZipMemberToMemory(
@@ -2416,13 +2414,18 @@ nonisolated enum DiffsplitterContainer {
         expectedBytes: Int? = nil,
         progress: DiffsplitterContent.MaterializeProgress? = nil
     ) throws -> Data {
-        do {
-            return try DiffsplitterZip.extractMemberToMemory(
+        try mapZipError {
+            try DiffsplitterZip.extractMemberToMemory(
                 archive: archive,
                 memberPath: memberPath,
                 expectedBytes: expectedBytes,
                 progress: progress
             )
+        }
+    }
+    private static func mapZipError<T>(_ body: () throws -> T) throws -> T {
+        do {
+            return try body()
         } catch let error as DiffsplitterZip.ZipError {
             throw ContainerError.expandFailed(error.localizedDescription)
         }
@@ -3565,18 +3568,16 @@ nonisolated struct DiffsplitterDocument: Codable {
         self.selectedRelativePath = selectedRelativePath
     }
     func encoded() throws -> Data {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        return try encoder.encode(self)
+        try DeboogeyJSONDocument.encode(self)
     }
     static func read(from url: URL) throws -> DiffsplitterDocument {
-        let document = try JSONDecoder().decode(Self.self, from: Data(contentsOf: url))
-        guard document.formatVersion == currentFormatVersion else {
-            throw CocoaError(.fileReadCorruptFile, userInfo: [
-                NSDebugDescriptionErrorKey: "Unsupported Diffsplitter document version."
-            ])
-        }
-        return document
+        try DeboogeyJSONDocument.decode(
+            Self.self,
+            from: url,
+            formatVersion: \.formatVersion,
+            expectedVersion: currentFormatVersion,
+            unsupportedMessage: "Unsupported Diffsplitter document version."
+        )
     }
 }
 
@@ -3641,18 +3642,16 @@ nonisolated struct DiffsplitterXDocument: Codable {
         }
     }
     func encoded() throws -> Data {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        return try encoder.encode(self)
+        try DeboogeyJSONDocument.encode(self)
     }
     static func read(from url: URL) throws -> DiffsplitterXDocument {
-        let document = try JSONDecoder().decode(Self.self, from: Data(contentsOf: url))
-        guard document.formatVersion == currentFormatVersion else {
-            throw CocoaError(.fileReadCorruptFile, userInfo: [
-                NSDebugDescriptionErrorKey: "Unsupported DiffsplitterX document version."
-            ])
-        }
-        return document
+        try DeboogeyJSONDocument.decode(
+            Self.self,
+            from: url,
+            formatVersion: \.formatVersion,
+            expectedVersion: currentFormatVersion,
+            unsupportedMessage: "Unsupported DiffsplitterX document version."
+        )
     }
 }
 

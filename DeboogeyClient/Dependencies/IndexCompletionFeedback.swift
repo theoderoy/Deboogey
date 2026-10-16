@@ -9,7 +9,6 @@ import Foundation
 
 enum IndexCompletionFeedback {
     private static let preferenceKey = "theoderoy.Deboogey.Indexing.playCompletionSound"
-    private static let completionSoundVolume: Float = 0.3
 
     static func playSoundIfEnabled(
         defaults: UserDefaults = .standard,
@@ -17,7 +16,11 @@ enum IndexCompletionFeedback {
     ) {
         guard defaults.bool(forKey: preferenceKey) else { return }
 #if canImport(AppKit)
-        _ = BundleAIFSound.play(named: "ProcessDone", bundle: bundle, volume: completionSoundVolume)
+        _ = BundleAIFSound.play(
+            named: BundleAIFSound.processDoneName,
+            bundle: bundle,
+            volume: BundleAIFSound.processDoneVolume
+        )
 #endif
     }
 

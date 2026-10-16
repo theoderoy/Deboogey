@@ -7,6 +7,7 @@
 
 import Foundation
 import CryptoKit
+import Compression
 import zlib
 
 nonisolated enum DiffsplitterBinaryIO {
@@ -100,6 +101,48 @@ nonisolated enum DiffsplitterBinaryIO {
             }
         }
         output.count = written
+        return output
+    }
+
+    static func decompressCompression(
+        _ data: Data,
+        algorithm: compression_algorithm,
+        destinationSize: Int
+    ) throws -> Data {
+        var destination = Data(count: max(destinationSize, 1))
+        let written: Int = try destination.withUnsafeMutableBytes { dst in
+            try data.withUnsafeBytes { src in
+                guard let dstBase = dst.bindMemory(to: UInt8.self).baseAddress,
+                      let srcBase = src.bindMemory(to: UInt8.self).baseAddress else {
+                    throw InflateError.failed
+                }
+                let n = compression_decode_buffer(
+                    dstBase, dst.count, srcBase, src.count, nil, algorithm
+                )
+                if n == 0 { throw InflateError.failed }
+                return n
+            }
+        }
+        destination.count = written
+        return destination
+    }
+
+    static func decompressCompression(
+        _ data: Data,
+        algorithm: compression_algorithm,
+        expectedSize: Int,
+        padToExpected: Bool
+    ) throws -> Data {
+        var output = try decompressCompression(
+            data,
+            algorithm: algorithm,
+            destinationSize: max(expectedSize, data.count)
+        )
+        guard padToExpected else { return output }
+        output.count = min(output.count, expectedSize)
+        if output.count < expectedSize {
+            output.append(Data(count: expectedSize - output.count))
+        }
         return output
     }
 

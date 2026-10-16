@@ -107,9 +107,7 @@ struct DeboogeySDLauncherView: View {
                             .padding(12)
                         }
                     }
-                    .padding(12)
-                    .background(Color.secondary.opacity(0.05))
-                    .cornerRadius(12)
+                    .helperToolSectionThing()
 
                     if let errorMessage {
                         Text(errorMessage).foregroundColor(.red).font(.caption).padding(8)
@@ -120,17 +118,12 @@ struct DeboogeySDLauncherView: View {
             .padding(.vertical)
         }
         .disabled(isRunning)
-        Divider()
-        HStack {
-            Button(L10n.t("Cancel")) { presentationMode.wrappedValue.dismiss() }
-                .disabled(isRunning)
-            Spacer()
-            Button(L10n.t("Run")) { runHelper() }
-                .keyboardShortcut(.defaultAction)
-                .disabled(isRunning || (preset == .custom && customMask.isEmpty))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        HelperToolSheetFooter(
+            isRunning: isRunning,
+            runDisabled: isRunning || (preset == .custom && customMask.isEmpty),
+            onCancel: { presentationMode.wrappedValue.dismiss() },
+            onRun: runHelper
+        )
         }
         .frame(width: AppWindowSizing.skyLightDiagnostics.defaultSize.width, height: AppWindowSizing.skyLightDiagnostics.defaultSize.height)
         .navigationTitle(L10n.t("SkyLight Diagnostics"))

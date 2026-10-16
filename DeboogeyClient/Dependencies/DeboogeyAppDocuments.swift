@@ -76,3 +76,27 @@ enum DeboogeyAppDocuments {
         return String(string[..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
+
+enum DeboogeyJSONDocument {
+    static func encode<T: Encodable>(_ value: T) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        return try encoder.encode(value)
+    }
+
+    static func decode<T: Decodable>(
+        _ type: T.Type,
+        from url: URL,
+        formatVersion: KeyPath<T, Int>,
+        expectedVersion: Int,
+        unsupportedMessage: String
+    ) throws -> T {
+        let document = try JSONDecoder().decode(type, from: Data(contentsOf: url))
+        guard document[keyPath: formatVersion] == expectedVersion else {
+            throw CocoaError(.fileReadCorruptFile, userInfo: [
+                NSDebugDescriptionErrorKey: unsupportedMessage
+            ])
+        }
+        return document
+    }
+}

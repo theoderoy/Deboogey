@@ -422,27 +422,14 @@ nonisolated enum DiffsplitterXAR {
     }
 
     private static func decompressLZMA(_ data: Data, expectedSize: Int) throws -> Data {
-        let dstSize = max(expectedSize, data.count)
-        var destination = Data(count: dstSize)
-        let written: Int = try destination.withUnsafeMutableBytes { dst in
-            try data.withUnsafeBytes { src in
-                guard let dstBase = dst.bindMemory(to: UInt8.self).baseAddress,
-                      let srcBase = src.bindMemory(to: UInt8.self).baseAddress else {
-                    throw XARError.extractFailed("lzma buffer")
-                }
-                let n = compression_decode_buffer(
-                    dstBase,
-                    dst.count,
-                    srcBase,
-                    src.count,
-                    nil,
-                    COMPRESSION_LZMA
-                )
-                if n == 0 { throw XARError.extractFailed("lzma") }
-                return n
-            }
+        do {
+            return try DiffsplitterBinaryIO.decompressCompression(
+                data,
+                algorithm: COMPRESSION_LZMA,
+                destinationSize: max(expectedSize, data.count)
+            )
+        } catch {
+            throw XARError.extractFailed("lzma")
         }
-        destination.count = written
-        return destination
     }
 }

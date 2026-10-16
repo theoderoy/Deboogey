@@ -99,130 +99,10 @@ private struct MCELegacyCommands: Commands {
     }
 }
 
-@available(macOS 13.0, *)
-private struct MCELoupeCommands: Commands {
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some Commands {
-        DocumentToolCommandSet(
-            createLoupeDocument: { LoupeMachineNavigation.open(documentAt: nil, using: openWindow) },
-            openLoupeDocument: { LoupeMachineNavigation.chooseDocument(using: openWindow) },
-            createDiffsplitterDocument: { DiffsplitterNavigation.open(documentAt: nil, using: openWindow) },
-            openDiffsplitterDocument: { DiffsplitterNavigation.chooseDocument(using: openWindow) },
-            openMain: { MCEWindowController.open(.main) }
-        )
-    }
-}
-
-@available(macOS 13.0, *)
-private struct MCELoupeScene: Scene {
-    var body: some Scene {
-        WindowGroup(
-            L10n.t("Loupe Machine"),
-            id: LoupeMachineNavigation.windowID,
-            for: LoupeMachineWindowRequest.self
-        ) { request in
-            NavigationStack {
-                if let request = request.wrappedValue {
-                    LoupeMachineView(request: request)
-                }
-            }
-            .environment(\.locale, L10n.locale)
-        }
-        .commands {
-            MCELoupeCommands()
-        }
-        .defaultSize(
-            width: AppWindowSizing.loupeMachine.defaultSize.width,
-            height: AppWindowSizing.loupeMachine.defaultSize.height
-        )
-        .windowResizability(.contentMinSize)
-    }
-}
-
-@available(macOS 13.0, *)
-private struct MCEDiffsplitterScene: Scene {
-    var body: some Scene {
-        WindowGroup(
-            L10n.t("Diffsplitter"),
-            id: DiffsplitterNavigation.windowID,
-            for: DiffsplitterWindowRequest.self
-        ) { request in
-            Group {
-                if let request = request.wrappedValue {
-                    DiffsplitterView(request: request)
-                }
-            }
-            .environment(\.locale, L10n.locale)
-        }
-        .commandsRemoved()
-        .defaultSize(
-            width: AppWindowSizing.diffsplitter.defaultSize.width,
-            height: AppWindowSizing.diffsplitter.defaultSize.height
-        )
-        .windowResizability(.contentMinSize)
-    }
-}
-
-@available(macOS 13.0, *)
-private struct MCEEntityTrackerScene: Scene {
-    var body: some Scene {
-        Window(L10n.t("Entity Tracker"), id: "entity-tracker") {
-            NavigationStack {
-                EntityTrackerView()
-            }
-            .environment(\.locale, L10n.locale)
-        }
-        .commandsRemoved()
-        .defaultSize(width: AppWindowSizing.entityTracker.defaultSize.width, height: AppWindowSizing.entityTracker.defaultSize.height)
-        .windowResizability(.contentSize)
-    }
-}
-
-@available(macOS 14.0, *)
-private struct MCEConfigurationModern: Scene {
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some Scene {
-        Window(L10n.t("Settings"), id: "settings") {
-            ConfigurationRootView()
-                .environment(\.locale, L10n.locale)
-        }
-        .commandsRemoved()
-        .commands {
-            CommandGroup(replacing: .appSettings) {
-                Button(L10n.t("Configuration"), systemImage: "gear") {
-                    openWindow(id: "settings")
-                }
-                .keyboardShortcut(",", modifiers: .command)
-            }
-        }
-        .defaultSize(
-            width: AppWindowSizing.Configuration.modern.defaultSize.width,
-            height: AppWindowSizing.Configuration.modern.defaultSize.height
-        )
-        .windowResizability(.contentMinSize)
-    }
-}
-
-private struct MCERootContentView: View {
-    @ViewBuilder
-    var body: some View {
-        if #available(macOS 13.0, *) {
-            RootView().modifier(ExternalDocumentWindowHandler())
-        } else {
-            RootView().modifier(ExternalDocumentHandler(
-                openLoupe: { LoupeMachineNavigation.openLegacy(documentAt: $0) },
-                openDiffsplitter: { DiffsplitterNavigation.openLegacy(documentAt: $0) }
-            ))
-        }
-    }
-}
-
 private struct MCELegacyRootScene: Scene {
     var body: some Scene {
         WindowGroup {
-            MCERootContentView()
+            DeboogeyRootContentView()
                 .environment(\.locale, L10n.locale)
         }
         .commands {
@@ -242,20 +122,16 @@ struct DeboogeyClientMCE: App {
 
     var body: some Scene {
         MCELegacyRootScene()
-
-        Settings {
-            ConfigurationRootView()
-                .environment(\.locale, L10n.locale)
-        }
+        ConfigurationLegacy()
 
         if #available(macOS 14.0, *) {
-            MCEConfigurationModern()
+            ConfigurationModern()
         }
 
         if #available(macOS 13.0, *) {
-            MCELoupeScene()
-            MCEDiffsplitterScene()
-            MCEEntityTrackerScene()
+            DeboogeyLoupeCommandsScene(openMain: { MCEWindowController.open(.main) })
+            DeboogeyDiffsplitterScene()
+            EntityTrackerScene()
         }
     }
 }

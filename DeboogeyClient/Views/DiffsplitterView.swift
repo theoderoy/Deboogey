@@ -1693,17 +1693,17 @@ private struct DiffsplitterEmptyBackground: View {
 
     var body: some View {
         ZStack {
-            isDark ? Color.black : DiffsplitterPalette.windowBackground
+            isDark ? Color.black : DiffsplitterPalette.emptyDocumentLightBackground
 
             LinearGradient(
                 stops: [
                     .init(color: .clear, location: 0.55),
                     .init(
-                        color: DiffsplitterPalette.brandGreen.opacity(isDark ? 0.22 : 0.10),
+                        color: DiffsplitterPalette.brandGreen.opacity(isDark ? 0.22 : 0.12),
                         location: 0.82
                     ),
                     .init(
-                        color: DiffsplitterPalette.brandGreen.opacity(isDark ? 0.38 : 0.18),
+                        color: DiffsplitterPalette.brandGreen.opacity(isDark ? 0.38 : 0.22),
                         location: 1.0
                     )
                 ],
@@ -1838,6 +1838,7 @@ private enum DiffsplitterPalette {
     static let leftAccent = Color(red: 1.0, green: 0.18, blue: 0.26)
     static let rightAccent = Color(red: 0.10, green: 0.88, blue: 0.42)
     static let brandGreen = Color(red: 0.0, green: 0.435, blue: 0.243)
+    static let emptyDocumentLightBackground = Color(red: 0.86, green: 0.94, blue: 0.89)
 
     static var windowBackground: Color {
 #if os(macOS)

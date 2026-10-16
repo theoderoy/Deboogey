@@ -14,7 +14,6 @@ enum DiffsplitterCompletionFeedback {
     static let soundPreferenceKey = "theoderoy.Deboogey.Diffsplitter.playCompletionSound"
     static let notifyWhenBackgroundedKey = "theoderoy.Deboogey.Diffsplitter.notifyWhenBackgrounded"
     static let minimumSecondsKey = "theoderoy.Deboogey.Diffsplitter.completionMinimumSeconds"
-    private static let completionSoundVolume: Float = 0.3
     static let selectableMinimumSeconds: [Double] = [0] + (5...30).map(Double.init)
     static let minimumSecondsRange: ClosedRange<Double> = 0...30
     static let sliderIndexRange: ClosedRange<Double> = 0...Double(selectableMinimumSeconds.count - 1)
@@ -89,7 +88,11 @@ enum DiffsplitterCompletionFeedback {
         if !shouldBypassMinimumDuration(defaults: defaults) {
             guard elapsed >= preferredMinimumSeconds(defaults: defaults) else { return }
         }
-        _ = BundleAIFSound.play(named: "ProcessDone", bundle: bundle, volume: completionSoundVolume)
+        _ = BundleAIFSound.play(
+            named: BundleAIFSound.processDoneName,
+            bundle: bundle,
+            volume: BundleAIFSound.processDoneVolume
+        )
         BannerNotificationCenter.shared.notify(
             title: L10n.t("Diffsplitter Finished"),
             body: L10n.f("%@ finished comparing", label),
