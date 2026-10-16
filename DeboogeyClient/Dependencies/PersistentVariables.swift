@@ -40,6 +40,14 @@ public final class PersistentVariables: ObservableObject {
         static let diffsplitterMaxEntries = DiffsplitterSettings.Keys.maxEntries
         static let showCLTNotices = "showCLTNotices"
         static let showLoupeApplyVerification = "showLoupeApplyVerification"
+        static let animateEmptyDocumentBackgrounds = "theoderoy.Deboogey.animateEmptyDocumentBackgrounds"
+    }
+
+    public static func settingsDisplayTitle() -> String {
+#if os(macOS)
+        guard #available(macOS 13.0, *) else { return L10n.t("Preferences") }
+#endif
+        return L10n.t("Settings")
     }
 
     public static let defaultDiffsplitterStatusPriority: [String] = [
@@ -99,7 +107,8 @@ public final class PersistentVariables: ObservableObject {
         Keys.diffsplitterMaxNestDepth: DiffsplitterSettings.defaultMaxNestDepth,
         Keys.diffsplitterMaxEntries: DiffsplitterSettings.defaultMaxEntries,
         Keys.showCLTNotices: true,
-        Keys.showLoupeApplyVerification: true
+        Keys.showLoupeApplyVerification: true,
+        Keys.animateEmptyDocumentBackgrounds: true
     ]
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {
@@ -271,6 +280,10 @@ public final class PersistentVariables: ObservableObject {
         didSet { defaults.set(showLoupeApplyVerification, forKey: Keys.showLoupeApplyVerification) }
     }
 
+    @Published public var animateEmptyDocumentBackgrounds: Bool {
+        didSet { defaults.set(animateEmptyDocumentBackgrounds, forKey: Keys.animateEmptyDocumentBackgrounds) }
+    }
+
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         Self.registerDefaults(in: self.defaults)
@@ -305,6 +318,7 @@ public final class PersistentVariables: ObservableObject {
         self.diffsplitterMaxEntries = Double(DiffsplitterSettings.maxEntries(defaults: self.defaults))
         self.showCLTNotices = self.defaults.bool(forKey: Keys.showCLTNotices)
         self.showLoupeApplyVerification = self.defaults.bool(forKey: Keys.showLoupeApplyVerification)
+        self.animateEmptyDocumentBackgrounds = self.defaults.bool(forKey: Keys.animateEmptyDocumentBackgrounds)
     }
 
     public func resetDiffsplitterStatusPriority() {
@@ -352,6 +366,7 @@ public final class PersistentVariables: ObservableObject {
         diffsplitterMaxEntries = Double(DiffsplitterSettings.maxEntries(defaults: defaults))
         showCLTNotices = defaults.bool(forKey: Keys.showCLTNotices)
         showLoupeApplyVerification = defaults.bool(forKey: Keys.showLoupeApplyVerification)
+        animateEmptyDocumentBackgrounds = defaults.bool(forKey: Keys.animateEmptyDocumentBackgrounds)
     }
 
     private static func clamped(_ value: Double, range: ClosedRange<Int>) -> Double {

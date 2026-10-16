@@ -184,6 +184,9 @@ private struct LoupeMachineExportDocument: FileDocument {
 
 struct LoupeMachineView: View {
     @AppStorage("showLoupeApplyVerification") private var showLoupeApplyVerification = true
+    @AppStorage("theoderoy.Deboogey.animateEmptyDocumentBackgrounds")
+    private var animateEmptyDocumentBackgrounds = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let request: LoupeMachineWindowRequest
     @State private var isImporting = false
     @State private var isOpeningDocument = false
@@ -234,6 +237,7 @@ struct LoupeMachineView: View {
                 importView
             }
         }
+        .minimumWindowContentSize(AppWindowSizing.loupeMachine)
 #if os(iOS)
         .navigationBarBackButtonHidden(true)
         .navigationTitle(sourceApplicationDisplayName ?? "")
@@ -376,7 +380,9 @@ struct LoupeMachineView: View {
         Color.clear
 #else
         ZStack {
-            LoupeMachineRippleEffect()
+            if animateEmptyDocumentBackgrounds && !reduceMotion {
+                LoupeMachineRippleEffect()
+            }
 
             VStack(spacing: 30) {
                 HStack {
@@ -399,6 +405,7 @@ struct LoupeMachineView: View {
             .padding(48)
             .frame(maxWidth: 680)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
 #endif
     }
 

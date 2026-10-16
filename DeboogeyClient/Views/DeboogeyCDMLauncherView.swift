@@ -82,9 +82,7 @@ struct DeboogeyCDMLauncherView: View {
                         .pickerStyle(.segmented)
                         .labelsHidden()
                     }
-                    .padding(12)
-                    .background(Color.secondary.opacity(0.05))
-                    .cornerRadius(12)
+                    .helperToolSectionThing()
 
 #if !DEBOOGEY_MCE
                     VStack(alignment: .leading, spacing: 12) {
@@ -116,9 +114,7 @@ struct DeboogeyCDMLauncherView: View {
                             Toggle("", isOn: $autoKill).toggleStyle(.switch).labelsHidden()
                         }
                     }
-                    .padding(12)
-                    .background(Color.secondary.opacity(0.05))
-                    .cornerRadius(12)
+                    .helperToolSectionThing()
 #endif
 
                     if let errorMessage {
@@ -144,17 +140,12 @@ struct DeboogeyCDMLauncherView: View {
             .padding(.vertical)
         }
         .disabled(isRunning)
-        Divider()
-        HStack {
-            Button(L10n.t("Cancel")) { presentationMode.wrappedValue.dismiss() }
-                .disabled(isRunning)
-            Spacer()
-            Button(L10n.t("Run")) { requestRun() }
-                .keyboardShortcut(.defaultAction)
-                .disabled(isRunning || (domain == .custom && customBundle.isEmpty))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        HelperToolSheetFooter(
+            isRunning: isRunning,
+            runDisabled: isRunning || (domain == .custom && customBundle.isEmpty),
+            onCancel: { presentationMode.wrappedValue.dismiss() },
+            onRun: requestRun
+        )
         }
         .frame(width: AppWindowSizing.cocoaDebugMenu.defaultSize.width, height: viewHeight)
         .navigationTitle(L10n.t("Cocoa Debug Menu"))

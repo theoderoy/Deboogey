@@ -34,6 +34,7 @@ final class DeboogeyWindowController: NSWindowController, NSWindowDelegate {
                 ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
                 ?? "Deboogey"
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            window.isRestorable = false
 
         case .cocoaDebugMenu:
             let content = NavigationView {
@@ -45,7 +46,7 @@ final class DeboogeyWindowController: NSWindowController, NSWindowDelegate {
             window = NSWindow(contentViewController: NSHostingController(rootView: content))
             window.title = L10n.t("Cocoa Debug Menu")
             window.styleMask = [.titled, .closable, .miniaturizable]
-            window.setContentSize(AppWindowSizing.cocoaDebugMenu.defaultSize)
+            window.applyDefaultContentSize(AppWindowSizing.cocoaDebugMenu)
 
         case .skyLightDiagnostics:
             let content = NavigationView {
@@ -57,11 +58,13 @@ final class DeboogeyWindowController: NSWindowController, NSWindowDelegate {
             window = NSWindow(contentViewController: NSHostingController(rootView: content))
             window.title = L10n.t("SkyLight Diagnostics")
             window.styleMask = [.titled, .closable, .miniaturizable]
-            window.setContentSize(NSSize(width: 520, height: 540))
+            window.applyDefaultContentSize(AppWindowSizing.skyLightDiagnostics)
         }
 
         window.isReleasedWhenClosed = false
-        window.center()
+        if kind != .main {
+            window.centerAfterHostingLayout()
+        }
         super.init(window: window)
         window.delegate = self
     }

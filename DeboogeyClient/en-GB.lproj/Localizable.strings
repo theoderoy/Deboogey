@@ -23,7 +23,6 @@
 ".dspltx file was exported — %@" = ".dspltx file was exported — %@";
 ".loum file was created — %@" = ".loum file was created — %@";
 ".loum file was modified — %@" = ".loum file was modified — %@";
-"A multi-step backend overhaul has resulted in major performance increases and more responsive interactions. Loupe Machine documents in Marketplace Candidate Edition now show more data when migrated from other versions of Deboogey." = "A multi-step backend overhaul has resulted in major performance increases and more responsive interactions. Loupe Machine documents in Marketplace Candidate Edition now show more data when migrated from other versions of Deboogey.";
 "ACTION" = "ACTION";
 "AEA Decryption Key" = "AEA Decryption Key";
 "About %@ in memory for materialized files, plus %@ for the visible window" = "About %@ in memory for materialized files, plus %@ for the visible window";
@@ -39,6 +38,7 @@
 "Alphabetical (Target)" = "Alphabetical (Target)";
 "Alphabetical (Tool)" = "Alphabetical (Tool)";
 "Also notify immediately in the background" = "Also notify immediately in the background";
+"Appearance" = "Appearance";
 "Apply" = "Apply";
 "Apply All Pending" = "Apply All Pending";
 "Apply Currently Viewed" = "Apply Currently Viewed";
@@ -202,7 +202,6 @@
 "Internal" = "Internal";
 "Internal %@" = "Internal %@";
 "Internal builds contain experimental features and are not notarised by Apple." = "Internal builds contain experimental features and are not notarised by Apple.";
-"Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on iPhone Duo, Mac, iPad, and Apple Vision." = "Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on iPhone Duo, Mac, iPad, and Apple Vision.";
 "Invalid arguments. Expected: enable|disable <bundle-id|global> [--autokill]" = "Invalid arguments. Expected: enable|disable <bundle-id|global> [--autokill]";
 "Invalid arguments. First argument must be 'enable' or 'disable'" = "Invalid arguments. First argument must be 'enable' or 'disable'";
 "Invalid arguments. Unknown flag: %@" = "Invalid arguments. Unknown flag: %@";
@@ -287,6 +286,7 @@
 "PlaceholderText2" = "Strings, text, variables, placeholders and the sort.";
 "Play a sound when Diffsplitter finishes a comparison" = "Play a sound when Diffsplitter finishes a comparison";
 "Play a sound when Loupe Machine finishes an index cycle" = "Play a sound when Loupe Machine finishes an index cycle";
+"Play background animations on new document creation" = "Play background animations on new document creation";
 "Play sounds when Apple System Tools complete successfully or halt due to an error." = "Play sounds when Apple System Tools complete successfully or halt due to an error.";
 "Play sounds when Apple System Tools finish or fail" = "Play sounds when Apple System Tools finish or fail";
 "Play sounds when Cocoa Debug Menu completes successfully or halts due to an error." = "Play sounds when Cocoa Debug Menu completes successfully or halts due to an error.";
@@ -403,10 +403,11 @@
 "When off, Diffsplitter skips hidden files while walking folders." = "When off, Diffsplitter skips hidden files while walking folders.";
 "When on, oversized files that are not content-detected binaries open as a windowed hex dump instead of text. Binary status is only for recognised binary content and is unaffected." = "When on, oversized files that are not content-detected binaries open as a windowed hex dump instead of text. Binary status is only for recognised binary content and is unaffected.";
 "Why is Diffsplitter unavailable?" = "Why is Diffsplitter unavailable?";
+"Will not be honored when Reduce Motion is turned on in Accessibility." = "Will not be honoured when Reduce Motion is turned on in Accessibility.";
 "Window %@–%@ of %@ (%d lines in memory)" = "Window %@–%@ of %@ (%d lines in memory)";
 "Writing DiffsplitterX Document…" = "Writing DiffsplitterX Document…";
 "You might need to manually code-sign after upgrading." = "You might need to manually code-sign after upgrading.";
-"You'll now be able to view Loupe Machine documents on iPhone, iPad, and Apple Vision." = "You'll now be able to view Loupe Machine documents on iPhone, iPad, and Apple Vision.";
+"You will now be able to turn off background animations when creating new documents in the app. With this version also comes a large overhaul of most of the application's features to make them faster, less wonky and overall more stable." = "You will now be able to turn off background animations when creating new documents in the app. With this version also comes a large overhaul of most of the application's features to make them faster, less wonky and overall more stable.";
 "Your session pair will be lost if you don’t save it." = "Your session pair will be lost if you don’t save it.";
 "Your unapplied drafted value changes will be lost if you don’t save them." = "Your unapplied drafted value changes will be lost if you don’t save them.";
 "base64:… or hex:…" = "base64:… or hex:…";

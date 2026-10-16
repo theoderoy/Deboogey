@@ -166,7 +166,10 @@ struct DiffsplitterView: View {
     @State private var statusPriorityRaw = PersistentVariables.loadDiffsplitterStatusPriority()
     @State private var copySucceededFlash = false
     @State private var copySucceededResetTask: Task<Void, Never>?
+    @AppStorage("theoderoy.Deboogey.animateEmptyDocumentBackgrounds")
+    private var animateEmptyDocumentBackgrounds = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 #if os(iOS)
     @Environment(\.dismiss) private var dismiss
@@ -257,9 +260,15 @@ struct DiffsplitterView: View {
             session.presentAEAKeyPromptIfNeeded()
         }
 #else
-        .navigationTitle(showsBookFoldNavTitleSwap ? "" : L10n.t("Diffsplitter"))
+        .navigationTitle(
+            session.isReady
+                ? (showsBookFoldNavTitleSwap ? "" : L10n.t("Diffsplitter"))
+                : ""
+        )
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
+        .toolbarBackground(session.isReady ? .automatic : .hidden, for: .navigationBar)
+        .toolbarBackgroundVisibility(session.isReady ? .automatic : .hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button {
@@ -271,8 +280,13 @@ struct DiffsplitterView: View {
                         dismiss()
                     }
                 } label: {
-                    Label(L10n.t("Back"), systemImage: "chevron.backward")
+                    if session.isReady {
+                        Label(L10n.t("Back"), systemImage: "chevron.backward")
+                    } else {
+                        Image(systemName: "chevron.backward")
+                    }
                 }
+                .accessibilityLabel(L10n.t("Back"))
             }
             if showsBookFoldNavTitleSwap {
                 ToolbarItem(placement: .principal) {
@@ -520,7 +534,7 @@ struct DiffsplitterView: View {
 #endif
     private var setupView: some View {
         ZStack {
-            DiffsplitterEmptyBackground()
+            DiffsplitterEmptyBackground(animationsEnabled: animateEmptyDocumentBackgrounds)
             if usesCompactSetupLayout {
                 ScrollView {
                     setupContent
@@ -535,6 +549,8 @@ struct DiffsplitterView: View {
         }
     }
 
+    private var setupUsesDarkChrome: Bool { colorScheme == .dark }
+
     private var setupContent: some View {
         VStack(spacing: 28) {
             HStack(spacing: 14) {
@@ -542,22 +558,21 @@ struct DiffsplitterView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 72, height: 72)
-                    .environment(\.colorScheme, .dark)
                 Text(L10n.t("Diffsplitter"))
                     .font(.largeTitle.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(setupUsesDarkChrome ? Color.white : Color.primary)
             }
             setupDropWells
                 .frame(maxWidth: usesCompactSetupLayout ? .infinity : 760)
             if session.isComparing {
                 indexingProgressChrome
                     .frame(maxWidth: 420)
-                    .foregroundStyle(.white.opacity(0.75))
-                    .tint(.white)
+                    .foregroundStyle(setupUsesDarkChrome ? Color.white.opacity(0.75) : Color.secondary)
+                    .tint(setupUsesDarkChrome ? .white : .accentColor)
             } else {
                 Text(L10n.t("Drop two text files, or two folders or archives — one on each side — to compare them."))
                     .font(.body)
-                    .foregroundStyle(.white.opacity(0.65))
+                    .foregroundStyle(setupUsesDarkChrome ? Color.white.opacity(0.65) : Color.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 560)
             }
@@ -609,7 +624,7 @@ struct DiffsplitterView: View {
         VStack(spacing: 14) {
             Text(title)
                 .font(.headline)
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(setupUsesDarkChrome ? Color.white.opacity(0.9) : Color.primary)
             dropWellGlass(isTargeted: isTargeted, side: side) {
                 dropWellContent(url: url, side: side)
             }
@@ -625,13 +640,19 @@ struct DiffsplitterView: View {
     ) -> some View {
         let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
         let tint = side == .left ? DiffsplitterPalette.leftAccent : DiffsplitterPalette.rightAccent
+        let fillOpacity = isTargeted
+            ? (setupUsesDarkChrome ? 0.18 : 0.14)
+            : (setupUsesDarkChrome ? 0.10 : 0.08)
+        let glassOpacity = isTargeted
+            ? (setupUsesDarkChrome ? 0.28 : 0.22)
+            : (setupUsesDarkChrome ? 0.16 : 0.12)
         let well = content()
             .padding(24)
             .frame(maxWidth: .infinity, minHeight: 220)
             .overlay {
                 shape
                     .strokeBorder(
-                        isTargeted ? tint : tint.opacity(0.45),
+                        isTargeted ? tint : tint.opacity(setupUsesDarkChrome ? 0.45 : 0.55),
                         style: StrokeStyle(lineWidth: isTargeted ? 3 : 1.5, dash: [9, 7])
                     )
             }
@@ -642,20 +663,20 @@ struct DiffsplitterView: View {
         if #available(macOS 26.0, *) {
             attachDropTarget(
                 to: well.glassEffect(
-                    .clear.tint(tint.opacity(isTargeted ? 0.28 : 0.16)),
+                    .clear.tint(tint.opacity(glassOpacity)),
                     in: shape
                 ),
                 side: side
             )
         } else {
             attachDropTarget(
-                to: well.background(tint.opacity(isTargeted ? 0.18 : 0.10), in: shape),
+                to: well.background(tint.opacity(fillOpacity), in: shape),
                 side: side
             )
         }
 #else
         attachDropTarget(
-            to: well.background(tint.opacity(isTargeted ? 0.18 : 0.10), in: shape),
+            to: well.background(tint.opacity(fillOpacity), in: shape),
             side: side
         )
 #endif
@@ -678,15 +699,15 @@ struct DiffsplitterView: View {
             if let url {
                 Image(systemName: session.isDirectoryLike(url) ? "folder" : "doc.text")
                     .font(.system(size: 36, weight: .thin))
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(setupUsesDarkChrome ? Color.white.opacity(0.7) : Color.secondary)
                 Text(url.lastPathComponent)
                     .font(.body.weight(.medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(setupUsesDarkChrome ? Color.white : Color.primary)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
                 Text(url.deletingLastPathComponent().path)
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(setupUsesDarkChrome ? Color.white.opacity(0.6) : Color.secondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
             } else {
@@ -695,7 +716,7 @@ struct DiffsplitterView: View {
                     .scaledToFit()
                     .frame(width: 72, height: 72)
                 Text(L10n.t("Drop a file, folder, or archive here"))
-                    .foregroundStyle(.white.opacity(0.65))
+                    .foregroundStyle(setupUsesDarkChrome ? Color.white.opacity(0.65) : Color.secondary)
                     .multilineTextAlignment(.center)
             }
             Button(L10n.t("Import…")) {
@@ -704,7 +725,6 @@ struct DiffsplitterView: View {
 #if os(macOS)
             .controlSize(.large)
 #endif
-            .colorScheme(.dark)
         }
     }
 
@@ -1661,48 +1681,37 @@ struct DiffsplitterView: View {
 }
 
 private struct DiffsplitterEmptyBackground: View {
+    var animationsEnabled: Bool = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
 
-    private let spawnInterval: TimeInterval = 0.16
-    private let sweepDuration: TimeInterval = 0.55
+    private let spawnInterval: TimeInterval = 0.10
+    private let sweepDuration: TimeInterval = 0.32
     private var activeStripeSpan: Int { Int(ceil(sweepDuration / spawnInterval)) }
+    private var shouldAnimate: Bool { animationsEnabled && !reduceMotion }
+    private var isDark: Bool { colorScheme == .dark }
 
     var body: some View {
         ZStack {
-            Color.black
+            isDark ? Color.black : DiffsplitterPalette.emptyDocumentLightBackground
 
             LinearGradient(
                 stops: [
                     .init(color: .clear, location: 0.55),
-                    .init(color: DiffsplitterPalette.brandGreen.opacity(0.22), location: 0.82),
-                    .init(color: DiffsplitterPalette.brandGreen.opacity(0.38), location: 1.0)
+                    .init(
+                        color: DiffsplitterPalette.brandGreen.opacity(isDark ? 0.22 : 0.12),
+                        location: 0.82
+                    ),
+                    .init(
+                        color: DiffsplitterPalette.brandGreen.opacity(isDark ? 0.38 : 0.22),
+                        location: 1.0
+                    )
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
 
-            if reduceMotion {
-                Canvas { context, size in
-                    drawStripe(
-                        in: &context,
-                        size: size,
-                        color: DiffsplitterPalette.leftAccent,
-                        progress: 0.4,
-                        yFactor: 0.34,
-                        goesRight: true,
-                        peakOpacity: 0.10
-                    )
-                    drawStripe(
-                        in: &context,
-                        size: size,
-                        color: DiffsplitterPalette.rightAccent,
-                        progress: 0.62,
-                        yFactor: 0.66,
-                        goesRight: false,
-                        peakOpacity: 0.10
-                    )
-                }
-            } else {
+            if shouldAnimate {
                 TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
                     let t = timeline.date.timeIntervalSinceReferenceDate
                     Canvas { context, size in
@@ -1720,6 +1729,7 @@ private struct DiffsplitterEmptyBackground: View {
         let newest = Int(floor(time / spawnInterval))
         let oldest = newest - activeStripeSpan
         guard newest >= oldest else { return }
+        let peakOpacity = isDark ? 0.15 : 0.22
 
         for index in oldest...newest {
             let progress = (time - Double(index) * spawnInterval) / sweepDuration
@@ -1732,7 +1742,7 @@ private struct DiffsplitterEmptyBackground: View {
                 progress: progress,
                 yFactor: traits.yFactor,
                 goesRight: traits.goesRight,
-                peakOpacity: 0.15
+                peakOpacity: peakOpacity
             )
         }
     }
@@ -1754,7 +1764,7 @@ private struct DiffsplitterEmptyBackground: View {
         goesRight: Bool,
         peakOpacity: Double
     ) {
-        let stripeHeight = max(size.height * 0.1, 28)
+        let stripeHeight = max(size.height * 0.035, 10)
         let stripeWidth = max(size.width * 0.36, 110)
         let travel = size.width + stripeWidth
         let eased = CGFloat(easeInOut(progress))
@@ -1828,6 +1838,7 @@ private enum DiffsplitterPalette {
     static let leftAccent = Color(red: 1.0, green: 0.18, blue: 0.26)
     static let rightAccent = Color(red: 0.10, green: 0.88, blue: 0.42)
     static let brandGreen = Color(red: 0.0, green: 0.435, blue: 0.243)
+    static let emptyDocumentLightBackground = Color(red: 0.86, green: 0.94, blue: 0.89)
 
     static var windowBackground: Color {
 #if os(macOS)

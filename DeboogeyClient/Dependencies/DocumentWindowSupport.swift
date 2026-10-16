@@ -97,7 +97,7 @@ enum ToolDocumentWindowHosting {
             forContentRect: NSRect(origin: .zero, size: sizing.minimumSize)
         ).size
         window.isReleasedWhenClosed = false
-        window.center()
+        window.centerAfterHostingLayout()
         return window
     }
 

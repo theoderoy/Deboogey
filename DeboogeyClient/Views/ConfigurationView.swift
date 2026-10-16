@@ -196,10 +196,15 @@ private enum ConfigurationMaintenanceAction {
 
 private struct ConfigurationMaintenanceRows: View {
     let onSelect: (ConfigurationMaintenanceAction) -> Void
+#if os(iOS)
+    @ObservedObject private var diffsplitterAvailability = MCEIOSFeatureSupport.Model.shared
+#endif
 
     var body: some View {
 #if os(iOS)
-        if UIDevice.current.userInterfaceIdiom != .phone {
+        if UIDevice.current.userInterfaceIdiom != .phone
+            || diffsplitterAvailability.hasDeviceHinge
+        {
             resetPreferencesRow
         }
 #else
@@ -275,6 +280,7 @@ private struct GeneralPanelView: View {
 #if !DEBOOGEY_MCE
     @Environment(\.sipSatisfied) private var sipSatisfied
 #endif
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pendingMaintenanceAction: ConfigurationMaintenanceAction?
 
     var body: some View {
@@ -323,6 +329,28 @@ private struct GeneralPanelView: View {
             }
         }
 #endif
+
+        section(header: "Appearance") {
+            Toggle(isOn: $vm.animateEmptyDocumentBackgrounds) {
+                Label {
+                    Text(L10n.t("Play background animations on new document creation"))
+                } icon: {
+                    Image(systemName: "accessibility")
+                        .overlay {
+                            if !reduceMotion {
+                                Capsule()
+                                    .frame(height: 1.5)
+                                    .rotationEffect(.degrees(-45))
+                            }
+                        }
+                        .accessibilityHidden(true)
+                }
+            }
+            .disabled(reduceMotion)
+            configurationSecondaryCaption(
+                L10n.t("Will not be honored when Reduce Motion is turned on in Accessibility.")
+            )
+        }
         
 #if !DEBOOGEY_MCE
         section(header: "Notices") {
@@ -838,6 +866,10 @@ final class ConfigurationViewModel: ObservableObject {
     @Published var showLoupeApplyVerification: Bool {
         didSet { vars.showLoupeApplyVerification = showLoupeApplyVerification }
     }
+
+    @Published var animateEmptyDocumentBackgrounds: Bool {
+        didSet { vars.animateEmptyDocumentBackgrounds = animateEmptyDocumentBackgrounds }
+    }
     
     @Published var upgradeChannel: String {
         didSet { vars.upgradeChannel = upgradeChannel }
@@ -937,6 +969,7 @@ final class ConfigurationViewModel: ObservableObject {
         self.showNetworkNotices = vars.showNetworkNotices
         self.showCLTNotices = vars.showCLTNotices
         self.showLoupeApplyVerification = vars.showLoupeApplyVerification
+        self.animateEmptyDocumentBackgrounds = vars.animateEmptyDocumentBackgrounds
         self.upgradeChannel = vars.upgradeChannel
         self.hideUpgradeAlerts = vars.hideUpgradeAlerts
         self.deleteBackupOnStartup = vars.deleteBackupOnStartup
@@ -1012,6 +1045,7 @@ final class ConfigurationViewModel: ObservableObject {
         showNetworkNotices = vars.showNetworkNotices
         showCLTNotices = vars.showCLTNotices
         showLoupeApplyVerification = vars.showLoupeApplyVerification
+        animateEmptyDocumentBackgrounds = vars.animateEmptyDocumentBackgrounds
         upgradeChannel = vars.upgradeChannel
         hideUpgradeAlerts = vars.hideUpgradeAlerts
         deleteBackupOnStartup = vars.deleteBackupOnStartup
@@ -1087,7 +1121,7 @@ private struct PanelDetail: View {
                 Text(L10n.t("Select a panel"))
             }
         }
-        .navigationTitle(vm.selection?.title ?? L10n.t("Configuration"))
+        .navigationTitle(vm.selection?.title ?? PersistentVariables.settingsDisplayTitle())
     }
 }
 
@@ -1139,7 +1173,7 @@ struct ConfigurationRootView: View {
                 }
             }
         }
-        .navigationTitle(L10n.t("Settings"))
+        .navigationTitle(PersistentVariables.settingsDisplayTitle())
         .configurationMaintenanceAlert(pending: $pendingMaintenanceAction) {
             vm.performMaintenance($0)
         }

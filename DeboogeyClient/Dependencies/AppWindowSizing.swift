@@ -5,8 +5,10 @@
 //  Created by Théo De Roy on 30/07/2026.
 //
 
-
 import SwiftUI
+#if canImport(AppKit)
+import AppKit
+#endif
 
 struct AppWindowSize {
     let defaultSize: CGSize
@@ -20,7 +22,7 @@ struct AppWindowSize {
 }
 
 enum AppWindowSizing {
-    static let root = AppWindowSize(width: 620, height: 520)
+    static let root = AppWindowSize(width: 448, height: 520)
     static let loupeMachine = AppWindowSize(width: 960, height: 720)
     static let diffsplitter = AppWindowSize(width: 960, height: 720)
     static let entityTracker = AppWindowSize(width: 560, height: 480)
@@ -50,3 +52,45 @@ extension View {
 #endif
     }
 }
+
+#if os(macOS)
+@available(macOS 13.0, *)
+extension Scene {
+    func deboogeyWindowPlacement(_ sizing: AppWindowSize) -> some Scene {
+        self
+            .defaultSize(
+                width: sizing.defaultSize.width,
+                height: sizing.defaultSize.height
+            )
+            .defaultPosition(.center)
+    }
+}
+
+extension NSWindow {
+    private func layoutHostingContent() {
+        contentView?.layoutSubtreeIfNeeded()
+        layoutIfNeeded()
+        updateConstraintsIfNeeded()
+    }
+
+    func centerAfterHostingLayout() {
+        layoutHostingContent()
+        center()
+    }
+
+    func sizeToFittingContentAndCenter() {
+        layoutHostingContent()
+        if let fittingSize = contentView?.fittingSize,
+           fittingSize.width > 0,
+           fittingSize.height > 0 {
+            setContentSize(fittingSize)
+        }
+        center()
+    }
+
+    func applyDefaultContentSize(_ sizing: AppWindowSize) {
+        setContentSize(sizing.defaultSize)
+        minSize = frameRect(forContentRect: NSRect(origin: .zero, size: sizing.minimumSize)).size
+    }
+}
+#endif

@@ -13,6 +13,9 @@ import AVFoundation
 #endif
 
 enum BundleAIFSound {
+    static let processDoneName = "ProcessDone"
+    static let processDoneVolume: Float = 0.3
+
     static func url(named name: String, bundle: Bundle = .main) -> URL? {
         bundle.url(forResource: name, withExtension: "aif")
             ?? bundle.url(

@@ -55,19 +55,17 @@ struct LoupeMachineDocument: Codable {
     }
 
     func encoded() throws -> Data {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        return try encoder.encode(self)
+        try DeboogeyJSONDocument.encode(self)
     }
 
     static func read(from url: URL) throws -> LoupeMachineDocument {
-        let document = try JSONDecoder().decode(Self.self, from: Data(contentsOf: url))
-        guard document.formatVersion == currentFormatVersion else {
-            throw CocoaError(.fileReadCorruptFile, userInfo: [
-                NSDebugDescriptionErrorKey: "Unsupported Loupe Machine document version."
-            ])
-        }
-        return document
+        try DeboogeyJSONDocument.decode(
+            Self.self,
+            from: url,
+            formatVersion: \.formatVersion,
+            expectedVersion: currentFormatVersion,
+            unsupportedMessage: "Unsupported Loupe Machine document version."
+        )
     }
 
     var containsNonMCECategories: Bool {
