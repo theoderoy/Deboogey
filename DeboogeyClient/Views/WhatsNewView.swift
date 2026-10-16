@@ -19,25 +19,11 @@ struct WhatsNewView: View {
     private let entries: [WhatsNewEntry] = [
         WhatsNewEntry(
             scope: .unified,
-            icon: "DiffsplitterIconIPOSF",
-            color: .accentColor,
-            title: "Diffsplitter",
-            description: "Introducing a versatile yet easy-to-use desktop class diffing tool built right into Deboogey, with a completely custom architecture powerful yet light enough to work at full speed on iPhone Duo, Mac, iPad, and Apple Vision."
-        ),
-        WhatsNewEntry(
-            scope: .unified,
-            icon: "loupe",
-            color: .accentColor,
-            title: "Loupe View",
-            description: "You'll now be able to view Loupe Machine documents on iPhone, iPad, and Apple Vision."
-        ),
-        WhatsNewEntry(
-            scope: .unified,
             icon: "info.circle",
             color: .blue,
             title: "Improvements",
-            description: "A multi-step backend overhaul has resulted in major performance increases and more responsive interactions. Loupe Machine documents in Marketplace Candidate Edition now show more data when migrated from other versions of Deboogey."
-        )
+            description: "You will now be able to turn off background animations when creating new documents in the app. With this version also comes a large overhaul of most of the application's features to make them faster, less wonky and overall more stable."
+        ),
     ]
 
     private var versionHeading: String {
