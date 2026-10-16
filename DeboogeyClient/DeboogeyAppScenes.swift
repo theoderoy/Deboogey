@@ -54,10 +54,7 @@ private struct DeboogeyLoupeWindowGroup: Scene {
             }
             .environment(\.locale, L10n.locale)
         }
-        .defaultSize(
-            width: AppWindowSizing.loupeMachine.defaultSize.width,
-            height: AppWindowSizing.loupeMachine.defaultSize.height
-        )
+        .deboogeyWindowPlacement(AppWindowSizing.loupeMachine)
         .windowResizability(.contentMinSize)
     }
 }
@@ -96,10 +93,7 @@ struct DeboogeyDiffsplitterScene: Scene {
             .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
-        .defaultSize(
-            width: AppWindowSizing.diffsplitter.defaultSize.width,
-            height: AppWindowSizing.diffsplitter.defaultSize.height
-        )
+        .deboogeyWindowPlacement(AppWindowSizing.diffsplitter)
         .windowResizability(.contentMinSize)
     }
 }
@@ -116,10 +110,7 @@ struct DeboogeyCDMLauncherScene: Scene {
             .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
-        .defaultSize(
-            width: AppWindowSizing.cocoaDebugMenu.defaultSize.width,
-            height: AppWindowSizing.cocoaDebugMenu.defaultSize.height
-        )
+        .deboogeyWindowPlacement(AppWindowSizing.cocoaDebugMenu)
         .windowResizability(.contentSize)
     }
 }
@@ -154,10 +145,7 @@ struct DeboogeySDLauncherScene: Scene {
             .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
-        .defaultSize(
-            width: AppWindowSizing.skyLightDiagnostics.defaultSize.width,
-            height: AppWindowSizing.skyLightDiagnostics.defaultSize.height
-        )
+        .deboogeyWindowPlacement(AppWindowSizing.skyLightDiagnostics)
         .windowResizability(.contentSize)
     }
 }
@@ -173,10 +161,7 @@ struct EntityTrackerScene: Scene {
             .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
-        .defaultSize(
-            width: AppWindowSizing.entityTracker.defaultSize.width,
-            height: AppWindowSizing.entityTracker.defaultSize.height
-        )
+        .deboogeyWindowPlacement(AppWindowSizing.entityTracker)
         .windowResizability(.contentSize)
     }
 }
@@ -199,10 +184,7 @@ struct ConfigurationModern: Scene {
                 .keyboardShortcut(",", modifiers: .command)
             }
         }
-        .defaultSize(
-            width: AppWindowSizing.Configuration.modern.defaultSize.width,
-            height: AppWindowSizing.Configuration.modern.defaultSize.height
-        )
+        .deboogeyWindowPlacement(AppWindowSizing.Configuration.modern)
         .windowResizability(.contentMinSize)
     }
 }

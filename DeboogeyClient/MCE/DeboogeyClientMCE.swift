@@ -21,13 +21,14 @@ private final class MCEAboutWindowController: NSWindowController {
         window.title = L10n.t("About Deboogey")
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
-        window.center()
+        window.sizeToFittingContentAndCenter()
         super.init(window: window)
     }
 
     required init?(coder: NSCoder) { nil }
 
     func show() {
+        window?.sizeToFittingContentAndCenter()
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -56,10 +57,10 @@ private final class MCEWindowController: NSWindowController, NSWindowDelegate {
                 ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
                 ?? "Deboogey"
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            window.isRestorable = false
         }
 
         window.isReleasedWhenClosed = false
-        window.center()
         super.init(window: window)
         window.delegate = self
     }

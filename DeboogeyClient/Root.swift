@@ -19,7 +19,7 @@ private final class AboutWindowController: NSWindowController {
         window.title = L10n.t("About Deboogey")
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
-        window.center()
+        window.sizeToFittingContentAndCenter()
         super.init(window: window)
     }
 
@@ -28,7 +28,7 @@ private final class AboutWindowController: NSWindowController {
     }
 
     func show() {
-        window?.center()
+        window?.sizeToFittingContentAndCenter()
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
