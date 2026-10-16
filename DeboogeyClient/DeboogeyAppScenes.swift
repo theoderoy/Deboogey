@@ -186,14 +186,14 @@ struct ConfigurationModern: Scene {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        Window(L10n.t("Settings"), id: "settings") {
+        Window(PersistentVariables.settingsDisplayTitle(), id: "settings") {
             ConfigurationRootView()
                 .environment(\.locale, L10n.locale)
         }
         .commandsRemoved()
         .commands {
             CommandGroup(replacing: .appSettings) {
-                Button(L10n.t("Configuration"), systemImage: "gear") {
+                Button(PersistentVariables.settingsDisplayTitle() + "...", systemImage: "gear") {
                     openWindow(id: "settings")
                 }
                 .keyboardShortcut(",", modifiers: .command)

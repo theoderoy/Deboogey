@@ -1121,7 +1121,7 @@ private struct PanelDetail: View {
                 Text(L10n.t("Select a panel"))
             }
         }
-        .navigationTitle(vm.selection?.title ?? L10n.t("Configuration"))
+        .navigationTitle(vm.selection?.title ?? PersistentVariables.settingsDisplayTitle())
     }
 }
 
@@ -1173,7 +1173,7 @@ struct ConfigurationRootView: View {
                 }
             }
         }
-        .navigationTitle(L10n.t("Settings"))
+        .navigationTitle(PersistentVariables.settingsDisplayTitle())
         .configurationMaintenanceAlert(pending: $pendingMaintenanceAction) {
             vm.performMaintenance($0)
         }

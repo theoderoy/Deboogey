@@ -43,6 +43,13 @@ public final class PersistentVariables: ObservableObject {
         static let animateEmptyDocumentBackgrounds = "theoderoy.Deboogey.animateEmptyDocumentBackgrounds"
     }
 
+    public static func settingsDisplayTitle() -> String {
+#if os(macOS)
+        guard #available(macOS 13.0, *) else { return L10n.t("Preferences") }
+#endif
+        return L10n.t("Settings")
+    }
+
     public static let defaultDiffsplitterStatusPriority: [String] = [
         "added", "modified", "removed", "binary"
     ]

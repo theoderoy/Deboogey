@@ -266,7 +266,7 @@ struct RootView: View {
             DeboogeyLoupeIOSLauncher(navigate: navigate)
 
             LauncherButton(
-                title: "Settings",
+                title: PersistentVariables.settingsDisplayTitle(),
                 icon: "gear",
                 color: .gray
             ) {
@@ -337,24 +337,7 @@ struct RootView: View {
                         }
                     }
 
-                    if #available(macOS 14.0, *) {
-                        ModernSettingsLauncher()
-                    } else {
-                        LauncherButton(
-                            title: {
-                                if #available(macOS 13.0, *) { return "Settings" }
-                                return "Preferences"
-                            }(),
-                            icon: "gear",
-                            color: .gray
-                        ) {
-                            if #available(macOS 13.0, *) {
-                                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                            } else {
-                                NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-                            }
-                        }
-                    }
+                    SettingsLauncher()
                 }
                 .padding()
             }
@@ -568,24 +551,7 @@ struct RootView: View {
                         }
                     }
                     
-                    if #available(macOS 14.0, *) {
-                        ModernSettingsLauncher()
-                    } else {
-                        LauncherButton(
-                            title: {
-                                if #available(macOS 13.0, *) { return "Settings" }
-                                return "Preferences"
-                            }(),
-                            icon: "gear",
-                            color: .gray
-                        ) {
-                            if #available(macOS 13.0, *) {
-                                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                            } else {
-                                NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-                            }
-                        }
-                    }
+                    SettingsLauncher()
                 }
                 .padding()
             }
@@ -1209,13 +1175,33 @@ private struct EntityTrackerWindowLauncher: View {
     }
 }
 
+private struct SettingsLauncher: View {
+    var body: some View {
+        if #available(macOS 14.0, *) {
+            ModernSettingsLauncher()
+        } else {
+            LauncherButton(
+                title: PersistentVariables.settingsDisplayTitle(),
+                icon: "gear",
+                color: .gray
+            ) {
+                if #available(macOS 13.0, *) {
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                } else {
+                    NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                }
+            }
+        }
+    }
+}
+
 @available(macOS 14.0, *)
 private struct ModernSettingsLauncher: View {
     @Environment(\.openWindow) var openWindow
-    
+
     var body: some View {
         LauncherButton(
-            title: "Configuration",
+            title: PersistentVariables.settingsDisplayTitle(),
             icon: "gear",
             color: .gray
         ) {
