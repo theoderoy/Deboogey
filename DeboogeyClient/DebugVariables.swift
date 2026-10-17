@@ -49,6 +49,8 @@ enum DebugVariables {
     static var alwaysShowWhatsNewView = false
     static var alwaysShowLMEducation = false
     static var pseudoSystemIntegrityProtection = false
+    static var forceDiffsplitterOnUnsupportedPhones = false
+    static var forceDiffsplitterOnUnsupportedChips = false
     nonisolated(unsafe) static var forcedLanguage: Language? = nil
     static var forcedVersionType: VersionType? = nil
 
