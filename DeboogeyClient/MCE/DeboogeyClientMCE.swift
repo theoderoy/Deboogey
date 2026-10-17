@@ -173,10 +173,16 @@ enum MCEIOSFeatureSupport {
 
         static func blocker(hasDeviceHinge: Bool) -> DiffsplitterBlocker? {
             let idiom = UIDevice.current.userInterfaceIdiom
-            if idiom != .pad && !hasDeviceHinge { return .phone }
+            if idiom != .pad
+                && !hasDeviceHinge
+                && !DebugVariables.forceDiffsplitterOnUnsupportedPhones
+            {
+                return .phone
+            }
             #if targetEnvironment(simulator)
             return nil
             #else
+            if DebugVariables.forceDiffsplitterOnUnsupportedChips { return nil }
             guard let device = MTLCreateSystemDefaultDevice(),
                   device.supportsFamily(.apple7) else { return .chip }
             return nil
