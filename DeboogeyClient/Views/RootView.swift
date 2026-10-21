@@ -211,6 +211,39 @@ struct LauncherButton: View {
     }
 }
 
+private struct EntityTrackerLauncherButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        LauncherButton(title: "Entity Tracker", icon: "eyeglasses", color: .gray, action: action)
+    }
+}
+
+#if os(iOS)
+private extension View {
+    func sheetWithCloseButton<Content: View>(
+        isPresented: Binding<Bool>,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        sheet(isPresented: isPresented) {
+            NavigationStack {
+                content()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button {
+                                isPresented.wrappedValue = false
+                            } label: {
+                                Image(systemName: "xmark")
+                            }
+                            .accessibilityLabel(L10n.t("Close"))
+                        }
+                    }
+            }
+        }
+    }
+}
+#endif
+
 private struct LauncherIcon: View {
     let name: String
 
@@ -279,6 +312,7 @@ struct RootView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @ObservedObject private var diffsplitterAvailability = MCEIOSFeatureSupport.Model.shared
     @State private var showingSettings = false
+    @State private var showingEntityTracker = false
     @State private var showingDiffsplitterUnavailable = false
 
     var body: some View {
@@ -296,20 +330,11 @@ struct RootView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(isPresented: $showingSettings) {
-            NavigationStack {
-                ConfigurationRootView()
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button {
-                                showingSettings = false
-                            } label: {
-                                Image(systemName: "xmark")
-                            }
-                            .accessibilityLabel(L10n.t("Close"))
-                        }
-                    }
-            }
+        .sheetWithCloseButton(isPresented: $showingSettings) {
+            ConfigurationRootView()
+        }
+        .sheetWithCloseButton(isPresented: $showingEntityTracker) {
+            EntityTrackerView()
         }
         .alert(
             L10n.t("Diffsplitter is unavailable on this device."),
@@ -361,6 +386,10 @@ struct RootView: View {
             }
 
             DeboogeyLoupeIOSLauncher(navigate: navigate)
+
+            EntityTrackerLauncherButton {
+                showingEntityTracker = true
+            }
 
             LauncherButton(
                 title: PersistentVariables.settingsDisplayTitle(),
@@ -416,11 +445,7 @@ struct RootView: View {
                     if #available(macOS 13.0, *) {
                         EntityTrackerWindowLauncher()
                     } else {
-                        LauncherButton(
-                            title: "Entity Tracker",
-                            icon: "eyeglasses",
-                            color: .accentColor
-                        ) {
+                        EntityTrackerLauncherButton {
                             showingEntityTracker = true
                         }
                     }
@@ -620,11 +645,7 @@ struct RootView: View {
                         if #available(macOS 13.0, *) {
                             EntityTrackerWindowLauncher()
                         } else {
-                            LauncherButton(
-                                title: "Entity Tracker",
-                                icon: "eyeglasses",
-                                color: .accentColor
-                            ) {
+                            EntityTrackerLauncherButton {
                                 showingEntityTracker = true
                             }
                         }
@@ -1244,7 +1265,7 @@ private struct DeboogeySDWindowLauncher: View {
 private struct EntityTrackerWindowLauncher: View {
     @Environment(\.openWindow) var openWindow
     var body: some View {
-        LauncherButton(title: "Entity Tracker", icon: "eyeglasses", color: .accentColor) {
+        EntityTrackerLauncherButton {
             openWindow(id: "entity-tracker")
         }
     }

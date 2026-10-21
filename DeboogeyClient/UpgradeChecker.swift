@@ -245,13 +245,19 @@ class UpgradeChecker: ObservableObject {
         task.resume()
     }
 
-    private func archiveDownloadedUpdate(at localUrl: URL, version: String) throws -> String {
-        let dateFormatter = DateFormatter()
-        dateFormatter.calendar = Calendar(identifier: .gregorian)
-        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-        dateFormatter.dateFormat = "dd_MM_yy"
+    private static let auxiliaryArchiveDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "dd_MM_yy"
+        return formatter
+    }()
 
-        let archiveName = auxiliaryArchiveName(version: version, date: dateFormatter.string(from: Date()))
+    private func archiveDownloadedUpdate(at localUrl: URL, version: String) throws -> String {
+        let archiveName = auxiliaryArchiveName(
+            version: version,
+            date: Self.auxiliaryArchiveDateFormatter.string(from: Date())
+        )
         let destination = Bundle.main.bundleURL
             .deletingLastPathComponent()
             .appendingPathComponent(archiveName)

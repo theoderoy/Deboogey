@@ -185,7 +185,6 @@
 "Imported application: %@" = "Application importée : %@";
 "Importing DiffsplitterX Document…" = "Importation du document DiffsplitterX…";
 "Import…" = "Importer…";
-"Improvements" = "Améliorations";
 "Include Hidden Files" = "Inclure les fichiers masqués";
 "Indexing" = "Indexation";
 "Indexing Finished" = "Indexation terminée";
@@ -240,6 +239,7 @@
 "Memory (RAM)" = "Mémoire (RAM)";
 "Metadata Only" = "Métadonnées seulement";
 "Minimum Duration" = "Durée minimale";
+"Modifications made by Loupe View and Diffsplitter will appear here." = "Les modifications effectuées par Vue Loupe et Diffsplitter apparaîtront ici.";
 "Modifications made via Cocoa Debug Menu, Loupe Machine, and Diffsplitter will appear here." = "Les modifications effectuées via le menu de débogage Cocoa, Loupe Machine et Diffsplitter apparaîtront ici.";
 "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, Loupe Machine, and Diffsplitter will appear here." = "Les modifications effectuées via le menu de débogage Cocoa, les diagnostics SkyLight, Loupe Machine et Diffsplitter apparaîtront ici.";
 "Modified" = "Modifié";
@@ -364,6 +364,7 @@
 "Swap" = "Inverser";
 "Swap Modification" = "Inverser la modification";
 "Swap Sides" = "Inverser les côtés";
+"System" = "Système";
 "System Integrity Protection" = "La fonctionnalité Protection de l’intégrité du système";
 "System write-dependent features have been disabled." = "Les fonctionnalités dépendantes de l’écriture système ont été désactivées.";
 "TARGET DOMAIN" = "DOMAINE CIBLE";
@@ -407,7 +408,6 @@
 "Window %@–%@ of %@ (%d lines in memory)" = "Fenêtre %@–%@ sur %@ (%d lignes en mémoire)";
 "Writing DiffsplitterX Document…" = "Écriture du document DiffsplitterX…";
 "You might need to manually code-sign after upgrading." = "Vous devrez peut-être signer le code manuellement après la mise à niveau.";
-"You will now be able to turn off background animations when creating new documents in the app. With this version also comes a large overhaul of most of the application's features to make them faster, less wonky and overall more stable." = "Vous pourrez désormais désactiver les animations d’arrière-plan lors de la création de nouveaux documents dans l’app. Cette version s’accompagne également d’une importante refonte de la plupart des fonctionnalités de l’application pour les rendre plus rapides, moins capricieuses et globalement plus stables.";
 "Your session pair will be lost if you don’t save it." = "Votre paire de session sera perdue si vous ne l’enregistrez pas.";
 "Your unapplied drafted value changes will be lost if you don’t save them." = "Les brouillons de valeurs non appliqués seront perdus si vous ne les enregistrez pas.";
 "base64:… or hex:…" = "base64:… ou hex:…";

@@ -131,6 +131,8 @@ func readDefaults(domain: String) throws -> [String: Any] {
 }
 #endif
 
+private let loupeISO8601DateFormatter = ISO8601DateFormatter()
+
 func normalizedForJSON(_ value: Any) -> Any {
     switch value {
     case let dictionary as [String: Any]:
@@ -138,7 +140,7 @@ func normalizedForJSON(_ value: Any) -> Any {
     case let array as [Any]:
         return array.map(normalizedForJSON)
     case let date as Date:
-        return ISO8601DateFormatter().string(from: date)
+        return loupeISO8601DateFormatter.string(from: date)
     case let data as Data:
         return data.base64EncodedString()
     case let url as URL:

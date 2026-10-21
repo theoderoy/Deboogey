@@ -1086,10 +1086,13 @@ struct DiffsplitterView: View {
         session.leaveDirectoryDetail()
     }
     private var directoryStatusFilterCircles: some View {
-        HStack(spacing: 6) {
+        let counts = Dictionary(grouping: session.directoryEntries, by: \.status).mapValues(\.count)
+        let filters = session.directoryStatusFilters
+        return HStack(spacing: 6) {
             ForEach(statusPriority, id: \.self) { status in
-                let count = session.directoryEntries.filter { $0.status == status }.count
-                let isActive = session.directoryStatusFilters.isEmpty || session.directoryStatusFilters.contains(status)
+                let count = counts[status, default: 0]
+                let isSelected = filters.contains(status)
+                let isActive = filters.isEmpty || isSelected
                 Button {
                     toggleDirectoryStatusFilter(status)
                 } label: {
@@ -1097,7 +1100,7 @@ struct DiffsplitterView: View {
                         Circle()
                             .fill(status.color.opacity(count == 0 ? 0.25 : (isActive ? 1 : 0.35)))
                             .frame(width: 12, height: 12)
-                        if session.directoryStatusFilters.contains(status) {
+                        if isSelected {
                             Circle()
                                 .strokeBorder(Color.primary.opacity(0.85), lineWidth: 1.5)
                                 .frame(width: 16, height: 16)
@@ -1110,8 +1113,8 @@ struct DiffsplitterView: View {
                 .disabled(count == 0)
                 .help(directoryStatusFilterHelp(status, count: count))
                 .accessibilityLabel(status.title)
-                .accessibilityValue(session.directoryStatusFilters.contains(status) ? L10n.t("On") : L10n.t("Off"))
-                .accessibilityAddTraits(session.directoryStatusFilters.contains(status) ? .isSelected : [])
+                .accessibilityValue(isSelected ? L10n.t("On") : L10n.t("Off"))
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }
         .padding(.horizontal, 4)

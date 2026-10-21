@@ -19,10 +19,10 @@ struct WhatsNewView: View {
     private let entries: [WhatsNewEntry] = [
         WhatsNewEntry(
             scope: .unified,
-            icon: "info.circle",
-            color: .blue,
-            title: "Improvements",
-            description: "You will now be able to turn off background animations when creating new documents in the app. With this version also comes a large overhaul of most of the application's features to make them faster, less wonky and overall more stable."
+            icon: "hand.wave",
+            color: .accentColor,
+            title: "PlaceholderText1",
+            description: "PlaceholderText2"
         ),
     ]
 

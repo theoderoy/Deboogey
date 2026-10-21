@@ -185,7 +185,6 @@
 "Imported application: %@" = "Imported application: %@";
 "Importing DiffsplitterX Document…" = "Importing DiffsplitterX Document…";
 "Import…" = "Import…";
-"Improvements" = "Improvements";
 "Include Hidden Files" = "Include Hidden Files";
 "Indexing" = "Indexing";
 "Indexing Finished" = "Indexing Finished";
@@ -240,6 +239,7 @@
 "Memory (RAM)" = "Memory (RAM)";
 "Metadata Only" = "Metadata Only";
 "Minimum Duration" = "Minimum Duration";
+"Modifications made by Loupe View and Diffsplitter will appear here." = "Modifications made by Loupe View and Diffsplitter will appear here.";
 "Modifications made via Cocoa Debug Menu, Loupe Machine, and Diffsplitter will appear here." = "Modifications made via Cocoa Debug Menu, Loupe Machine, and Diffsplitter will appear here.";
 "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, Loupe Machine, and Diffsplitter will appear here." = "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, Loupe Machine, and Diffsplitter will appear here.";
 "Modified" = "Modified";
@@ -364,6 +364,7 @@
 "Swap" = "Swap";
 "Swap Modification" = "Swap Modification";
 "Swap Sides" = "Swap Sides";
+"System" = "System";
 "System Integrity Protection" = "System Integrity Protection";
 "System write-dependent features have been disabled." = "System write-dependent features have been disabled.";
 "TARGET DOMAIN" = "TARGET DOMAIN";
@@ -407,7 +408,6 @@
 "Window %@–%@ of %@ (%d lines in memory)" = "Window %@–%@ of %@ (%d lines in memory)";
 "Writing DiffsplitterX Document…" = "Writing DiffsplitterX Document…";
 "You might need to manually code-sign after upgrading." = "You might need to manually code-sign after upgrading.";
-"You will now be able to turn off background animations when creating new documents in the app. With this version also comes a large overhaul of most of the application's features to make them faster, less wonky and overall more stable." = "You will now be able to turn off background animations when creating new documents in the app. With this version also comes a large overhaul of most of the application's features to make them faster, less wonky and overall more stable.";
 "Your session pair will be lost if you don’t save it." = "Your session pair will be lost if you don’t save it.";
 "Your unapplied drafted value changes will be lost if you don’t save them." = "Your unapplied drafted value changes will be lost if you don’t save them.";
 "base64:… or hex:…" = "base64:… or hex:…";
