@@ -311,9 +311,12 @@ struct RootView: View {
     @Environment(\.mceIOSNavigate) private var navigate
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @ObservedObject private var diffsplitterAvailability = MCEIOSFeatureSupport.Model.shared
+    @StateObject private var vars = PersistentVariables()
     @State private var showingSettings = false
     @State private var showingEntityTracker = false
     @State private var showingDiffsplitterUnavailable = false
+    @State private var showingWhatsNew = false
+    @State private var didPrepareStartupFlow = false
 
     var body: some View {
         VStack {
@@ -336,6 +339,13 @@ struct RootView: View {
         .sheetWithCloseButton(isPresented: $showingEntityTracker) {
             EntityTrackerView()
         }
+        .sheet(isPresented: $showingWhatsNew) {
+            WhatsNewView {
+                showingWhatsNew = false
+                vars.acknowledgeWhatsNew()
+            }
+            .interactiveDismissDisabled()
+        }
         .alert(
             L10n.t("Diffsplitter is unavailable on this device."),
             isPresented: $showingDiffsplitterUnavailable
@@ -343,6 +353,11 @@ struct RootView: View {
             Button(L10n.t("OK"), role: .cancel) {}
         } message: {
             Text(L10n.t(diffsplitterUnavailableMessage))
+        }
+        .onAppear {
+            guard !didPrepareStartupFlow else { return }
+            didPrepareStartupFlow = true
+            showingWhatsNew = vars.shouldPresentWhatsNew
         }
     }
 
@@ -472,13 +487,13 @@ struct RootView: View {
         .sheet(isPresented: $showingWhatsNew) {
             WhatsNewView {
                 showingWhatsNew = false
-                vars.hasShownWhatsNew = true
+                vars.acknowledgeWhatsNew()
             }
         }
         .onAppear {
             guard !didPrepareStartupFlow else { return }
             didPrepareStartupFlow = true
-            showingWhatsNew = DebugVariables.alwaysShowWhatsNewView || !vars.hasShownWhatsNew
+            showingWhatsNew = vars.shouldPresentWhatsNew
         }
     }
 #endif
@@ -791,7 +806,7 @@ struct RootView: View {
         .sheet(isPresented: $showingWhatsNew) {
             WhatsNewView {
                 showingWhatsNew = false
-                vars.hasShownWhatsNew = true
+                vars.acknowledgeWhatsNew()
                 performStartupChecks()
             }
         }
@@ -855,7 +870,7 @@ struct RootView: View {
         if !DebugVariables.isMarketplaceCandidateEditionBuild {
             checkCLT()
         }
-        if DebugVariables.alwaysShowWhatsNewView || !vars.hasShownWhatsNew {
+        if vars.shouldPresentWhatsNew {
             showingWhatsNew = true
         } else {
             performStartupChecks()
@@ -944,7 +959,6 @@ struct RootView: View {
     }
 
     private func performUpgrade() {
-        vars.hasShownWhatsNew = false
         upgradeChecker.upgradeAvailable = false
         upgradeChecker.proceedWithUpdate()
     }

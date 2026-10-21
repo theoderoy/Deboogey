@@ -20,7 +20,8 @@ public final class PersistentVariables: ObservableObject {
         static let upgradeChannel = "upgradeChannel"
         static let hideUpgradeAlerts = "hideUpgradeAlerts"
         static let deleteBackupOnStartup = "deleteBackupOnStartup"
-        static let hasShownWhatsNew = "hasShownWhatsNew"
+        static let lastAcknowledgedWhatsNewIdentity = "lastAcknowledgedWhatsNewIdentity"
+        static let legacyHasShownWhatsNew = "hasShownWhatsNew"
         static let entityTrackerAutoDeleteEnabled = "theoderoy.Deboogey.EntityTracker.autoDeleteEnabled"
         static let entityTrackerAutoDeleteScope = "theoderoy.Deboogey.EntityTracker.autoDeleteScope"
         static let entityTrackerAutoDeleteTrigger = "theoderoy.Deboogey.EntityTracker.autoDeleteTrigger"
@@ -88,7 +89,7 @@ public final class PersistentVariables: ObservableObject {
         Keys.upgradeChannel: "Release",
         Keys.hideUpgradeAlerts: false,
         Keys.deleteBackupOnStartup: true,
-        Keys.hasShownWhatsNew: false,
+        Keys.lastAcknowledgedWhatsNewIdentity: "",
         Keys.entityTrackerAutoDeleteEnabled: true,
         Keys.entityTrackerAutoDeleteScope: "ephemerals",
         Keys.entityTrackerAutoDeleteTrigger: "login",
@@ -135,8 +136,24 @@ public final class PersistentVariables: ObservableObject {
         didSet { defaults.set(deleteBackupOnStartup, forKey: Keys.deleteBackupOnStartup) }
     }
     
-    @Published public var hasShownWhatsNew: Bool {
-        didSet { defaults.set(hasShownWhatsNew, forKey: Keys.hasShownWhatsNew) }
+    @Published public var lastAcknowledgedWhatsNewIdentity: String {
+        didSet { defaults.set(lastAcknowledgedWhatsNewIdentity, forKey: Keys.lastAcknowledgedWhatsNewIdentity) }
+    }
+
+    public static func currentWhatsNewIdentity(
+        shortVersion: String = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "",
+        buildNumber: String = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
+    ) -> String {
+        "\(shortVersion)|\(buildNumber)"
+    }
+
+    public var shouldPresentWhatsNew: Bool {
+        DebugVariables.alwaysShowWhatsNewView
+            || lastAcknowledgedWhatsNewIdentity != Self.currentWhatsNewIdentity()
+    }
+
+    public func acknowledgeWhatsNew() {
+        lastAcknowledgedWhatsNewIdentity = Self.currentWhatsNewIdentity()
     }
 
     @Published public var entityTrackerAutoDeleteEnabled: Bool {
@@ -292,7 +309,7 @@ public final class PersistentVariables: ObservableObject {
         self.upgradeChannel = "Release"
         self.hideUpgradeAlerts = false
         self.deleteBackupOnStartup = false
-        self.hasShownWhatsNew = false
+        self.lastAcknowledgedWhatsNewIdentity = ""
         self.entityTrackerAutoDeleteEnabled = false
         self.entityTrackerAutoDeleteScope = "ephemerals"
         self.entityTrackerAutoDeleteTrigger = "login"
@@ -321,7 +338,7 @@ public final class PersistentVariables: ObservableObject {
     }
 
     public func resetPreferenceValues() {
-        for key in Self.registeredDefaults.keys where key != Keys.hasShownWhatsNew {
+        for key in Self.registeredDefaults.keys where key != Keys.lastAcknowledgedWhatsNewIdentity {
             defaults.removeObject(forKey: key)
         }
         defaults.synchronize()
@@ -333,13 +350,21 @@ public final class PersistentVariables: ObservableObject {
         applyFromDefaults()
     }
 
+    private static func loadAcknowledgedWhatsNewIdentity(from defaults: UserDefaults) -> String {
+        let stored = defaults.string(forKey: Keys.lastAcknowledgedWhatsNewIdentity) ?? ""
+        if defaults.object(forKey: Keys.legacyHasShownWhatsNew) != nil {
+            defaults.removeObject(forKey: Keys.legacyHasShownWhatsNew)
+        }
+        return stored
+    }
+
     private func applyFromDefaults() {
         pesterMeWithSipping = defaults.bool(forKey: Keys.pesterMeWithSipping)
         showNetworkNotices = defaults.bool(forKey: Keys.showNetworkNotices)
         upgradeChannel = defaults.string(forKey: Keys.upgradeChannel) ?? "Release"
         hideUpgradeAlerts = defaults.bool(forKey: Keys.hideUpgradeAlerts)
         deleteBackupOnStartup = defaults.bool(forKey: Keys.deleteBackupOnStartup)
-        hasShownWhatsNew = defaults.bool(forKey: Keys.hasShownWhatsNew)
+        lastAcknowledgedWhatsNewIdentity = Self.loadAcknowledgedWhatsNewIdentity(from: defaults)
         entityTrackerAutoDeleteEnabled = defaults.bool(forKey: Keys.entityTrackerAutoDeleteEnabled)
         entityTrackerAutoDeleteScope = defaults.string(forKey: Keys.entityTrackerAutoDeleteScope) ?? "ephemerals"
         entityTrackerAutoDeleteTrigger = defaults.string(forKey: Keys.entityTrackerAutoDeleteTrigger) ?? "login"

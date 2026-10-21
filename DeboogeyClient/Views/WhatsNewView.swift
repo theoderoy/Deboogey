@@ -18,11 +18,19 @@ struct WhatsNewView: View {
 
     private let entries: [WhatsNewEntry] = [
         WhatsNewEntry(
-            scope: .unified,
-            icon: "hand.wave",
+            scope: .MCEOnly,
+            icon: "eyeglasses",
             color: .accentColor,
-            title: "PlaceholderText1",
-            description: "PlaceholderText2"
+            title: "Entity Tracker",
+            description: "You can now track modifications made using iPhone, iPad and Apple Vision."
+        ),
+        
+        WhatsNewEntry(
+            scope: .unified,
+            icon: "info.circle",
+            color: .accentColor,
+            title: "Improvements",
+            description: "A Legal section is now available in-app, and new version changes can now also be viewed on iPhone, iPad and Apple Vision."
         ),
     ]
 
@@ -37,44 +45,52 @@ struct WhatsNewView: View {
     }
 
     var body: some View {
-        VStack(spacing: 30) {
-            VStack(spacing: 8) {
+        ScrollView {
+            VStack(spacing: 30) {
+                VStack(spacing: 8) {
 #if canImport(AppKit)
-                if let appIcon = NSImage(named: NSImage.applicationIconName) {
-                    Image(nsImage: appIcon)
+                    if let appIcon = NSImage(named: NSImage.applicationIconName) {
+                        Image(nsImage: appIcon)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 128, height: 128)
+                    }
+#else
+                    Image("DeboogeyIdent")
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 128, height: 128)
-                }
-#else
-                Image("DeboogeyIdent")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 128, height: 128)
 #endif
-                
-                Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "DeboogeyClient")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                
-                Text(versionHeading)
-                    .font(.title2)
-                    .fontWeight(.medium)
-            }
-            .padding(.top, 40)
-            
-            VStack(alignment: .leading, spacing: 25) {
-                ForEach(entries.filter(\.scope.isVisible)) { entry in
-                    FeatureRow(entry: entry)
+
+                    Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "DeboogeyClient")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+
+                    Text(versionHeading)
+                        .font(.title2)
+                        .fontWeight(.medium)
+                        .multilineTextAlignment(.center)
                 }
-            }
-            .padding(.horizontal, 40)
-            
-            ContinueButton(title: "Continue", color: .accentColor, action: onDismiss)
+                .padding(.top, 40)
+
+                VStack(alignment: .leading, spacing: 25) {
+                    ForEach(entries.filter(\.scope.isVisible)) { entry in
+                        FeatureRow(entry: entry)
+                    }
+                }
                 .padding(.horizontal, 40)
-                .padding(.bottom, 40)
+
+                ContinueButton(title: "Continue", color: .accentColor, action: onDismiss)
+                    .padding(.horizontal, 40)
+                    .padding(.bottom, 40)
+            }
         }
+#if os(macOS)
         .frame(width: 500)
+#else
+        .frame(maxWidth: 500)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+#endif
     }
 }
 
