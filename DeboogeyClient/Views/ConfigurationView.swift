@@ -31,6 +31,23 @@ private var platformGroupedBackground: Color {
 #endif
 }
 
+@ViewBuilder
+private func groupedSectionThing<Content: View>(
+    @ViewBuilder content: () -> Content
+) -> some View {
+    VStack(alignment: .leading, spacing: 12) {
+        content()
+    }
+    .padding()
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(platformGroupedBackground)
+    .cornerRadius(10)
+    .overlay(
+        RoundedRectangle(cornerRadius: 10)
+            .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+    )
+}
+
 private struct LegacyGroupedSection<Content: View>: View {
     let header: String
     let content: Content
@@ -47,17 +64,7 @@ private struct LegacyGroupedSection<Content: View>: View {
                 .foregroundColor(.secondary)
                 .padding(.leading, 16)
 
-            VStack(alignment: .leading, spacing: 12) {
-                content
-            }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(platformGroupedBackground)
-            .cornerRadius(10)
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
-            )
+            groupedSectionThing { content }
         }
         .padding(.horizontal)
     }
@@ -83,18 +90,8 @@ private func configurationSection<Content: View>(
             content()
         }
     } else {
-        VStack(alignment: .leading, spacing: 12) {
-            content()
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(platformGroupedBackground)
-        .cornerRadius(10)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
-        )
-        .padding(.horizontal)
+        groupedSectionThing(content: content)
+            .padding(.horizontal)
     }
 }
 
@@ -295,7 +292,7 @@ private struct GeneralPanelView: View {
     @ViewBuilder
     private var panels: some View {
 #if os(macOS)
-        section(header: "Sounds") {
+        configurationSection(header: "Sounds") {
             Toggle(isOn: $vm.playToolCycleSound) {
 #if DEBOOGEY_MCE
                 Text(L10n.t("Play sounds when Cocoa Debug Menu finishes or fails"))
@@ -324,13 +321,13 @@ private struct GeneralPanelView: View {
         }
 #else
         if configurationShowsDiffsplitter {
-            section(header: DiffsplitterCompletionFeedback.completionNotifySectionHeader) {
+            configurationSection(header: DiffsplitterCompletionFeedback.completionNotifySectionHeader) {
                 diffsplitterSoundControls
             }
         }
 #endif
 
-        section(header: "Appearance") {
+        configurationSection(header: "Appearance") {
             Toggle(isOn: $vm.animateEmptyDocumentBackgrounds) {
                 Label {
                     Text(L10n.t("Play background animations on new document creation"))
@@ -353,7 +350,7 @@ private struct GeneralPanelView: View {
         }
         
 #if !DEBOOGEY_MCE
-        section(header: "Notices") {
+        configurationSection(header: "Notices") {
             Toggle(isOn: $vm.pesterMeWithSipping) {
                 Text("System Integrity Protection")
             }
@@ -391,7 +388,7 @@ private struct GeneralPanelView: View {
         }
         
         if !DebugVariables.areUpdatesDisabled {
-            section(header: "Upgrades") {
+            configurationSection(header: "Upgrades") {
                 Picker("Upgrade Channel", selection: $vm.upgradeChannel) {
                     Text("Release").tag("Release")
                     Text("Internal").tag("Internal")
@@ -408,7 +405,7 @@ private struct GeneralPanelView: View {
         }
 #endif
 
-        section(header: "Maintenance") {
+        configurationSection(header: "Maintenance") {
             ConfigurationMaintenanceRows { pendingMaintenanceAction = $0 }
         }
     }
@@ -427,11 +424,6 @@ private struct GeneralPanelView: View {
                 showsResetButton: true
             )
         }
-    }
-
-    @ViewBuilder
-    private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
-        configurationSection(header: header, content: content)
     }
 
 }
@@ -453,7 +445,7 @@ private struct DiffsplitterPanelView: View {
         let maxEntries = Int(vm.diffsplitterMaxEntries.rounded())
         let largeHexEnabled = vm.diffsplitterLargeFileHexConversionEnabled
 
-        section {
+        configurationSection {
             Picker(
                 L10n.t("Offload Large Dumps to Temporary Storage"),
                 selection: $vm.diffsplitterPreferDiskTempForLargeFiles
@@ -466,7 +458,7 @@ private struct DiffsplitterPanelView: View {
             )
         }
 
-        section {
+        configurationSection {
             Toggle(isOn: $vm.diffsplitterIncludeHiddenFiles) {
                 Text(L10n.t("Include Hidden Files"))
             }
@@ -475,7 +467,7 @@ private struct DiffsplitterPanelView: View {
             )
         }
 
-        section {
+        configurationSection {
             labeledSlider(
                 title: L10n.t("Hex Dump Window"),
                 valueLabel: L10n.f("%d lines", hexLines),
@@ -557,7 +549,7 @@ private struct DiffsplitterPanelView: View {
         }
 
 #if os(macOS)
-        section {
+        configurationSection {
             Text(L10n.t("Folder Status Dot Priority"))
             configurationSecondaryCaption(
                 L10n.t("Drag to reorder. Items nearer the top win when a folder contains mixed changes.")
@@ -568,11 +560,6 @@ private struct DiffsplitterPanelView: View {
             )
         }
 #endif
-    }
-
-    @ViewBuilder
-    private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
-        configurationSection(header: header, content: content)
     }
 
     private func labeledSlider(
@@ -612,44 +599,66 @@ private struct DiffsplitterPanelView: View {
     }
 }
 
-#if os(macOS)
 private struct EntityTrackerPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
     @AppStorage("theoderoy.Deboogey.EntityTracker.rowScale") private var rowScale: Double = 1.0
-    @State private var displayScale: Double = {
-        let stored = UserDefaults.standard.double(forKey: "theoderoy.Deboogey.EntityTracker.rowScale")
-        return stored.isZero ? 1.0 : stored
-    }()
-    @AppStorage("theoderoy.Deboogey.EntityTracker.scaleTarget") private var scaleTarget: String = "both"
+    @AppStorage("theoderoy.Deboogey.EntityTracker.scaleTarget") private var scaleTarget: String = "system"
+
+    private var usesSystemDisplayScale: Bool { scaleTarget == "system" }
+
+    private var showsFileCompareIndexingPicker: Bool {
+        guard DebugVariables.isMarketplaceCandidateEditionBuild
+            || vm.entityTrackerAutoDeleteScope == "all"
+        else { return false }
+#if os(iOS)
+        return configurationShowsDiffsplitter
+#else
+        return true
+#endif
+    }
 
     var body: some View {
         ConfigurationPreferenceBannerPanel(imageName: "EntityTrackerConfUnit") {
             panels
         }
+#if os(iOS)
+        .onAppear {
+            if vm.entityTrackerAutoDeleteTrigger != "launch" {
+                vm.entityTrackerAutoDeleteTrigger = "launch"
+            }
+            if !configurationShowsDiffsplitter,
+               !vm.entityTrackerAutoDeleteLoupeActivities {
+                vm.entityTrackerAutoDeleteLoupeActivities = true
+            }
+        }
+#endif
     }
 
     @ViewBuilder
     private var panels: some View {
-        section {
+        configurationSection {
             Toggle("Auto-Delete", isOn: $vm.entityTrackerAutoDeleteEnabled)
             if vm.entityTrackerAutoDeleteEnabled {
+#if os(macOS)
                 Picker("Trigger", selection: $vm.entityTrackerAutoDeleteTrigger) {
                     Text("On Login").tag("login")
                     Text("On Deboogey Launch").tag("launch")
                 }
+#endif
 #if !DEBOOGEY_MCE
                 Picker("Scope", selection: $vm.entityTrackerAutoDeleteScope) {
                     Text("Ephemerals Only").tag("ephemerals")
                     Text("All Entries").tag("all")
                 }
 #endif
-                if DebugVariables.isMarketplaceCandidateEditionBuild
-                    || vm.entityTrackerAutoDeleteScope == "all" {
+                if showsFileCompareIndexingPicker {
                     Picker("File, compare, and indexing entries", selection: $vm.entityTrackerAutoDeleteLoupeActivities) {
                         Text("Remove these entries").tag(true)
                         Text("Leave these entries out").tag(false)
                     }
+#if os(macOS)
                     .pickerStyle(.radioGroup)
+#endif
                 }
                 Text(descriptionForAutoDelete)
                     .font(.subheadline)
@@ -657,27 +666,24 @@ private struct EntityTrackerPanelView: View {
             }
         }
 
-        section {
+        configurationSection {
             Picker("Display Scale", selection: $scaleTarget) {
+                Text("System").tag("system")
                 Text("Icon").tag("icon")
                 Text("Text").tag("text")
                 Text("Both").tag("both")
             }
 
-            HStack {
-                Text("Scale Size")
-                Spacer()
-                Text("\(Int((displayScale * 100).rounded()))%")
-                    .monospacedDigit()
-                    .foregroundColor(.secondary)
-                Stepper("", value: Binding(
-                    get: { rowScale },
-                    set: { newValue in
-                        rowScale = newValue
-                        displayScale = newValue
-                    }
-                ), in: 0.70...1.50, step: 0.05)
-                .labelsHidden()
+            if !usesSystemDisplayScale {
+                HStack {
+                    Text("Scale Size")
+                    Spacer()
+                    Text("\(Int((rowScale * 100).rounded()))%")
+                        .monospacedDigit()
+                        .foregroundColor(.secondary)
+                    Stepper("", value: $rowScale, in: 0.70...1.50, step: 0.05)
+                    .labelsHidden()
+                }
             }
         }
     }
@@ -691,34 +697,42 @@ private struct EntityTrackerPanelView: View {
                     ? "Clears the entire Entity Tracker log"
                     : "Clears the Entity Tracker log except file, compare, and indexing entries"
             )
+#if os(iOS)
+        let when = L10n.t("on every app launch.")
+#else
         let when = vm.entityTrackerAutoDeleteTrigger == "login"
             ? L10n.t("once per login session.")
             : L10n.t("on every app launch.")
+#endif
         return "\(what) \(when)"
     }
-
-    @ViewBuilder
-    private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
-        configurationSection(header: header, content: content)
-    }
 }
-
-#endif
 
 private struct AcknowledgementsPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
     @Environment(\.openURL) private var openURL
-    
+    @State private var presentedLegalDocument: BundledLegalDocument?
+
     var body: some View {
         ConfigurationPanelContainer {
             panels
         }
+        .sheet(item: $presentedLegalDocument) { document in
+            legalDocumentSheet(document)
+        }
     }
-    
+
     @ViewBuilder
     private var panels: some View {
+        configurationSection(header: "Legal") {
+            legalRow(.license, symbol: "doc.text", tint: .secondary)
+#if DEBOOGEY_MCE
+            legalRow(.privacyPolicy, symbol: "hand.raised", tint: .secondary)
+#endif
+        }
+
 #if !DEBOOGEY_MCE
-        section(header: "Sources") {
+        configurationSection(header: "Sources") {
             creditRows([
                 (
                     "Cocoa Debug Menu",
@@ -737,16 +751,59 @@ private struct AcknowledgementsPanelView: View {
             ])
         }
 #endif
-        
-        section(header: "Special Thanks") {
+
+        configurationSection(header: "Special Thanks") {
             creditRows([
                 ("Salty", "Insight", "https://github.com/ogui-775", "star.fill", .yellow),
+                ("Kyan Van Ostaeyen", "Tester", "https://instagram.com/kyan_van_ostaeyen", "gearshape", .green),
+                ("Arjan Minnaert", "Tester", "https://instagram.com/realarjan_", "gearshape", .green),
                 ("1davi", "Tester", "https://github.com/1davi", "gearshape", .green),
                 ("Alex Spaulding", "Tester", "https://github.com/aspauldingcode", "gearshape", .green),
                 ("MTACS", "Tester", "https://github.com/MTACS", "gearshape", .green),
                 ("Olivia Iacovou", "Tester", "https://github.com/oliviaiacovou", "gearshape", .green),
             ])
         }
+    }
+
+    private func legalRow(_ document: BundledLegalDocument, symbol: String, tint: Color) -> some View {
+        Button {
+            presentedLegalDocument = document
+        } label: {
+            Label {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(document.title).font(.headline)
+                    if let detail = document.detail {
+                        Text(detail).font(.subheadline).foregroundColor(.secondary)
+                    }
+                }
+            } icon: {
+                Image(systemName: symbol).foregroundColor(tint)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func legalDocumentSheet(_ document: BundledLegalDocument) -> some View {
+        let reader = LegalDocumentReaderView(document: document)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.t("Done")) {
+                        presentedLegalDocument = nil
+                    }
+                }
+            }
+#if os(macOS)
+        if #available(macOS 13.0, *) {
+            NavigationStack { reader }
+                .frame(minWidth: 520, minHeight: 640)
+        } else {
+            NavigationView { reader }
+                .frame(minWidth: 520, minHeight: 640)
+        }
+#else
+        NavigationStack { reader }
+#endif
     }
 
     @ViewBuilder
@@ -767,11 +824,6 @@ private struct AcknowledgementsPanelView: View {
             .buttonStyle(.plain)
         }
     }
-    
-    @ViewBuilder
-    private func section<Content: View>(header: String? = nil, @ViewBuilder content: () -> Content) -> some View {
-        configurationSection(header: header, content: content)
-    }
 }
 
 enum Panel: Identifiable, Hashable, Codable {
@@ -784,9 +836,9 @@ enum Panel: Identifiable, Hashable, Codable {
     static var allCases: [Panel] {
 #if os(iOS)
         if configurationShowsDiffsplitter {
-            [.general, .diffsplitter, .about, .acknowledge]
+            [.general, .diffsplitter, .entityTracker, .about, .acknowledge]
         } else {
-            [.about, .acknowledge]
+            [.entityTracker, .about, .acknowledge]
         }
 #else
         [.general, .diffsplitter, .entityTracker, .acknowledge]
@@ -965,31 +1017,32 @@ final class ConfigurationViewModel: ObservableObject {
     ) {
         self.vars = vars
         self.selection = initialSelection
-        self.pesterMeWithSipping = vars.pesterMeWithSipping
-        self.showNetworkNotices = vars.showNetworkNotices
-        self.showCLTNotices = vars.showCLTNotices
-        self.showLoupeApplyVerification = vars.showLoupeApplyVerification
-        self.animateEmptyDocumentBackgrounds = vars.animateEmptyDocumentBackgrounds
-        self.upgradeChannel = vars.upgradeChannel
-        self.hideUpgradeAlerts = vars.hideUpgradeAlerts
-        self.deleteBackupOnStartup = vars.deleteBackupOnStartup
-        self.entityTrackerAutoDeleteEnabled = vars.entityTrackerAutoDeleteEnabled
-        self.entityTrackerAutoDeleteScope = vars.entityTrackerAutoDeleteScope
-        self.entityTrackerAutoDeleteTrigger = vars.entityTrackerAutoDeleteTrigger
-        self.entityTrackerAutoDeleteLoupeActivities = vars.entityTrackerAutoDeleteLoupeActivities
-        self.playIndexingDoneSound = vars.playIndexingDoneSound
-        self.playToolCycleSound = vars.playToolCycleSound
-        self.playDiffsplitterDoneSound = vars.playDiffsplitterDoneSound
-        self.diffsplitterNotifyWhenBackgrounded = vars.diffsplitterNotifyWhenBackgrounded
-        self.diffsplitterNotifyMinimumSeconds = vars.diffsplitterNotifyMinimumSeconds
-        self.diffsplitterStatusPriority = vars.diffsplitterStatusPriority
-        self.diffsplitterIncludeHiddenFiles = vars.diffsplitterIncludeHiddenFiles
-        self.diffsplitterPreferDiskTempForLargeFiles = vars.diffsplitterPreferDiskTempForLargeFiles
-        self.diffsplitterHexWindowLines = vars.diffsplitterHexWindowLines
-        self.diffsplitterLargeFileHexConversionEnabled = vars.diffsplitterLargeFileHexConversionEnabled
-        self.diffsplitterMaxTextMegabytes = vars.diffsplitterMaxTextMegabytes
-        self.diffsplitterMaxNestDepth = vars.diffsplitterMaxNestDepth
-        self.diffsplitterMaxEntries = vars.diffsplitterMaxEntries
+        self.pesterMeWithSipping = false
+        self.showNetworkNotices = false
+        self.showCLTNotices = false
+        self.showLoupeApplyVerification = false
+        self.animateEmptyDocumentBackgrounds = false
+        self.upgradeChannel = "Release"
+        self.hideUpgradeAlerts = false
+        self.deleteBackupOnStartup = false
+        self.entityTrackerAutoDeleteEnabled = false
+        self.entityTrackerAutoDeleteScope = "ephemerals"
+        self.entityTrackerAutoDeleteTrigger = "login"
+        self.entityTrackerAutoDeleteLoupeActivities = false
+        self.playIndexingDoneSound = false
+        self.playToolCycleSound = false
+        self.playDiffsplitterDoneSound = false
+        self.diffsplitterNotifyWhenBackgrounded = false
+        self.diffsplitterNotifyMinimumSeconds = 0
+        self.diffsplitterStatusPriority = []
+        self.diffsplitterIncludeHiddenFiles = false
+        self.diffsplitterPreferDiskTempForLargeFiles = false
+        self.diffsplitterHexWindowLines = 0
+        self.diffsplitterLargeFileHexConversionEnabled = false
+        self.diffsplitterMaxTextMegabytes = 0
+        self.diffsplitterMaxNestDepth = 0
+        self.diffsplitterMaxEntries = 0
+        applyFromVars()
     }
 
     func moveDiffsplitterStatusPriority(from source: IndexSet, to destination: Int) {
@@ -1041,6 +1094,10 @@ final class ConfigurationViewModel: ObservableObject {
     }
 
     private func reloadFromVars() {
+        applyFromVars()
+    }
+
+    private func applyFromVars() {
         pesterMeWithSipping = vars.pesterMeWithSipping
         showNetworkNotices = vars.showNetworkNotices
         showCLTNotices = vars.showCLTNotices
@@ -1097,27 +1154,31 @@ private struct PanelList: View {
     }
 }
 
+
+@ViewBuilder
+private func configurationPanelContent(_ panel: Panel, vm: ConfigurationViewModel) -> some View {
+    switch panel {
+    case .general:
+        GeneralPanelView(vm: vm)
+    case .about:
+        AboutView()
+    case .diffsplitter:
+        DiffsplitterPanelView(vm: vm)
+    case .entityTracker:
+        EntityTrackerPanelView(vm: vm)
+    case .acknowledge:
+        AcknowledgementsPanelView(vm: vm)
+    }
+}
+
 private struct PanelDetail: View {
     @ObservedObject var vm: ConfigurationViewModel
     
     var body: some View {
         Group {
-            switch vm.selection {
-            case .general:
-                GeneralPanelView(vm: vm)
-            case .about:
-                AboutView()
-            case .diffsplitter:
-                DiffsplitterPanelView(vm: vm)
-            case .entityTracker:
-#if os(macOS)
-                EntityTrackerPanelView(vm: vm)
-#else
-                EmptyView()
-#endif
-            case .acknowledge:
-                AcknowledgementsPanelView(vm: vm)
-            case .none:
+            if let panel = vm.selection {
+                configurationPanelContent(panel, vm: vm)
+            } else {
                 Text(L10n.t("Select a panel"))
             }
         }
@@ -1136,35 +1197,14 @@ struct ConfigurationRootView: View {
 #if os(iOS)
         List {
             Section {
-                if diffsplitterAvailability.diffsplitter {
+                ForEach(Panel.allCases) { panel in
                     NavigationLink {
-                        GeneralPanelView(vm: vm)
-                            .navigationTitle(Panel.general.title)
+                        configurationPanelContent(panel, vm: vm)
+                            .navigationTitle(panel.title)
                             .navigationBarTitleDisplayMode(.inline)
                     } label: {
-                        Panel.general.label
+                        panel.label
                     }
-                    NavigationLink {
-                        DiffsplitterPanelView(vm: vm)
-                            .navigationTitle(Panel.diffsplitter.title)
-                            .navigationBarTitleDisplayMode(.inline)
-                    } label: {
-                        Panel.diffsplitter.label
-                    }
-                }
-                NavigationLink {
-                    AboutView()
-                        .navigationTitle(Panel.about.title)
-                        .navigationBarTitleDisplayMode(.inline)
-                } label: {
-                    Panel.about.label
-                }
-                NavigationLink {
-                    AcknowledgementsPanelView(vm: vm)
-                        .navigationTitle(Panel.acknowledge.title)
-                        .navigationBarTitleDisplayMode(.inline)
-                } label: {
-                    Panel.acknowledge.label
                 }
             }
             if !diffsplitterAvailability.diffsplitter {

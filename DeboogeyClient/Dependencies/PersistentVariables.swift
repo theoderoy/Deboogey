@@ -287,38 +287,33 @@ public final class PersistentVariables: ObservableObject {
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         Self.registerDefaults(in: self.defaults)
-        self.pesterMeWithSipping = self.defaults.bool(forKey: Keys.pesterMeWithSipping)
-        self.showNetworkNotices = self.defaults.bool(forKey: Keys.showNetworkNotices)
-        self.upgradeChannel = self.defaults.string(forKey: Keys.upgradeChannel) ?? "Release"
-        self.hideUpgradeAlerts = self.defaults.bool(forKey: Keys.hideUpgradeAlerts)
-        self.deleteBackupOnStartup = self.defaults.bool(forKey: Keys.deleteBackupOnStartup)
-        self.hasShownWhatsNew = self.defaults.bool(forKey: Keys.hasShownWhatsNew)
-        self.entityTrackerAutoDeleteEnabled = self.defaults.bool(forKey: Keys.entityTrackerAutoDeleteEnabled)
-        self.entityTrackerAutoDeleteScope = self.defaults.string(forKey: Keys.entityTrackerAutoDeleteScope) ?? "ephemerals"
-        self.entityTrackerAutoDeleteTrigger = self.defaults.string(forKey: Keys.entityTrackerAutoDeleteTrigger) ?? "login"
-        self.entityTrackerAutoDeleteLoupeActivities = self.defaults.bool(forKey: Keys.entityTrackerAutoDeleteLoupeActivities)
-        self.playIndexingDoneSound = self.defaults.bool(forKey: Keys.playIndexingDoneSound)
-        self.playToolCycleSound = self.defaults.bool(forKey: Keys.playToolCycleSound)
-        self.playDiffsplitterDoneSound = self.defaults.bool(forKey: Keys.playDiffsplitterDoneSound)
-        self.diffsplitterNotifyWhenBackgrounded = self.defaults.bool(forKey: Keys.diffsplitterNotifyWhenBackgrounded)
-        self.diffsplitterNotifyMinimumSeconds = DiffsplitterCompletionFeedback.preferredMinimumSeconds(
-            defaults: self.defaults
-        )
-        self.diffsplitterStatusPriority = Self.loadDiffsplitterStatusPriority(from: self.defaults)
-        self.diffsplitterIncludeHiddenFiles = DiffsplitterSettings.includeHiddenFiles(defaults: self.defaults)
-        self.diffsplitterPreferDiskTempForLargeFiles = DiffsplitterSettings.preferDiskTempForLargeFiles(
-            defaults: self.defaults
-        )
-        self.diffsplitterHexWindowLines = Double(DiffsplitterSettings.hexWindowLines(defaults: self.defaults))
-        self.diffsplitterLargeFileHexConversionEnabled = DiffsplitterSettings.largeFileHexConversionEnabled(
-            defaults: self.defaults
-        )
-        self.diffsplitterMaxTextMegabytes = Double(DiffsplitterSettings.maxTextMegabytes(defaults: self.defaults))
-        self.diffsplitterMaxNestDepth = Double(DiffsplitterSettings.maxNestDepth(defaults: self.defaults))
-        self.diffsplitterMaxEntries = Double(DiffsplitterSettings.maxEntries(defaults: self.defaults))
-        self.showCLTNotices = self.defaults.bool(forKey: Keys.showCLTNotices)
-        self.showLoupeApplyVerification = self.defaults.bool(forKey: Keys.showLoupeApplyVerification)
-        self.animateEmptyDocumentBackgrounds = self.defaults.bool(forKey: Keys.animateEmptyDocumentBackgrounds)
+        self.pesterMeWithSipping = false
+        self.showNetworkNotices = false
+        self.upgradeChannel = "Release"
+        self.hideUpgradeAlerts = false
+        self.deleteBackupOnStartup = false
+        self.hasShownWhatsNew = false
+        self.entityTrackerAutoDeleteEnabled = false
+        self.entityTrackerAutoDeleteScope = "ephemerals"
+        self.entityTrackerAutoDeleteTrigger = "login"
+        self.entityTrackerAutoDeleteLoupeActivities = false
+        self.playIndexingDoneSound = false
+        self.playToolCycleSound = false
+        self.playDiffsplitterDoneSound = false
+        self.diffsplitterNotifyWhenBackgrounded = false
+        self.diffsplitterNotifyMinimumSeconds = 0
+        self.diffsplitterStatusPriority = []
+        self.diffsplitterIncludeHiddenFiles = false
+        self.diffsplitterPreferDiskTempForLargeFiles = false
+        self.diffsplitterHexWindowLines = 0
+        self.diffsplitterLargeFileHexConversionEnabled = false
+        self.diffsplitterMaxTextMegabytes = 0
+        self.diffsplitterMaxNestDepth = 0
+        self.diffsplitterMaxEntries = 0
+        self.showCLTNotices = false
+        self.showLoupeApplyVerification = false
+        self.animateEmptyDocumentBackgrounds = false
+        applyFromDefaults()
     }
 
     public func resetDiffsplitterStatusPriority() {
@@ -335,6 +330,10 @@ public final class PersistentVariables: ObservableObject {
     }
 
     private func reloadFromDefaults() {
+        applyFromDefaults()
+    }
+
+    private func applyFromDefaults() {
         pesterMeWithSipping = defaults.bool(forKey: Keys.pesterMeWithSipping)
         showNetworkNotices = defaults.bool(forKey: Keys.showNetworkNotices)
         upgradeChannel = defaults.string(forKey: Keys.upgradeChannel) ?? "Release"

@@ -5,17 +5,23 @@
 //  Created by Théo De Roy on 05/04/2026.
 //
 
-import AppKit
 import SwiftUI
+#if os(macOS)
+import AppKit
+#elseif os(iOS)
+import UIKit
+#endif
 
 struct EntityTrackerView: View {
     @ObservedObject private var tracker = EntityTracker.shared
     @State private var selection = Set<UUID>()
     @State private var revertingID: UUID? = nil
     @State private var errorMessage: String? = nil
-    @Environment(\.presentationMode) private var presentationMode
+    @State private var cachedSupersededIDs = Set<UUID>()
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage("theoderoy.Deboogey.EntityTracker.rowScale") private var rowScale: Double = 1.0
-    @AppStorage("theoderoy.Deboogey.EntityTracker.scaleTarget") private var scaleTarget: String = "both"
+    @AppStorage("theoderoy.Deboogey.EntityTracker.scaleTarget") private var scaleTarget: String = "system"
     @AppStorage("theoderoy.Deboogey.EntityTracker.sortOrder") private var sortOrder: SortOrder = .dateNewest
     
     enum SortOrder: String, CaseIterable, Codable {
@@ -37,17 +43,41 @@ struct EntityTrackerView: View {
         
         var icon: String {
             switch self {
-            case .dateNewest: return "calendar.badge.clock"
-            case .dateOldest: return "calendar.badge.clock"
-            case .alphabeticalAction: return "textformat.abc"
-            case .alphabeticalTarget: return "textformat.abc"
+            case .dateNewest, .dateOldest: return "calendar.badge.clock"
+            case .alphabeticalAction, .alphabeticalTarget: return "textformat.abc"
             case .alphabeticalTool: return "wrench.and.screwdriver"
             }
         }
     }
 
-    private var iconScale: Double { scaleTarget != "text" ? rowScale : 1.0 }
-    private var textScale: Double { scaleTarget != "icon" ? rowScale : 1.0 }
+    private var systemDisplayScale: Double {
+        switch dynamicTypeSize {
+        case .xSmall: return 0.82
+        case .small: return 0.88
+        case .medium: return 0.94
+        case .large: return 1.0
+        case .xLarge: return 1.12
+        case .xxLarge: return 1.23
+        case .xxxLarge: return 1.35
+        case .accessibility1: return 1.55
+        case .accessibility2: return 1.75
+        case .accessibility3: return 1.95
+        case .accessibility4: return 2.15
+        case .accessibility5: return 2.35
+        @unknown default: return 1.0
+        }
+    }
+
+    private func scale(excluding excluded: String) -> Double {
+        switch scaleTarget {
+        case "system": return systemDisplayScale
+        case excluded: return 1.0
+        default: return rowScale
+        }
+    }
+
+    private var iconScale: Double { scale(excluding: "text") }
+    private var textScale: Double { scale(excluding: "icon") }
 
     private var visibleEntities: [TrackedEntity] {
         tracker.entities.filter {
@@ -97,14 +127,20 @@ struct EntityTrackerView: View {
                 entityList
             }
         }
+#if os(macOS)
         .frame(width: AppWindowSizing.entityTracker.defaultSize.width, height: AppWindowSizing.entityTracker.defaultSize.height)
+#endif
         .navigationTitle(L10n.t("Entity Tracker"))
+        .onAppear { cachedSupersededIDs = computeSupersededIDs() }
+        .onReceive(tracker.$entities) { _ in
+            cachedSupersededIDs = computeSupersededIDs()
+        }
         .modifier(ToolbarModifier(
             tracker: tracker,
             selection: $selection,
             revertingID: revertingID,
-            supersededIDs: supersededIDs,
-            presentationMode: presentationMode
+            supersededIDs: cachedSupersededIDs,
+            dismiss: dismiss
         ))
     }
 
@@ -116,19 +152,23 @@ struct EntityTrackerView: View {
             Text(L10n.t("No modifications recorded yet."))
                 .font(.headline)
                 .foregroundColor(.secondary)
-            Text(
-                L10n.t(
-                    DebugVariables.isMarketplaceCandidateEditionBuild
-                        ? "Modifications made via Cocoa Debug Menu, Loupe Machine, and Diffsplitter will appear here."
-                        : "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, Loupe Machine, and Diffsplitter will appear here."
-                )
-            )
+            Text(L10n.t(emptyStateDetail))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 300)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var emptyStateDetail: String {
+        #if os(iOS)
+        "Modifications made by Loupe View and Diffsplitter will appear here."
+        #else
+        DebugVariables.isMarketplaceCandidateEditionBuild
+            ? "Modifications made via Cocoa Debug Menu, Loupe Machine, and Diffsplitter will appear here."
+            : "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, Loupe Machine, and Diffsplitter will appear here."
+        #endif
     }
 
     private var entityList: some View {
@@ -157,26 +197,37 @@ struct EntityTrackerView: View {
                 Divider()
             }
 
-            List(sortedEntities, selection: $selection) { entity in
-                EntityRow(
-                    entity: entity,
-                    isReverting: revertingID == entity.id,
-                    isSuperseded: supersededIDs.contains(entity.id),
-                    iconScale: iconScale,
-                    textScale: textScale,
-                    onRevert: { revertEntity(entity) },
-                    onRemoveFromLog: { tracker.remove(ids: [entity.id]) }
-                )
-                .tag(entity.id)
+            List(selection: $selection) {
+                ForEach(sortedEntities) { entity in
+                    EntityRow(
+                        entity: entity,
+                        isReverting: revertingID == entity.id,
+                        isSuperseded: cachedSupersededIDs.contains(entity.id),
+                        iconScale: iconScale,
+                        textScale: textScale,
+                        onRevert: { revertEntity(entity) },
+                        onRemoveFromLog: { tracker.remove(ids: [entity.id]) }
+                    )
+                    .tag(entity.id)
+                }
+                .onDelete(perform: deleteEntities)
             }
+#if os(macOS)
             .onDeleteCommand {
                 tracker.remove(ids: selection)
                 selection.removeAll()
             }
+#endif
         }
     }
 
-    private var supersededIDs: Set<UUID> {
+    private func deleteEntities(at offsets: IndexSet) {
+        let ids = Set(offsets.map { sortedEntities[$0].id })
+        tracker.remove(ids: ids)
+        selection.subtract(ids)
+    }
+
+    private func computeSupersededIDs() -> Set<UUID> {
         var seenDomains = Set<String>()
         var seenLoupeTargets = Set<String>()
         var seenDeboogeySD = false
@@ -349,39 +400,59 @@ private struct EntityRow: View {
 private struct AppIconImage: View {
     let entity: TrackedEntity
     var iconScale: Double = 1.0
+#if os(macOS)
     @State private var appIcon: NSImage? = nil
+#endif
 
     var body: some View {
         Group {
+#if os(macOS)
             if let icon = appIcon {
                 Image(nsImage: icon)
                     .resizable()
                     .scaledToFit()
-            } else if NSImage(named: fallbackSystemImage) != nil {
-                Image(fallbackSystemImage)
-                    .renderingMode(.template)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 22 * iconScale, height: 22 * iconScale)
-                    .foregroundColor(.accentColor)
             } else {
-                Image(systemName: fallbackSystemImage)
-                    .font(.system(size: 22 * iconScale))
-                    .foregroundColor(.accentColor)
+                fallbackIconView
             }
+#else
+            fallbackIconView
+#endif
         }
+#if os(macOS)
         .onAppear(perform: loadIcon)
+#endif
+    }
+
+    @ViewBuilder
+    private var fallbackIconView: some View {
+        let name = fallbackSystemImage
+#if os(macOS)
+        let hasAsset = NSImage(named: name) != nil
+#else
+        let hasAsset = UIImage(named: name) != nil
+#endif
+        if hasAsset {
+            Image(name)
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 22 * iconScale, height: 22 * iconScale)
+                .foregroundColor(.accentColor)
+        } else {
+            Image(systemName: name)
+                .font(.system(size: 22 * iconScale))
+                .foregroundColor(.accentColor)
+        }
     }
 
     private var fallbackSystemImage: String {
-        switch entity.source {
-        case .wsOverlay: return entity.source.systemImage
-        case .deboogeyCDM:   return entity.deboogeyCDMDomain == "global" ? "globe" : entity.source.systemImage
-        case .loupeMachine: return entity.source.systemImage
-        case .diffsplitter: return entity.source.systemImage
+        if entity.source == .deboogeyCDM, entity.deboogeyCDMDomain == "global" {
+            return "globe"
         }
+        return entity.source.systemImage
     }
 
+#if os(macOS)
     private func loadIcon() {
         let domain: String?
         switch entity.source {
@@ -400,6 +471,7 @@ private struct AppIconImage: View {
             DispatchQueue.main.async { appIcon = icon }
         }
     }
+#endif
 }
 
 private struct ToolbarModifier: ViewModifier {
@@ -407,10 +479,20 @@ private struct ToolbarModifier: ViewModifier {
     @Binding var selection: Set<UUID>
     let revertingID: UUID?
     let supersededIDs: Set<UUID>
-    let presentationMode: Binding<PresentationMode>
+    let dismiss: DismissAction
     @AppStorage("theoderoy.Deboogey.EntityTracker.sortOrder") private var sortOrder: EntityTrackerView.SortOrder = .dateNewest
     
     func body(content: Content) -> some View {
+#if os(iOS)
+        content.toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                sortMenu(iconOnly: true)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                actionsMenu(iconOnly: true)
+            }
+        }
+#elseif os(macOS)
         if #available(macOS 13.0, *) {
             content.toolbar {
                 ToolbarItem(placement: .automatic) {
@@ -433,15 +515,17 @@ private struct ToolbarModifier: ViewModifier {
                 }
             }
         }
+#endif
     }
     
     private var closeButton: some View {
-        Button(L10n.t("Close")) { presentationMode.wrappedValue.dismiss() }
+        Button(L10n.t("Close")) { dismiss() }
             .disabled(revertingID != nil)
     }
     
+    @ViewBuilder
     private func sortMenu(iconOnly: Bool) -> some View {
-        Menu {
+        let menu = Menu {
             ForEach(EntityTrackerView.SortOrder.allCases, id: \.self) { order in
                 Button {
                     sortOrder = order
@@ -461,15 +545,19 @@ private struct ToolbarModifier: ViewModifier {
                 Image(systemName: sortOrder.icon)
             }
         }
-        .if(!iconOnly) { view in
-            view.frame(width: 42)
-        }
         .help(L10n.f("Sort by %@", sortOrder.displayName))
         .disabled(tracker.entities.isEmpty || revertingID != nil)
+
+        if iconOnly {
+            menu
+        } else {
+            menu.frame(width: 42)
+        }
     }
     
+    @ViewBuilder
     private func actionsMenu(iconOnly: Bool) -> some View {
-        Menu {
+        let menu = Menu {
             if !selection.isEmpty {
                 Button(L10n.f("Remove %d Selected from Log", selection.count)) {
                     tracker.remove(ids: selection)
@@ -491,29 +579,25 @@ private struct ToolbarModifier: ViewModifier {
         } label: {
             Image(systemName: "ellipsis.circle")
         }
-        .if(!iconOnly) { view in
-            view.frame(width: 42)
-        }
         .help(iconOnly ? L10n.t("Actions") : L10n.t("Log actions"))
         .disabled(tracker.entities.isEmpty || revertingID != nil)
-    }
-}
 
-extension View {
-    @ViewBuilder
-    func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
-        if condition {
-            transform(self)
+        if iconOnly {
+            menu
         } else {
-            self
+            menu.frame(width: 42)
         }
     }
 }
 
 #Preview {
+#if os(macOS)
     if #available(macOS 13.0, *) {
         NavigationStack { EntityTrackerView() }
     } else {
         NavigationView { EntityTrackerView() }
     }
+#else
+    NavigationStack { EntityTrackerView() }
+#endif
 }

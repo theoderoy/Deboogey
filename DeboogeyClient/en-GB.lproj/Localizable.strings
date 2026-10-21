@@ -121,7 +121,9 @@
 "Disassembled" = "Disassembled";
 "Display Scale" = "Display Scale";
 "Distribution" = "Distribution";
+"Document unavailable" = "Document unavailable";
 "Don't Save" = "Don't Save";
+"Done" = "Done";
 "Don’t Save" = "Don’t Save";
 "Downloading upgrade" = "Downloading upgrade";
 "Drag to reorder. Items nearer the top win when a folder contains mixed changes." = "Drag to reorder. Items nearer the top win when a folder contains mixed changes.";
@@ -162,6 +164,7 @@
 "Flags" = "Flags";
 "Folder Status Dot Priority" = "Folder Status Dot Priority";
 "Foreground" = "Foreground";
+"GNU Affero General Public License v3" = "GNU Affero General Public License v3";
 "General" = "General";
 "Global" = "Global";
 "Global Defaults" = "Global Defaults";
@@ -185,7 +188,6 @@
 "Imported application: %@" = "Imported application: %@";
 "Importing DiffsplitterX Document…" = "Importing DiffsplitterX Document…";
 "Import…" = "Import…";
-"Improvements" = "Improvements";
 "Include Hidden Files" = "Include Hidden Files";
 "Indexing" = "Indexing";
 "Indexing Finished" = "Indexing Finished";
@@ -211,6 +213,8 @@
 "Learn More" = "Learn More";
 "Leave these entries out" = "Leave these entries out";
 "Left" = "Left";
+"Legal" = "Legal";
+"License" = "License";
 "Listing left archive…" = "Listing left archive…";
 "Listing right archive…" = "Listing right archive…";
 "Live Activity" = "Live Activity";
@@ -240,6 +244,7 @@
 "Memory (RAM)" = "Memory (RAM)";
 "Metadata Only" = "Metadata Only";
 "Minimum Duration" = "Minimum Duration";
+"Modifications made by Loupe View and Diffsplitter will appear here." = "Modifications made by Loupe View and Diffsplitter will appear here.";
 "Modifications made via Cocoa Debug Menu, Loupe Machine, and Diffsplitter will appear here." = "Modifications made via Cocoa Debug Menu, Loupe Machine, and Diffsplitter will appear here.";
 "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, Loupe Machine, and Diffsplitter will appear here." = "Modifications made via Cocoa Debug Menu, SkyLight Diagnostics, Loupe Machine, and Diffsplitter will appear here.";
 "Modified" = "Modified";
@@ -297,6 +302,7 @@
 "Preparing upgrade" = "Preparing upgrade";
 "Previous window" = "Previous window";
 "Priority %d" = "Priority %d";
+"Privacy Policy" = "Privacy Policy";
 "Provide a custom mask in binary (0b...) or decimal." = "Provide a custom mask in binary (0b...) or decimal.";
 "Quit Deboogey manually to see changes." = "Quit Deboogey manually to see changes.";
 "Quit the app manually to see changes." = "Quit the app manually to see changes.";
@@ -364,6 +370,7 @@
 "Swap" = "Swap";
 "Swap Modification" = "Swap Modification";
 "Swap Sides" = "Swap Sides";
+"System" = "System";
 "System Integrity Protection" = "System Integrity Protection";
 "System write-dependent features have been disabled." = "System write-dependent features have been disabled.";
 "TARGET DOMAIN" = "TARGET DOMAIN";
@@ -407,7 +414,6 @@
 "Window %@–%@ of %@ (%d lines in memory)" = "Window %@–%@ of %@ (%d lines in memory)";
 "Writing DiffsplitterX Document…" = "Writing DiffsplitterX Document…";
 "You might need to manually code-sign after upgrading." = "You might need to manually code-sign after upgrading.";
-"You will now be able to turn off background animations when creating new documents in the app. With this version also comes a large overhaul of most of the application's features to make them faster, less wonky and overall more stable." = "You will now be able to turn off background animations when creating new documents in the app. With this version also comes a large overhaul of most of the application's features to make them faster, less wonky and overall more stable.";
 "Your session pair will be lost if you don’t save it." = "Your session pair will be lost if you don’t save it.";
 "Your unapplied drafted value changes will be lost if you don’t save them." = "Your unapplied drafted value changes will be lost if you don’t save them.";
 "base64:… or hex:…" = "base64:… or hex:…";

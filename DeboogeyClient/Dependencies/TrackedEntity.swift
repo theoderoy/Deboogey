@@ -26,7 +26,7 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
             let value = try container.decode(String.self)
 
             switch value {
-            case Self.deboogeyCDM.rawValue, ["lady", "bug"].joined():
+            case Self.deboogeyCDM.rawValue, "ladybug":
                 self = .deboogeyCDM
             case Self.wsOverlay.rawValue:
                 self = .wsOverlay

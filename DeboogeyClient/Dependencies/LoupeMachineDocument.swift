@@ -117,10 +117,6 @@ enum LoupeMachineNavigation {
         ))
     }
 
-    static func importApplicationLegacy() {
-        LoupeMachineWindowController.open(LoupeMachineWindowRequest(action: .importApplication))
-    }
-
     static func chooseDocumentLegacy() {
         chooseDocument { url in openLegacy(documentAt: url) }
     }
@@ -132,14 +128,6 @@ enum LoupeMachineNavigation {
             documentURL: url
         )
         openWindow(id: windowID, value: request)
-    }
-
-    @available(macOS 13.0, *)
-    static func importApplication(using openWindow: OpenWindowAction) {
-        openWindow(
-            id: windowID,
-            value: LoupeMachineWindowRequest(action: .importApplication)
-        )
     }
 
     @available(macOS 13.0, *)
