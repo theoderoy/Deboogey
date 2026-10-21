@@ -121,7 +121,9 @@
 "Disassembled" = "Désassemblés";
 "Display Scale" = "Échelle d’affichage";
 "Distribution" = "Distribution";
+"Document unavailable" = "Document indisponible";
 "Don't Save" = "Ne pas enregistrer";
+"Done" = "Terminé";
 "Don’t Save" = "Ne pas enregistrer";
 "Downloading upgrade" = "Téléchargement de la mise à niveau";
 "Drag to reorder. Items nearer the top win when a folder contains mixed changes." = "Faites glisser pour réordonner. Les éléments plus hauts l’emportent lorsqu’un dossier contient des changements mixtes.";
@@ -162,6 +164,7 @@
 "Flags" = "Drapeaux";
 "Folder Status Dot Priority" = "Priorité des pastilles d’état des dossiers";
 "Foreground" = "Premier plan";
+"GNU Affero General Public License v3" = "Licence publique générale GNU Affero v3";
 "General" = "Général";
 "Global" = "Global";
 "Global Defaults" = "Valeurs globales";
@@ -210,6 +213,8 @@
 "Learn More" = "En savoir plus";
 "Leave these entries out" = "Exclure ces entrées";
 "Left" = "Gauche";
+"Legal" = "Mentions légales";
+"License" = "Licence";
 "Listing left archive…" = "Lecture de l’archive de gauche…";
 "Listing right archive…" = "Lecture de l’archive de droite…";
 "Live Activity" = "Live Activity";
@@ -297,6 +302,7 @@
 "Preparing upgrade" = "Préparation de la mise à niveau";
 "Previous window" = "Fenêtre précédente";
 "Priority %d" = "Priorité %d";
+"Privacy Policy" = "Politique de confidentialité";
 "Provide a custom mask in binary (0b...) or decimal." = "Indiquez un masque personnalisé en binaire (0b...) ou en décimal.";
 "Quit Deboogey manually to see changes." = "Quittez Deboogey manuellement pour voir les changements.";
 "Quit the app manually to see changes." = "Quittez l’app manuellement pour voir les changements.";

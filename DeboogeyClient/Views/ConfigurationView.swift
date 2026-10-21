@@ -711,15 +711,26 @@ private struct EntityTrackerPanelView: View {
 private struct AcknowledgementsPanelView: View {
     @ObservedObject var vm: ConfigurationViewModel
     @Environment(\.openURL) private var openURL
-    
+    @State private var presentedLegalDocument: BundledLegalDocument?
+
     var body: some View {
         ConfigurationPanelContainer {
             panels
         }
+        .sheet(item: $presentedLegalDocument) { document in
+            legalDocumentSheet(document)
+        }
     }
-    
+
     @ViewBuilder
     private var panels: some View {
+        configurationSection(header: "Legal") {
+            legalRow(.license, symbol: "doc.text", tint: .secondary)
+#if DEBOOGEY_MCE
+            legalRow(.privacyPolicy, symbol: "hand.raised", tint: .secondary)
+#endif
+        }
+
 #if !DEBOOGEY_MCE
         configurationSection(header: "Sources") {
             creditRows([
@@ -740,16 +751,59 @@ private struct AcknowledgementsPanelView: View {
             ])
         }
 #endif
-        
+
         configurationSection(header: "Special Thanks") {
             creditRows([
                 ("Salty", "Insight", "https://github.com/ogui-775", "star.fill", .yellow),
+                ("Kyan Van Ostaeyen", "Tester", "https://instagram.com/kyan_van_ostaeyen", "gearshape", .green),
+                ("Arjan Minnaert", "Tester", "https://instagram.com/realarjan_", "gearshape", .green),
                 ("1davi", "Tester", "https://github.com/1davi", "gearshape", .green),
                 ("Alex Spaulding", "Tester", "https://github.com/aspauldingcode", "gearshape", .green),
                 ("MTACS", "Tester", "https://github.com/MTACS", "gearshape", .green),
                 ("Olivia Iacovou", "Tester", "https://github.com/oliviaiacovou", "gearshape", .green),
             ])
         }
+    }
+
+    private func legalRow(_ document: BundledLegalDocument, symbol: String, tint: Color) -> some View {
+        Button {
+            presentedLegalDocument = document
+        } label: {
+            Label {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(document.title).font(.headline)
+                    if let detail = document.detail {
+                        Text(detail).font(.subheadline).foregroundColor(.secondary)
+                    }
+                }
+            } icon: {
+                Image(systemName: symbol).foregroundColor(tint)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func legalDocumentSheet(_ document: BundledLegalDocument) -> some View {
+        let reader = LegalDocumentReaderView(document: document)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.t("Done")) {
+                        presentedLegalDocument = nil
+                    }
+                }
+            }
+#if os(macOS)
+        if #available(macOS 13.0, *) {
+            NavigationStack { reader }
+                .frame(minWidth: 520, minHeight: 640)
+        } else {
+            NavigationView { reader }
+                .frame(minWidth: 520, minHeight: 640)
+        }
+#else
+        NavigationStack { reader }
+#endif
     }
 
     @ViewBuilder
@@ -770,7 +824,7 @@ private struct AcknowledgementsPanelView: View {
             .buttonStyle(.plain)
         }
     }
-    }
+}
 
 enum Panel: Identifiable, Hashable, Codable {
     case general

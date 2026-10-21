@@ -121,7 +121,9 @@
 "Disassembled" = "Disassembled";
 "Display Scale" = "Display Scale";
 "Distribution" = "Distribution";
+"Document unavailable" = "Document unavailable";
 "Don't Save" = "Don't Save";
+"Done" = "Done";
 "Don’t Save" = "Don’t Save";
 "Downloading upgrade" = "Downloading upgrade";
 "Drag to reorder. Items nearer the top win when a folder contains mixed changes." = "Drag to reorder. Items nearer the top win when a folder contains mixed changes.";
@@ -162,6 +164,7 @@
 "Flags" = "Flags";
 "Folder Status Dot Priority" = "Folder Status Dot Priority";
 "Foreground" = "Foreground";
+"GNU Affero General Public License v3" = "GNU Affero General Public License v3";
 "General" = "General";
 "Global" = "Global";
 "Global Defaults" = "Global Defaults";
@@ -210,6 +213,8 @@
 "Learn More" = "Learn More";
 "Leave these entries out" = "Leave these entries out";
 "Left" = "Left";
+"Legal" = "Legal";
+"License" = "License";
 "Listing left archive…" = "Listing left archive…";
 "Listing right archive…" = "Listing right archive…";
 "Live Activity" = "Live Activity";
@@ -297,6 +302,7 @@
 "Preparing upgrade" = "Preparing upgrade";
 "Previous window" = "Previous window";
 "Priority %d" = "Priority %d";
+"Privacy Policy" = "Privacy Policy";
 "Provide a custom mask in binary (0b...) or decimal." = "Provide a custom mask in binary (0b...) or decimal.";
 "Quit Deboogey manually to see changes." = "Quit Deboogey manually to see changes.";
 "Quit the app manually to see changes." = "Quit the app manually to see changes.";

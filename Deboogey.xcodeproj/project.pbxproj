@@ -157,6 +157,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				MCE/DeboogeyClientMCE.swift,
+				"Resources/Privacy Policy (DeboogeyMCE).pdf",
 			);
 			target = F07EDA812E9CC3B200AE8D4A /* DeboogeyClient */;
 		};
