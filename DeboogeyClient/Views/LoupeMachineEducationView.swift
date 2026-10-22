@@ -46,6 +46,8 @@ struct LoupeMachineEducationView: View {
                     .fontWeight(.medium)
 
                 Text(resolvedExplanation)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 40)
                     .padding(.top, 20)
             }

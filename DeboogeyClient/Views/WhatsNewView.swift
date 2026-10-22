@@ -45,45 +45,43 @@ struct WhatsNewView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 30) {
-                VStack(spacing: 8) {
+        VStack(spacing: 30) {
+            VStack(spacing: 8) {
 #if canImport(AppKit)
-                    if let appIcon = NSImage(named: NSImage.applicationIconName) {
-                        Image(nsImage: appIcon)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 128, height: 128)
-                    }
-#else
-                    Image("DeboogeyIdent")
+                if let appIcon = NSImage(named: NSImage.applicationIconName) {
+                    Image(nsImage: appIcon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 128, height: 128)
+                }
+#else
+                Image("DeboogeyIdent")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 128, height: 128)
 #endif
 
-                    Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "DeboogeyClient")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
+                Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "DeboogeyClient")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
 
-                    Text(versionHeading)
-                        .font(.title2)
-                        .fontWeight(.medium)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.top, 40)
-
-                VStack(alignment: .leading, spacing: 25) {
-                    ForEach(entries.filter(\.scope.isVisible)) { entry in
-                        FeatureRow(entry: entry)
-                    }
-                }
-                .padding(.horizontal, 40)
-
-                ContinueButton(title: "Continue", color: .accentColor, action: onDismiss)
-                    .padding(.horizontal, 40)
-                    .padding(.bottom, 40)
+                Text(versionHeading)
+                    .font(.title2)
+                    .fontWeight(.medium)
+                    .multilineTextAlignment(.center)
             }
+            .padding(.top, 40)
+
+            VStack(alignment: .leading, spacing: 25) {
+                ForEach(entries.filter(\.scope.isVisible)) { entry in
+                    FeatureRow(entry: entry)
+                }
+            }
+            .padding(.horizontal, 40)
+
+            ContinueButton(title: "Continue", color: .accentColor, action: onDismiss)
+                .padding(.horizontal, 40)
+                .padding(.bottom, 40)
         }
 #if os(macOS)
         .frame(width: 500)
