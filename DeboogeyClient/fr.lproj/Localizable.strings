@@ -23,7 +23,6 @@
 ".dspltx file was exported — %@" = "Le fichier .dspltx a été exporté — %@";
 ".loum file was created — %@" = "Le fichier .loum a été créé — %@";
 ".loum file was modified — %@" = "Le fichier .loum a été modifié — %@";
-"A Legal section is now available in-app, and new version changes can now also be viewed on iPhone, iPad and Apple Vision." = "Une section Mentions légales est désormais disponible dans l’app, et les nouveautés de version sont aussi consultables sur iPhone, iPad et Apple Vision.";
 "ACTION" = "ACTION";
 "AEA Decryption Key" = "Clé de déchiffrement AEA";
 "About %@ in memory for materialized files, plus %@ for the visible window" = "Environ %@ en mémoire pour les fichiers matérialisés, plus %@ pour la fenêtre visible";
@@ -189,7 +188,6 @@
 "Imported application: %@" = "Application importée : %@";
 "Importing DiffsplitterX Document…" = "Importation du document DiffsplitterX…";
 "Import…" = "Importer…";
-"Improvements" = "Améliorations";
 "Include Hidden Files" = "Inclure les fichiers masqués";
 "Indexing" = "Indexation";
 "Indexing Finished" = "Indexation terminée";
@@ -415,7 +413,6 @@
 "Will not be honored when Reduce Motion is turned on in Accessibility." = "Non respecté lorsque Réduire les animations est activé dans Accessibilité.";
 "Window %@–%@ of %@ (%d lines in memory)" = "Fenêtre %@–%@ sur %@ (%d lignes en mémoire)";
 "Writing DiffsplitterX Document…" = "Écriture du document DiffsplitterX…";
-"You can now track modifications made using iPhone, iPad and Apple Vision." = "Vous pouvez désormais suivre les modifications effectuées depuis iPhone, iPad et Apple Vision.";
 "You might need to manually code-sign after upgrading." = "Vous devrez peut-être signer le code manuellement après la mise à niveau.";
 "Your session pair will be lost if you don’t save it." = "Votre paire de session sera perdue si vous ne l’enregistrez pas.";
 "Your unapplied drafted value changes will be lost if you don’t save them." = "Les brouillons de valeurs non appliqués seront perdus si vous ne les enregistrez pas.";

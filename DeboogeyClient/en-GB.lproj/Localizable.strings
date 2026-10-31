@@ -23,7 +23,6 @@
 ".dspltx file was exported — %@" = ".dspltx file was exported — %@";
 ".loum file was created — %@" = ".loum file was created — %@";
 ".loum file was modified — %@" = ".loum file was modified — %@";
-"A Legal section is now available in-app, and new version changes can now also be viewed on iPhone, iPad and Apple Vision." = "A Legal section is now available in-app, and new version changes can now also be viewed on iPhone, iPad and Apple Vision.";
 "ACTION" = "ACTION";
 "AEA Decryption Key" = "AEA Decryption Key";
 "About %@ in memory for materialized files, plus %@ for the visible window" = "About %@ in memory for materialized files, plus %@ for the visible window";
@@ -189,7 +188,6 @@
 "Imported application: %@" = "Imported application: %@";
 "Importing DiffsplitterX Document…" = "Importing DiffsplitterX Document…";
 "Import…" = "Import…";
-"Improvements" = "Improvements";
 "Include Hidden Files" = "Include Hidden Files";
 "Indexing" = "Indexing";
 "Indexing Finished" = "Indexing Finished";
@@ -415,7 +413,6 @@
 "Will not be honored when Reduce Motion is turned on in Accessibility." = "Will not be honoured when Reduce Motion is turned on in Accessibility.";
 "Window %@–%@ of %@ (%d lines in memory)" = "Window %@–%@ of %@ (%d lines in memory)";
 "Writing DiffsplitterX Document…" = "Writing DiffsplitterX Document…";
-"You can now track modifications made using iPhone, iPad and Apple Vision." = "You can now track modifications made using iPhone, iPad and Apple Vision.";
 "You might need to manually code-sign after upgrading." = "You might need to manually code-sign after upgrading.";
 "Your session pair will be lost if you don’t save it." = "Your session pair will be lost if you don’t save it.";
 "Your unapplied drafted value changes will be lost if you don’t save them." = "Your unapplied drafted value changes will be lost if you don’t save them.";

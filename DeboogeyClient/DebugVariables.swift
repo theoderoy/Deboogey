@@ -36,11 +36,13 @@ enum DebugVariables {
     enum Language: String {
         case en = "en-GB"
         case fr
+        case nl
 
         nonisolated var localeIdentifier: String {
             switch self {
             case .en: return "en_GB"
             case .fr: return "fr_FR"
+            case .nl: return "nl_NL"
             }
         }
     }
