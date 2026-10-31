@@ -23,132 +23,65 @@ let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as
 
 #if os(macOS)
 private enum RootLauncherMetrics {
-    static let horizontalPadding: CGFloat = 24
-    static let verticalPadding: CGFloat = 36
+    static let horizontalPadding: CGFloat = 16
+    static let verticalPadding: CGFloat = 20
+    static let columnSpacing: CGFloat = 16
+    static let actionsPadding: CGFloat = 8
+    static let bannerContentSpacing: CGFloat = 14
+    static let bannerWidth: CGFloat = 420
+    static let topBannerHeight: CGFloat = 64
+    static let bottomBannerHeight: CGFloat = 58
+    static let bottomBannerCollapsedHeight: CGFloat = 32
 }
 
-private struct RootContentSizeKey: PreferenceKey {
-    static let defaultValue: CGSize = .zero
-    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
-        let next = nextValue()
-        if next.width > 0, next.height > 0 { value = next }
+private struct RootBannerMotion {
+    let reduceMotion: Bool
+
+    var pop: Animation {
+        reduceMotion ? .easeOut(duration: 0.16) : .spring(response: 0.42, dampingFraction: 0.78)
+    }
+
+    var unfold: Animation {
+        reduceMotion ? .easeOut(duration: 0.14) : .spring(response: 0.38, dampingFraction: 0.86)
+    }
+
+    var popTransition: AnyTransition {
+        reduceMotion
+            ? .opacity
+            : .asymmetric(
+                insertion: .scale(scale: 0.86).combined(with: .opacity),
+                removal: .scale(scale: 0.92).combined(with: .opacity)
+            )
+    }
+
+    var unfoldTransition: AnyTransition {
+        reduceMotion
+            ? .opacity
+            : .asymmetric(
+                insertion: .opacity.combined(with: .scale(scale: 0.96, anchor: .top)),
+                removal: .opacity.combined(with: .scale(scale: 0.98, anchor: .top))
+            )
     }
 }
 
-private struct RootWindowBridge: NSViewRepresentable {
-    var contentSize: CGSize
-    let onWindowPrepared: () -> Void
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onWindowPrepared: onWindowPrepared)
+private final class RootWindowChromeProbe: NSView {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard let window else { return }
+        window.applyFixedLauncherChrome()
+        if window.alphaValue < 1 { window.alphaValue = 1 }
     }
+}
 
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView(frame: .zero)
+private struct RootWindowChrome: NSViewRepresentable {
+    func makeNSView(context: Context) -> RootWindowChromeProbe {
+        let view = RootWindowChromeProbe(frame: .zero)
         view.isHidden = true
-        context.coordinator.installObservers()
         return view
     }
 
-    func updateNSView(_ nsView: NSView, context: Context) {
-        context.coordinator.contentSize = contentSize
-        DispatchQueue.main.async {
-            context.coordinator.apply(to: nsView.window)
-        }
-    }
-
-    static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
-        coordinator.tearDown()
-    }
-
-    final class Coordinator {
-        private let onWindowPrepared: () -> Void
-        private weak var window: NSWindow?
-        var contentSize: CGSize = .zero
-        private var didPrepareWindow = false
-        private var didApplyInitialSize = false
-        private var isFullScreen = false
-        private var lastAppliedSize: CGSize = .zero
-        private var observers: [NSObjectProtocol] = []
-
-        init(onWindowPrepared: @escaping () -> Void) {
-            self.onWindowPrepared = onWindowPrepared
-        }
-
-        func installObservers() {
-            guard observers.isEmpty else { return }
-            observers = [
-                observe(NSWindow.willEnterFullScreenNotification) { [weak self] _ in
-                    self?.isFullScreen = true
-                },
-                observe(NSWindow.didExitFullScreenNotification) { [weak self] window in
-                    guard let self else { return }
-                    self.isFullScreen = false
-                    self.didApplyInitialSize = false
-                    self.apply(to: window)
-                },
-            ]
-        }
-
-        func tearDown() {
-            observers.forEach(NotificationCenter.default.removeObserver)
-            observers.removeAll()
-        }
-
-        func apply(to window: NSWindow?) {
-            guard let window else { return }
-            self.window = window
-            window.isRestorable = false
-            if window.styleMask.contains(.fullScreen) { isFullScreen = true }
-            guard !isFullScreen, contentSize.width > 1, contentSize.height > 1 else { return }
-
-            let target = CGSize(width: ceil(contentSize.width), height: ceil(contentSize.height))
-            let minFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: target)).size
-            if window.minSize != minFrame { window.minSize = minFrame }
-
-            let current = window.contentLayoutRect.size
-            if !didApplyInitialSize {
-                didApplyInitialSize = true
-                window.setContentSize(target)
-                lastAppliedSize = target
-                window.center()
-            } else if current.width + 1 < target.width || current.height + 1 < target.height {
-                window.setContentSize(CGSize(
-                    width: max(current.width, target.width),
-                    height: max(current.height, target.height)
-                ))
-                lastAppliedSize = target
-            } else if abs(current.width - lastAppliedSize.width) < 2,
-                      abs(current.height - lastAppliedSize.height) < 2,
-                      abs(lastAppliedSize.width - target.width) > 0.5
-                        || abs(lastAppliedSize.height - target.height) > 0.5 {
-                window.setContentSize(target)
-                lastAppliedSize = target
-            }
-
-            guard !didPrepareWindow else { return }
-            didPrepareWindow = true
-            onWindowPrepared()
-        }
-
-        private func observe(
-            _ name: Notification.Name,
-            handler: @escaping (NSWindow) -> Void
-        ) -> NSObjectProtocol {
-            NotificationCenter.default.addObserver(
-                forName: name,
-                object: nil,
-                queue: .main
-            ) { [weak self] notification in
-                guard let self,
-                      let window = notification.object as? NSWindow,
-                      window === self.window else { return }
-                handler(window)
-            }
-        }
-    }
+    func updateNSView(_ nsView: RootWindowChromeProbe, context: Context) {}
 }
-
 private struct RootLauncherBranding: View {
     var body: some View {
         VStack(spacing: 8) {
@@ -165,23 +98,12 @@ private struct RootLauncherBranding: View {
 }
 
 private struct RootLauncherCanvas<Content: View>: View {
-    var onPrepared: () -> Void = {}
     @ViewBuilder let content: () -> Content
-    @State private var measuredSize: CGSize = .zero
 
     var body: some View {
         content()
-            .background(
-                GeometryReader { proxy in
-                    Color.clear.preference(key: RootContentSizeKey.self, value: proxy.size)
-                }
-            )
             .fixedSize()
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            .onPreferenceChange(RootContentSizeKey.self) { measuredSize = $0 }
-            .background(
-                RootWindowBridge(contentSize: measuredSize, onWindowPrepared: onPrepared)
-            )
+            .background(RootWindowChrome())
     }
 }
 #endif
@@ -430,19 +352,15 @@ struct RootView: View {
 
     var body: some View {
         RootLauncherCanvas {
-            HStack {
+            HStack(spacing: RootLauncherMetrics.columnSpacing) {
                 RootLauncherBranding()
 
                 VStack(spacing: 12) {
                     if #available(macOS 13.0, *) {
                         DeboogeyLoupeWindowLauncher()
-                    } else {
-                        DeboogeyLoupeLegacyWindowLauncher()
-                    }
-
-                    if #available(macOS 13.0, *) {
                         DeboogeyDiffsplitterWindowLauncher()
                     } else {
+                        DeboogeyLoupeLegacyWindowLauncher()
                         DeboogeyDiffsplitterLegacyWindowLauncher()
                     }
 
@@ -467,7 +385,7 @@ struct RootView: View {
 
                     SettingsLauncher()
                 }
-                .padding()
+                .padding(RootLauncherMetrics.actionsPadding)
             }
             .padding(.horizontal, RootLauncherMetrics.horizontalPadding)
             .padding(.vertical, RootLauncherMetrics.verticalPadding)
@@ -500,6 +418,7 @@ struct RootView: View {
 #else
     @Environment(\.openURL) private var openURL
     @Environment(\.sipSatisfied) private var sipSatisfied
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @ObservedObject var networkMonitor = NetworkMonitor.shared
     @ObservedObject var upgradeChecker = UpgradeChecker.shared
@@ -537,6 +456,14 @@ struct RootView: View {
         }
     }
 
+    private var isOfflineWithoutUpgrade: Bool {
+        !networkMonitor.isConnected && !upgradeChecker.upgradeAvailable
+    }
+
+    private var shouldShowExperimentalBuildCard: Bool {
+        upgradeChecker.isExperimentalBuild && !hideExperimentalBuildCard
+    }
+
     private var shouldShowUpdateCard: Bool {
         !DebugVariables.areUpdatesDisabled
         && (upgradeChecker.isUpdating
@@ -547,42 +474,73 @@ struct RootView: View {
     private var updateCardExpanded: Bool {
         upgradeChecker.isUpdating
         || updateCardOpen
-        || (!networkMonitor.isConnected && !upgradeChecker.upgradeAvailable && vars.showNetworkNotices)
+        || (isOfflineWithoutUpgrade && vars.showNetworkNotices)
     }
 
     private var boundedUpdateProgress: Double {
         min(max(upgradeChecker.updateProgress, 0), 1)
     }
+
+    private var updateCardAccent: Color {
+        isOfflineWithoutUpgrade ? .orange : .accentColor
+    }
+
+    private var updateBannerHeight: CGFloat {
+        shouldShowUpdateCard && !updateCardExpanded
+            ? RootLauncherMetrics.bottomBannerCollapsedHeight
+            : RootLauncherMetrics.bottomBannerHeight
+    }
+
+    private var updateBannerCornerRadius: CGFloat {
+        shouldShowUpdateCard && !updateCardExpanded ? 10 : 16
+    }
+
+    private var bannerMotion: RootBannerMotion {
+        RootBannerMotion(reduceMotion: reduceMotion)
+    }
+
+    private var usesTertiarySkyLightHelp: Bool {
+        if #available(macOS 13.0, *) { return true }
+        return false
+    }
     
     var body: some View {
-        RootLauncherCanvas(onPrepared: prepareStartupFlowIfNeeded) {
-            VStack {
-                if upgradeChecker.isExperimentalBuild && !hideExperimentalBuildCard {
-                    ZStack(alignment: .topTrailing) {
-                        HStack(alignment: .top, spacing: 10) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(upgradeChecker.isDevelopmentBuild ? .red : .orange)
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(L10n.t(upgradeChecker.isDevelopmentBuild ? "PlaceholderText1" : "This version of Deboogey is experimental."))
-                                    .font(.headline)
-                                Text(L10n.t(upgradeChecker.isDevelopmentBuild ? "PlaceholderText2" : "This build contains experimental features and is not officially notarised by Apple. Use caution when running it."))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+        let motion = bannerMotion
+        RootLauncherCanvas {
+            VStack(spacing: RootLauncherMetrics.bannerContentSpacing) {
+                ZStack {
+                    if shouldShowExperimentalBuildCard {
+                        ZStack(alignment: .topTrailing) {
+                            HStack(alignment: .center, spacing: 10) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(upgradeChecker.isDevelopmentBuild ? .red : .orange)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(L10n.t(upgradeChecker.isDevelopmentBuild ? "PlaceholderText1" : "This version of Deboogey is experimental."))
+                                        .font(.headline)
+                                    Text(L10n.t(upgradeChecker.isDevelopmentBuild ? "PlaceholderText2" : "This build contains experimental features and is not officially notarised by Apple. Use caution when running it."))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(2)
+                                }
+                                Spacer(minLength: 22)
                             }
-                            Spacer(minLength: 22)
+                            Button {
+                                withAnimation(motion.pop) { hideExperimentalBuildCard = true }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(6)
                         }
-                        Button(action: { hideExperimentalBuildCard = true }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(8)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background((upgradeChecker.isDevelopmentBuild ? Color.red : Color.orange).opacity(0.12), in: RoundedRectangle(cornerRadius: 16))
+                        .transition(motion.popTransition)
                     }
-                    .padding(12)
-                    .frame(width: 420)
-                    .background((upgradeChecker.isDevelopmentBuild ? Color.red : Color.orange).opacity(0.12), in: RoundedRectangle(cornerRadius: 20))
-                    .padding(.top, 8)
                 }
+                .frame(width: RootLauncherMetrics.bannerWidth, height: RootLauncherMetrics.topBannerHeight)
 
                 if !DebugVariables.isMarketplaceCandidateEditionBuild,
                    sipSatisfied == true,
@@ -590,27 +548,18 @@ struct RootView: View {
                     Text(L10n.t("System write-dependent features have been disabled."))
                         .foregroundStyle(.tertiary)
                         .padding(3)
-                        .padding(.bottom, 8)
                 }
 
-                HStack {
+                HStack(spacing: RootLauncherMetrics.columnSpacing) {
                     RootLauncherBranding()
                     VStack(spacing: 12) {
                         if #available(macOS 13.0, *) {
                             DeboogeyLoupeWindowLauncher()
-                        } else {
-                            DeboogeyLoupeLegacyWindowLauncher()
-                        }
-
-                        if #available(macOS 13.0, *) {
                             DeboogeyDiffsplitterWindowLauncher()
-                        } else {
-                            DeboogeyDiffsplitterLegacyWindowLauncher()
-                        }
-
-                        if #available(macOS 13.0, *) {
                             DeboogeyCDMWindowLauncher()
                         } else {
+                            DeboogeyLoupeLegacyWindowLauncher()
+                            DeboogeyDiffsplitterLegacyWindowLauncher()
                             LauncherButton(
                                 title: "Cocoa Debug Menu",
                                 icon: "wrench.and.screwdriver",
@@ -621,35 +570,23 @@ struct RootView: View {
                         }
 
                         if !DebugVariables.isMarketplaceCandidateEditionBuild {
-                            if #available(macOS 13.0, *) {
-                                if sipSatisfied {
-                                    DisabledSkyLightLauncher(usesTertiaryStyle: true) {
-                                        activeAlert = .sipNotice
-                                    }
-                                } else if !cltInstalled {
-                                    DisabledSkyLightLauncher {
-                                        activeAlert = .cltNotice
-                                    }
-                                } else {
-                                    DeboogeySDWindowLauncher()
+                            if sipSatisfied {
+                                DisabledSkyLightLauncher(usesTertiaryStyle: usesTertiarySkyLightHelp) {
+                                    activeAlert = .sipNotice
                                 }
+                            } else if !cltInstalled {
+                                DisabledSkyLightLauncher {
+                                    activeAlert = .cltNotice
+                                }
+                            } else if #available(macOS 13.0, *) {
+                                DeboogeySDWindowLauncher()
                             } else {
-                                if sipSatisfied {
-                                    DisabledSkyLightLauncher {
-                                        activeAlert = .sipNotice
-                                    }
-                                } else if !cltInstalled {
-                                    DisabledSkyLightLauncher {
-                                        activeAlert = .cltNotice
-                                    }
-                                } else {
-                                    LauncherButton(
-                                        title: "SkyLight Diagnostics",
-                                        icon: "macwindow",
-                                        color: .accentColor
-                                    ) {
-                                        showingDeboogeySDLauncher = true
-                                    }
+                                LauncherButton(
+                                    title: "SkyLight Diagnostics",
+                                    icon: "macwindow",
+                                    color: .accentColor
+                                ) {
+                                    showingDeboogeySDLauncher = true
                                 }
                             }
                         }
@@ -667,119 +604,142 @@ struct RootView: View {
 
                         SettingsLauncher()
                     }
-                    .padding()
+                    .padding(RootLauncherMetrics.actionsPadding)
                 }
 
-                if shouldShowUpdateCard {
-                    ZStack {
-                        Rectangle()
-                            .cornerRadius(20)
-                            .foregroundColor(!networkMonitor.isConnected && !upgradeChecker.upgradeAvailable ? .orange : .accentColor)
-                            .opacity(0.1)
-                        if upgradeChecker.isUpdating {
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text(L10n.t(upgradeChecker.updateStep.isEmpty ? "Preparing upgrade" : upgradeChecker.updateStep))
-                                        .font(.headline)
-                                    Spacer()
-                                    Text("\(Int((boundedUpdateProgress * 100).rounded()))%")
-                                        .font(.caption.monospacedDigit())
-                                        .foregroundColor(.secondary)
+                ZStack {
+                    if shouldShowUpdateCard {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: updateBannerCornerRadius)
+                                .foregroundColor(updateCardAccent)
+                                .opacity(0.1)
+                            if upgradeChecker.isUpdating {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Text(L10n.t(upgradeChecker.updateStep.isEmpty ? "Preparing upgrade" : upgradeChecker.updateStep))
+                                            .font(.headline)
+                                        Spacer()
+                                        Text("\(Int((boundedUpdateProgress * 100).rounded()))%")
+                                            .font(.caption.monospacedDigit())
+                                            .foregroundColor(.secondary)
+                                    }
+                                    ProgressView(value: boundedUpdateProgress, total: 1)
+                                        .progressViewStyle(.linear)
                                 }
-                                ProgressView(value: boundedUpdateProgress, total: 1)
-                                    .progressViewStyle(.linear)
-                            }
-                            .padding(.horizontal, 14)
-                        } else if updateCardExpanded {
-                            HStack(spacing: 12) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    if !networkMonitor.isConnected && !upgradeChecker.upgradeAvailable {
-                                        Text(L10n.t("Network connection required")).font(.headline)
-                                        Text(L10n.t("Connect to check for upgrades")).font(.caption).foregroundColor(.orange)
-                                    } else {
-                                        Text(L10n.f("%@ is available", upgradeChecker.formattedLatestVersion)).font(.headline)
-                                        if !networkMonitor.isConnected {
-                                            Text(L10n.t("Network connection required to download upgrade")).font(.caption).foregroundColor(.orange)
+                                .padding(.horizontal, 12)
+                                .transition(motion.unfoldTransition)
+                            } else if updateCardExpanded {
+                                HStack(spacing: 10) {
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        if isOfflineWithoutUpgrade {
+                                            Text(L10n.t("Network connection required")).font(.headline)
+                                            Text(L10n.t("Connect to check for upgrades")).font(.caption).foregroundColor(.orange)
                                         } else {
-                                            Text(L10n.t("You might need to manually code-sign after upgrading.")).font(.caption).foregroundColor(.secondary)
+                                            Text(L10n.f("%@ is available", upgradeChecker.formattedLatestVersion)).font(.headline)
+                                            if !networkMonitor.isConnected {
+                                                Text(L10n.t("Network connection required to download upgrade")).font(.caption).foregroundColor(.orange)
+                                            } else {
+                                                Text(L10n.t("You might need to manually code-sign after upgrading.")).font(.caption).foregroundColor(.secondary)
+                                            }
                                         }
                                     }
-                                }
-                                Spacer()
-                                if upgradeChecker.upgradeAvailable {
-                                    HStack(spacing: 8) {
-                                        Button(L10n.t("Upgrade")) {
-                                            beginUpgrade()
-                                        }
-                                        .buttonStyle(.bordered)
-                                        .disabled(!networkMonitor.isConnected)
+                                    Spacer(minLength: 8)
+                                    if upgradeChecker.upgradeAvailable {
+                                        HStack(spacing: 8) {
+                                            Button(L10n.t("Upgrade")) {
+                                                beginUpgrade()
+                                            }
+                                            .buttonStyle(.bordered)
+                                            .controlSize(.small)
+                                            .disabled(!networkMonitor.isConnected)
 
-                                        if !networkMonitor.isConnected {
-                                            Image(systemName: "wifi.slash")
-                                                .foregroundColor(.orange)
-                                                .help(L10n.t("No network connection"))
+                                            if !networkMonitor.isConnected {
+                                                Image(systemName: "wifi.slash")
+                                                    .foregroundColor(.orange)
+                                                    .help(L10n.t("No network connection"))
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            .padding(.horizontal, 14)
-                        } else {
-                            Button(action: { updateCardOpen = true }) {
+                                .padding(.horizontal, 12)
+                                .transition(motion.unfoldTransition)
+                            } else {
                                 HStack(spacing: 6) {
-                                    Text(L10n.t("Upgrade available"))
-                                    if !networkMonitor.isConnected {
-                                        Image(systemName: "wifi.slash")
-                                            .foregroundColor(.orange)
-                                            .font(.caption)
-                                    }
-                                    Image(systemName: "chevron.down")
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        if updateCardExpanded && !upgradeChecker.isUpdating {
-                            VStack {
-                                HStack {
-                                    Spacer()
-                                    Button(action: {
-                                        hideUpdateCard = true
-                                        showUpdateCardOverride = false
-                                        updateCardOpen = false
-                                        highlightUpdateCard = false
-                                    }) {
-                                        Image(systemName: "xmark.circle.fill").foregroundColor(.secondary)
+                                    Button {
+                                        withAnimation(motion.unfold) { updateCardOpen = true }
+                                    } label: {
+                                        HStack(spacing: 5) {
+                                            Text(L10n.t("Upgrade available"))
+                                                .font(.caption.weight(.semibold))
+                                            if !networkMonitor.isConnected {
+                                                Image(systemName: "wifi.slash")
+                                                    .foregroundColor(.orange)
+                                                    .font(.caption2)
+                                            }
+                                            Image(systemName: "chevron.down")
+                                                .font(.caption2.weight(.semibold))
+                                        }
                                     }
                                     .buttonStyle(.plain)
-                                    .padding(6)
+                                    Spacer(minLength: 4)
+                                    Button(action: dismissUpdateCard) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                Spacer()
+                                .padding(.horizontal, 10)
+                                .transition(motion.unfoldTransition)
+                            }
+                            if updateCardExpanded && !upgradeChecker.isUpdating {
+                                VStack {
+                                    HStack {
+                                        Spacer()
+                                        Button(action: dismissUpdateCard) {
+                                            Image(systemName: "xmark.circle.fill").foregroundColor(.secondary)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .padding(4)
+                                    }
+                                    Spacer()
+                                }
+                                .transition(motion.unfoldTransition)
                             }
                         }
+                        .overlay(
+                            RoundedRectangle(cornerRadius: updateBannerCornerRadius)
+                                .stroke(updateCardAccent.opacity(highlightUpdateCard ? 0.9 : 0), lineWidth: 2)
+                        )
+                        .scaleEffect(highlightUpdateCard ? 1.02 : 1)
+                        .animation(.easeInOut(duration: 0.35), value: highlightUpdateCard)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .transition(motion.popTransition)
                     }
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke((!networkMonitor.isConnected && !upgradeChecker.upgradeAvailable ? Color.orange : Color.accentColor).opacity(highlightUpdateCard ? 0.9 : 0), lineWidth: 2)
-                    )
-                    .scaleEffect(highlightUpdateCard ? 1.02 : 1)
-                    .animation(.easeInOut(duration: 0.35), value: highlightUpdateCard)
-                    .frame(width: 420, height: updateCardExpanded ? 70 : 38)
-                    .padding(10)
 
                     if DebugVariables.auxiliaryUpgrades {
-                        Text(L10n.t("Auxiliary upgrades have been enabled."))
-                            .foregroundStyle(.orange)
-                            .padding(.bottom, 8)
+                        VStack {
+                            Spacer()
+                            Text(L10n.t("Auxiliary upgrades have been enabled."))
+                                .foregroundStyle(.orange)
+                        }
                     }
                 }
+                .frame(width: RootLauncherMetrics.bannerWidth, height: updateBannerHeight)
+                .animation(motion.unfold, value: updateCardExpanded)
 
                 if let forced = DebugVariables.forcedVersionType {
                     Text(L10n.f("Parameters pose this build type as %@.", forced.localizedName))
                         .foregroundStyle(.orange)
-                        .padding(.bottom, 8)
                 }
             }
             .padding(.horizontal, RootLauncherMetrics.horizontalPadding)
             .padding(.vertical, RootLauncherMetrics.verticalPadding)
+            .frame(
+                width: AppWindowSizing.root.defaultSize.width,
+                height: AppWindowSizing.root.defaultSize.height,
+                alignment: .top
+            )
         }
         .sheet(isPresented: $showingDeboogeySDLauncher) {
             NavigationView {
@@ -846,9 +806,7 @@ struct RootView: View {
             }
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                prepareStartupFlowIfNeeded()
-            }
+            prepareStartupFlowIfNeeded()
         }
         .onReceive(upgradeChecker.manualCheck) { _ in
             runManualCheck()
@@ -857,10 +815,20 @@ struct RootView: View {
             activeAlert = .message(L10n.f("%@ has been baked successfully.", filename))
         }
         .onChange(of: upgradeChecker.upgradeAvailable) { available in
-            if available && !vars.hideUpgradeAlerts { hideUpdateCard = false; showUpdateCardOverride = false; updateCardOpen = true }
+            guard available, !vars.hideUpgradeAlerts else { return }
+            withAnimation(bannerMotion.pop) {
+                hideUpdateCard = false
+                showUpdateCardOverride = false
+                updateCardOpen = true
+            }
         }
         .onChange(of: vars.hideUpgradeAlerts) { hide in
-            if hide { updateCardOpen = false; hideUpdateCard = true; showUpdateCardOverride = false }
+            guard hide else { return }
+            withAnimation(bannerMotion.pop) {
+                updateCardOpen = false
+                hideUpdateCard = true
+                showUpdateCardOverride = false
+            }
         }
     }
 
@@ -928,10 +896,12 @@ struct RootView: View {
     
     private func runManualCheck() {
         guard !DebugVariables.areUpdatesDisabled else { return }
-        if !networkMonitor.isConnected && !upgradeChecker.upgradeAvailable {
+        if isOfflineWithoutUpgrade {
             if vars.showNetworkNotices {
-                showUpdateCardOverride = true
-                hideUpdateCard = false
+                withAnimation(bannerMotion.pop) {
+                    showUpdateCardOverride = true
+                    hideUpdateCard = false
+                }
             }
             return
         }
@@ -941,12 +911,23 @@ struct RootView: View {
                 if updateCardOpen {
                     beginUpgrade()
                 } else {
-                    showUpdateCardOverride = vars.hideUpgradeAlerts || hideUpdateCard
-                    updateCardOpen = true
+                    withAnimation(bannerMotion.pop) {
+                        showUpdateCardOverride = vars.hideUpgradeAlerts || hideUpdateCard
+                        updateCardOpen = true
+                    }
                     highlightUpdateCard = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { highlightUpdateCard = false }
                 }
             } else { activeAlert = .message(L10n.t("No upgrade is present at this time.")) }
+        }
+    }
+
+    private func dismissUpdateCard() {
+        withAnimation(bannerMotion.pop) {
+            hideUpdateCard = true
+            showUpdateCardOverride = false
+            updateCardOpen = false
+            highlightUpdateCard = false
         }
     }
 

@@ -33,8 +33,7 @@ final class DeboogeyWindowController: NSWindowController, NSWindowDelegate {
             window.title = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
                 ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
                 ?? "Deboogey"
-            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
-            window.isRestorable = false
+            window.styleMask = [.titled, .closable, .miniaturizable]
 
         case .cocoaDebugMenu:
             let content = NavigationView {
@@ -62,7 +61,9 @@ final class DeboogeyWindowController: NSWindowController, NSWindowDelegate {
         }
 
         window.isReleasedWhenClosed = false
-        if kind != .main {
+        if kind == .main {
+            window.refreshFixedLauncherLayout()
+        } else {
             window.centerAfterHostingLayout()
         }
         super.init(window: window)
@@ -86,6 +87,9 @@ final class DeboogeyWindowController: NSWindowController, NSWindowDelegate {
             sipSatisfied: sipSatisfied
         )
         openWindows[kind] = controller
+        if kind == .main {
+            controller.window?.refreshFixedLauncherLayout()
+        }
         controller.showWindow(nil)
         controller.window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

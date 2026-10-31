@@ -27,6 +27,7 @@ public final class PersistentVariables: ObservableObject {
         static let entityTrackerAutoDeleteTrigger = "theoderoy.Deboogey.EntityTracker.autoDeleteTrigger"
         static let entityTrackerAutoDeleteLoupeActivities = "theoderoy.Deboogey.EntityTracker.autoDeleteLoupeActivities"
         static let playIndexingDoneSound = "theoderoy.Deboogey.Indexing.playCompletionSound"
+        static let playDocumentSaveSound = DocumentSaveFeedback.preferenceKey
         static let playToolCycleSound = "theoderoy.Deboogey.Tools.playCycleSound"
         static let playDiffsplitterDoneSound = DiffsplitterCompletionFeedback.soundPreferenceKey
         static let diffsplitterNotifyWhenBackgrounded = DiffsplitterCompletionFeedback.notifyWhenBackgroundedKey
@@ -95,6 +96,7 @@ public final class PersistentVariables: ObservableObject {
         Keys.entityTrackerAutoDeleteTrigger: "login",
         Keys.entityTrackerAutoDeleteLoupeActivities: true,
         Keys.playIndexingDoneSound: true,
+        Keys.playDocumentSaveSound: true,
         Keys.playToolCycleSound: true,
         Keys.playDiffsplitterDoneSound: true,
         Keys.diffsplitterNotifyWhenBackgrounded: true,
@@ -113,6 +115,7 @@ public final class PersistentVariables: ObservableObject {
     ]
 
     static func registerDefaults(in defaults: UserDefaults = .standard) {
+        DocumentSaveFeedback.migrateIfNeeded(defaults: defaults)
         defaults.register(defaults: registeredDefaults)
     }
 
@@ -174,6 +177,10 @@ public final class PersistentVariables: ObservableObject {
 
     @Published public var playIndexingDoneSound: Bool {
         didSet { defaults.set(playIndexingDoneSound, forKey: Keys.playIndexingDoneSound) }
+    }
+
+    @Published public var playDocumentSaveSound: Bool {
+        didSet { defaults.set(playDocumentSaveSound, forKey: Keys.playDocumentSaveSound) }
     }
 
     @Published public var playToolCycleSound: Bool {
@@ -315,6 +322,7 @@ public final class PersistentVariables: ObservableObject {
         self.entityTrackerAutoDeleteTrigger = "login"
         self.entityTrackerAutoDeleteLoupeActivities = false
         self.playIndexingDoneSound = false
+        self.playDocumentSaveSound = false
         self.playToolCycleSound = false
         self.playDiffsplitterDoneSound = false
         self.diffsplitterNotifyWhenBackgrounded = false
@@ -341,6 +349,7 @@ public final class PersistentVariables: ObservableObject {
         for key in Self.registeredDefaults.keys where key != Keys.lastAcknowledgedWhatsNewIdentity {
             defaults.removeObject(forKey: key)
         }
+        defaults.removeObject(forKey: DocumentSaveFeedback.legacyPreferenceKey)
         defaults.synchronize()
         reloadFromDefaults()
         Self.gracefullyTerminateAfterSettingsReset()
@@ -370,6 +379,7 @@ public final class PersistentVariables: ObservableObject {
         entityTrackerAutoDeleteTrigger = defaults.string(forKey: Keys.entityTrackerAutoDeleteTrigger) ?? "login"
         entityTrackerAutoDeleteLoupeActivities = defaults.bool(forKey: Keys.entityTrackerAutoDeleteLoupeActivities)
         playIndexingDoneSound = defaults.bool(forKey: Keys.playIndexingDoneSound)
+        playDocumentSaveSound = defaults.bool(forKey: Keys.playDocumentSaveSound)
         playToolCycleSound = defaults.bool(forKey: Keys.playToolCycleSound)
         playDiffsplitterDoneSound = defaults.bool(forKey: Keys.playDiffsplitterDoneSound)
         diffsplitterNotifyWhenBackgrounded = defaults.bool(forKey: Keys.diffsplitterNotifyWhenBackgrounded)

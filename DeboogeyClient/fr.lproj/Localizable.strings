@@ -291,11 +291,14 @@
 "PlaceholderText2" = "Chaînes, texte, variables, espaces réservés, etc.";
 "Play a sound when Diffsplitter finishes a comparison" = "Émettre un son lorsque Diffsplitter termine une comparaison";
 "Play a sound when Loupe Machine finishes an index cycle" = "Émettre un son lorsque Loupe Machine termine un cycle d’indexation";
+"Play a sound when a Deboogey document is saved" = "Émettre un son lorsqu’un document Deboogey est enregistré";
 "Play background animations on new document creation" = "Jouer des animations d’arrière-plan à la création d’un nouveau document";
 "Play sounds when Apple System Tools complete successfully or halt due to an error." = "Émet des sons lorsque les Outils système Apple se terminent avec succès ou s’arrêtent à cause d’une erreur.";
 "Play sounds when Apple System Tools finish or fail" = "Émettre des sons à la fin ou en cas d’échec des Outils système Apple";
 "Play sounds when Cocoa Debug Menu completes successfully or halts due to an error." = "Émet des sons lorsque le Menu de débogage Cocoa se termine avec succès ou s’arrête à cause d’une erreur.";
 "Play sounds when Cocoa Debug Menu finishes or fails" = "Émettre des sons à la fin ou en cas d’échec du Menu de débogage Cocoa";
+"Plays when a Loupe Machine document is written successfully." = "Émis lorsqu’un document Loupe Machine est écrit avec succès.";
+"Plays when a Loupe Machine, Diffsplitter, or DiffsplitterX document is written successfully." = "Émis lorsqu’un document Loupe Machine, Diffsplitter ou DiffsplitterX est écrit avec succès.";
 "Preferences" = "Préférences";
 "Preparing DiffsplitterX Document…" = "Préparation du document DiffsplitterX…";
 "Preparing binary dump…" = "Préparation du dump binaire…";

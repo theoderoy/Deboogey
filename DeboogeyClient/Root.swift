@@ -102,6 +102,9 @@ private struct SceneSwitcher: Scene {
     @SceneBuilder
     var body: some Scene {
         ConfigurationLegacy()
+            .commands {
+                RootPrimaryWindowCommands(sipSatisfied: sipSatisfied)
+            }
 
         if #available(macOS 14.0, *) {
             ConfigurationModern()
@@ -133,38 +136,45 @@ struct Root: App {
 
         PersistentVariables.registerDefaults()
         EntityTracker.shared.performConfiguredAutoRemoval()
+        DeboogeyLegacyRootLaunch.openIfNeeded(DeboogeyWindowController.openMain)
     }
 
     var body: some Scene {
-        WindowGroup {
-            DeboogeyRootContentView()
-                .environment(\.sipSatisfied, sipSatisfied)
-                .environment(\.locale, L10n.locale)
+        if #available(macOS 13.0, *) {
+            DeboogeyRootWindowScene {
+                DeboogeyRootContentView()
+                    .environment(\.sipSatisfied, sipSatisfied)
+                    .environment(\.locale, L10n.locale)
+            }
         }
-        .commands {
-            AboutCommands()
-#if !DEBOOGEY_MCE
-            UpgradeCommands()
-#endif
-            LoupeMachineLegacyCommands()
-            LegacyWindowLauncherCommands(
-                openMain: DeboogeyWindowController.openMain,
-                openCocoaDebugMenu: {
-                    DeboogeyWindowController.open(.cocoaDebugMenu, sipSatisfied: sipSatisfied)
-                },
-                openSkyLightDiagnostics: DebugVariables.isMarketplaceCandidateEditionBuild
-                    ? nil
-                    : {
-                        DeboogeyWindowController.open(
-                            .skyLightDiagnostics,
-                            sipSatisfied: sipSatisfied
-                        )
-                    },
-                skyLightDiagnosticsDisabled: sipSatisfied
-            )
-        }
-
         SceneSwitcher(sipSatisfied: sipSatisfied)
+    }
+}
+
+private struct RootPrimaryWindowCommands: Commands {
+    let sipSatisfied: Bool
+
+    var body: some Commands {
+        AboutCommands()
+#if !DEBOOGEY_MCE
+        UpgradeCommands()
+#endif
+        LoupeMachineLegacyCommands()
+        LegacyWindowLauncherCommands(
+            openMain: DeboogeyWindowController.openMain,
+            openCocoaDebugMenu: {
+                DeboogeyWindowController.open(.cocoaDebugMenu, sipSatisfied: sipSatisfied)
+            },
+            openSkyLightDiagnostics: DebugVariables.isMarketplaceCandidateEditionBuild
+                ? nil
+                : {
+                    DeboogeyWindowController.open(
+                        .skyLightDiagnostics,
+                        sipSatisfied: sipSatisfied
+                    )
+                },
+            skyLightDiagnosticsDisabled: sipSatisfied
+        )
     }
 }
 

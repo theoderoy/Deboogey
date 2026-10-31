@@ -56,11 +56,11 @@ private final class MCEWindowController: NSWindowController, NSWindowDelegate {
             window.title = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
                 ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
                 ?? "Deboogey"
-            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
-            window.isRestorable = false
+            window.styleMask = [.titled, .closable, .miniaturizable]
         }
 
         window.isReleasedWhenClosed = false
+        window.refreshFixedLauncherLayout()
         super.init(window: window)
         window.delegate = self
     }
@@ -70,6 +70,7 @@ private final class MCEWindowController: NSWindowController, NSWindowDelegate {
     static func open(_ kind: Kind) {
         let controller = openWindows[kind] ?? MCEWindowController(kind: kind)
         openWindows[kind] = controller
+        controller.window?.refreshFixedLauncherLayout()
         controller.showWindow(nil)
         controller.window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -100,17 +101,11 @@ private struct MCELegacyCommands: Commands {
     }
 }
 
-private struct MCELegacyRootScene: Scene {
-    var body: some Scene {
-        WindowGroup {
-            DeboogeyRootContentView()
-                .environment(\.locale, L10n.locale)
-        }
-        .commands {
-            MCEAboutCommands()
-            MCELegacyCommands()
-            LegacyWindowLauncherCommands(openMain: { MCEWindowController.open(.main) })
-        }
+private struct MCERootCommands: Commands {
+    var body: some Commands {
+        MCEAboutCommands()
+        MCELegacyCommands()
+        LegacyWindowLauncherCommands(openMain: { MCEWindowController.open(.main) })
     }
 }
 
@@ -119,11 +114,18 @@ struct DeboogeyClientMCE: App {
     init() {
         PersistentVariables.registerDefaults()
         EntityTracker.shared.performConfiguredAutoRemoval()
+        DeboogeyLegacyRootLaunch.openIfNeeded { MCEWindowController.open(.main) }
     }
 
     var body: some Scene {
-        MCELegacyRootScene()
+        if #available(macOS 13.0, *) {
+            DeboogeyRootWindowScene {
+                DeboogeyRootContentView()
+                    .environment(\.locale, L10n.locale)
+            }
+        }
         ConfigurationLegacy()
+            .commands { MCERootCommands() }
 
         if #available(macOS 14.0, *) {
             ConfigurationModern()

@@ -4102,7 +4102,9 @@ final class DiffsplitterSession: ObservableObject {
 
     private func endContinuedProcessing(success: Bool) {
 #if os(iOS)
-        continuedProcessing?.finish(success: success)
+        continuedProcessing?.finish(
+            success: success && UIApplication.shared.applicationState != .active
+        )
         continuedProcessing = nil
 #endif
     }
@@ -4630,6 +4632,7 @@ final class DiffsplitterSession: ObservableObject {
         let ignoreWhitespace = self.ignoreWhitespace
         compareTask?.cancel()
         let generation = bumpCompareGeneration()
+        let compareStartedAt = Date()
         isComparing = true
         memberLoadProgress = DiffsplitterIndexProgress(
             fractionCompleted: 0,
@@ -4656,7 +4659,11 @@ final class DiffsplitterSession: ObservableObject {
                 switch result {
                 case .success(let aligned):
                     self.applyRows(aligned)
-                    self.endContinuedProcessingIfCurrent(generation: generation, success: true)
+                    self.finishSuccessfulCompare(
+                        label: L10n.t("Comparison"),
+                        startedAt: compareStartedAt,
+                        generation: generation
+                    )
                 case .failure(let error):
                     self.endContinuedProcessingIfCurrent(generation: generation, success: false)
                     if error is CancellationError { return }
@@ -5660,8 +5667,7 @@ final class DiffsplitterSession: ObservableObject {
     }
     private func finishSuccessfulCompare(label: String, startedAt: Date, generation: UInt64) {
         guard generation == compareGeneration else { return }
-        endContinuedProcessing(success: true)
-        let shouldNotify: Bool = {
+        let includeBanner: Bool = {
 #if os(iOS)
             let suppress = suppressCompletionBannerForCurrentCompare
             suppressCompletionBannerForCurrentCompare = false
@@ -5670,12 +5676,12 @@ final class DiffsplitterSession: ObservableObject {
             return true
 #endif
         }()
-        if shouldNotify {
-            DiffsplitterCompletionFeedback.notifyIfNeeded(
-                elapsed: Date().timeIntervalSince(startedAt),
-                label: label
-            )
-        }
+        DiffsplitterCompletionFeedback.notifyIfNeeded(
+            elapsed: Date().timeIntervalSince(startedAt),
+            label: label,
+            includeBanner: includeBanner
+        )
+        endContinuedProcessing(success: true)
         EntityTracker.shared.record(
             source: .diffsplitter,
             arguments: [
@@ -5818,6 +5824,7 @@ final class DiffsplitterSession: ObservableObject {
                 }
                 guard url != nil else { return }
 #endif
+                DocumentSaveFeedback.playSoundIfEnabled()
             } catch is CancellationError {
                 return
             } catch {
@@ -6093,6 +6100,7 @@ final class DiffsplitterSession: ObservableObject {
                 source: .diffsplitter,
                 arguments: [activity.rawValue, url.lastPathComponent]
             )
+            DocumentSaveFeedback.playSoundIfEnabled()
             return true
         } catch {
             documentError = error.localizedDescription
