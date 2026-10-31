@@ -929,49 +929,17 @@ enum Panel: Identifiable, Hashable, Codable {
         }
     }
 
-    private var iconGradientColors: [Color] {
+    fileprivate func iconGradientColors(dark: Bool) -> [Color] {
+        let light: [(Double, Double, Double)]
         switch self {
-        case .general: return [Color(red: 0.61, green: 0.61, blue: 0.63), Color(red: 0.45, green: 0.45, blue: 0.47)]
-        case .diffsplitter: return [Color(red: 0.10, green: 0.58, blue: 0.34), Color(red: 0.00, green: 0.435, blue: 0.243)]
-        case .entityTracker: return [Color(red: 0.45, green: 0.38, blue: 0.90), Color(red: 0.30, green: 0.24, blue: 0.72)]
-        case .about: return [Color(red: 0.22, green: 0.62, blue: 1.00), Color(red: 0.00, green: 0.42, blue: 0.92)]
-        case .acknowledge: return [Color(red: 1.00, green: 0.82, blue: 0.18), Color(red: 0.95, green: 0.58, blue: 0.00)]
+        case .general: light = [(0.61, 0.61, 0.63), (0.45, 0.45, 0.47)]
+        case .diffsplitter: light = [(0.10, 0.58, 0.34), (0.00, 0.435, 0.243)]
+        case .entityTracker: light = [(0.45, 0.38, 0.90), (0.30, 0.24, 0.72)]
+        case .about: light = [(0.22, 0.62, 1.00), (0.00, 0.42, 0.92)]
+        case .acknowledge: light = [(1.00, 0.82, 0.18), (0.95, 0.58, 0.00)]
         }
-    }
-
-    @ViewBuilder
-    private var settingsIconBadge: some View {
-#if os(macOS)
-        let side: CGFloat = 22, corner: CGFloat = 5, asset: CGFloat = 14
-        let symbol: CGFloat = self == .entityTracker ? 9 : 11
-#else
-        let side: CGFloat = 28, corner: CGFloat = 6.5, asset: CGFloat = 18
-        let symbol: CGFloat = self == .entityTracker ? 11 : 14
-#endif
-        ZStack {
-            RoundedRectangle(cornerRadius: corner, style: .continuous)
-                .fill(LinearGradient(colors: iconGradientColors, startPoint: .top, endPoint: .bottom))
-                .frame(width: side, height: side)
-            Group {
-                if self == .diffsplitter {
-                    Image("DiffsplitterIconIPOSF")
-                        .renderingMode(.template)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: asset, height: asset)
-                } else {
-                    Image(systemName: systemImage)
-                        .font(.system(size: symbol, weight: .semibold))
-                        .symbolRenderingMode(.monochrome)
-                }
-            }
-            .foregroundStyle(.white)
-        }
-        .drawingGroup()
-#if os(macOS)
-        .shadow(color: Color.black.opacity(0.22), radius: 1.2, y: 0.8)
-#endif
-        .accessibilityHidden(true)
+        let factor = dark ? 0.38 : 1.0
+        return light.map { Color(red: $0.0 * factor, green: $0.1 * factor, blue: $0.2 * factor) }
     }
 
     @ViewBuilder
@@ -979,7 +947,7 @@ enum Panel: Identifiable, Hashable, Codable {
         Label {
             Text(title)
         } icon: {
-            settingsIconBadge
+            SettingsIconBadge(panel: self)
         }
     }
 
@@ -999,6 +967,59 @@ enum Panel: Identifiable, Hashable, Codable {
         default:
             Label(title, systemImage: systemImage)
         }
+    }
+}
+
+private struct SettingsIconBadge: View {
+    let panel: Panel
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+#if os(macOS)
+        let side: CGFloat = 22, corner: CGFloat = 5, asset: CGFloat = 14
+        let symbol: CGFloat = panel == .entityTracker ? 9 : 11
+#else
+        let side: CGFloat = 28, corner: CGFloat = 6.5, asset: CGFloat = 18
+        let symbol: CGFloat = panel == .entityTracker ? 11 : 14
+#endif
+        let isDark = colorScheme == .dark
+        let colors = panel.iconGradientColors(dark: isDark)
+        let shape = RoundedRectangle(cornerRadius: corner, style: .continuous)
+        let tint = colors.last ?? .gray
+
+        let icon = Group {
+            if panel == .diffsplitter {
+                Image("DiffsplitterIconIPOSF")
+                    .renderingMode(.template)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: asset, height: asset)
+            } else {
+                Image(systemName: panel.systemImage)
+                    .font(.system(size: symbol, weight: .semibold))
+                    .symbolRenderingMode(.monochrome)
+            }
+        }
+        .foregroundStyle(.white)
+
+        Group {
+            if #available(macOS 26.0, iOS 26.0, *) {
+                icon
+                    .frame(width: side, height: side)
+                    .glassEffect(.regular.tint(tint), in: shape)
+            } else {
+                ZStack {
+                    shape
+                        .fill(LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom))
+                    icon
+                }
+                .frame(width: side, height: side)
+#if os(macOS)
+                .shadow(color: Color.black.opacity(isDark ? 0.35 : 0.22), radius: 1.2, y: 0.8)
+#endif
+            }
+        }
+        .accessibilityHidden(true)
     }
 }
 
