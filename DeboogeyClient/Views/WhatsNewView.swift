@@ -18,19 +18,11 @@ struct WhatsNewView: View {
 
     private let entries: [WhatsNewEntry] = [
         WhatsNewEntry(
-            scope: .MCEOnly,
-            icon: "eyeglasses",
-            color: .accentColor,
-            title: "Entity Tracker",
-            description: "You can now track modifications made using iPhone, iPad and Apple Vision."
-        ),
-        
-        WhatsNewEntry(
             scope: .unified,
-            icon: "info.circle",
+            icon: "hand.wave",
             color: .accentColor,
-            title: "Improvements",
-            description: "A Legal section is now available in-app, and new version changes can now also be viewed on iPhone, iPad and Apple Vision."
+            title: "PlaceholderText1",
+            description: "PlaceholderText2"
         ),
     ]
 

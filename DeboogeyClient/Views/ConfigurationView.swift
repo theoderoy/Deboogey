@@ -293,12 +293,29 @@ private struct GeneralPanelView: View {
     private var panels: some View {
 #if os(macOS)
         configurationSection(header: "Sounds") {
+            Toggle(isOn: $vm.playIndexingDoneSound) {
+                Label {
+                    Text(L10n.t("Play a sound when Loupe Machine finishes an index cycle"))
+                } icon: {
+                    Image(systemName: "scope")
+                }
+            }
+            configurationSecondaryCaption(
+                L10n.t("Notify with a sound and banner when Loupe Machine finishes an index cycle.")
+            )
+
+            diffsplitterSoundControls
+
             Toggle(isOn: $vm.playToolCycleSound) {
+                Label {
 #if DEBOOGEY_MCE
-                Text(L10n.t("Play sounds when Cocoa Debug Menu finishes or fails"))
+                    Text(L10n.t("Play sounds when Cocoa Debug Menu finishes or fails"))
 #else
-                Text(L10n.t("Play sounds when Apple System Tools finish or fail"))
+                    Text(L10n.t("Play sounds when Apple System Tools finish or fail"))
 #endif
+                } icon: {
+                    Image(systemName: "wrench.and.screwdriver")
+                }
             }
 #if DEBOOGEY_MCE
             configurationSecondaryCaption(
@@ -309,15 +326,6 @@ private struct GeneralPanelView: View {
                 L10n.t("Play sounds when Apple System Tools complete successfully or halt due to an error.")
             )
 #endif
-
-            Toggle(isOn: $vm.playIndexingDoneSound) {
-                Text(L10n.t("Play a sound when Loupe Machine finishes an index cycle"))
-            }
-            configurationSecondaryCaption(
-                L10n.t("Notify with a sound and banner when Loupe Machine finishes an index cycle.")
-            )
-
-            diffsplitterSoundControls
         }
 #else
         if configurationShowsDiffsplitter {
@@ -413,7 +421,15 @@ private struct GeneralPanelView: View {
     @ViewBuilder
     private var diffsplitterSoundControls: some View {
         Toggle(isOn: $vm.playDiffsplitterDoneSound) {
-            Text(DiffsplitterCompletionFeedback.completionNotifyTitle)
+            Label {
+                Text(DiffsplitterCompletionFeedback.completionNotifyTitle)
+            } icon: {
+                Image("DiffsplitterIconIPOSF")
+                    .renderingMode(.template)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 16, height: 16)
+            }
         }
         configurationSecondaryCaption(DiffsplitterCompletionFeedback.completionNotifyCaption)
 
@@ -755,7 +771,7 @@ private struct AcknowledgementsPanelView: View {
         configurationSection(header: "Special Thanks") {
             creditRows([
                 ("Salty", "Insight", "https://github.com/ogui-775", "star.fill", .yellow),
-                ("Kyan Van Ostaeyen", "Tester", "https://instagram.com/kyan_van_ostaeyen", "gearshape", .green),
+                ("Kyan Van Ostaeyen", "Insight", "https://instagram.com/kyan_van_ostaeyen", "star.fill", .yellow),
                 ("Arjan Minnaert", "Tester", "https://instagram.com/realarjan_", "gearshape", .green),
                 ("1davi", "Tester", "https://github.com/1davi", "gearshape", .green),
                 ("Alex Spaulding", "Tester", "https://github.com/aspauldingcode", "gearshape", .green),
