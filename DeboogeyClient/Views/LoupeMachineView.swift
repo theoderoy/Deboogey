@@ -870,6 +870,7 @@ struct LoupeMachineView: View {
                 source: .loupeMachine,
                 arguments: [activity.rawValue, url.lastPathComponent]
             )
+            DocumentSaveFeedback.playSoundIfEnabled()
             completion(true)
         case .failure(let error):
             let nsError = error as NSError
@@ -899,6 +900,7 @@ struct LoupeMachineView: View {
                 source: .loupeMachine,
                 arguments: [activity.rawValue, url.lastPathComponent]
             )
+            DocumentSaveFeedback.playSoundIfEnabled()
             completion(true)
         } catch {
             documentError = error.localizedDescription
@@ -1169,7 +1171,6 @@ struct LoupeMachineView: View {
                 identifier
             ]
         )
-        IndexCompletionFeedback.playSoundIfEnabled()
         IndexCompletionFeedback.notifyIndexingFinished(for: applicationName)
     }
 #endif

@@ -81,29 +81,40 @@ enum DiffsplitterCompletionFeedback {
     static func notifyIfNeeded(
         elapsed: TimeInterval,
         label: String,
+        includeBanner: Bool = true,
         defaults: UserDefaults = .standard,
         bundle: Bundle = .main
     ) {
         guard defaults.bool(forKey: soundPreferenceKey) else { return }
-        if !shouldBypassMinimumDuration(defaults: defaults) {
+        let backgroundNotify = shouldBypassMinimumDuration(defaults: defaults)
+        if !backgroundNotify, includeBanner {
             guard elapsed >= preferredMinimumSeconds(defaults: defaults) else { return }
         }
-        _ = BundleAIFSound.play(
-            named: BundleAIFSound.processDoneName,
-            bundle: bundle,
-            volume: BundleAIFSound.processDoneVolume
-        )
-        BannerNotificationCenter.shared.notify(
-            title: L10n.t("Diffsplitter Finished"),
-            body: L10n.f("%@ finished comparing", label),
-            identifierPrefix: "diffsplitter-complete"
-        )
+        if isAppActive {
+            BundleAIFSound.playProcessDone(bundle: bundle)
+        }
+        if includeBanner || backgroundNotify {
+            BannerNotificationCenter.shared.notify(
+                title: L10n.t("Diffsplitter Finished"),
+                body: L10n.f("%@ finished comparing", label),
+                identifierPrefix: "diffsplitter-complete",
+                playsSound: false
+            )
+        }
+    }
+
+    private static var isAppActive: Bool {
+#if os(iOS)
+        UIApplication.shared.applicationState == .active
+#else
+        true
+#endif
     }
 
     private static func shouldBypassMinimumDuration(defaults: UserDefaults) -> Bool {
 #if os(iOS)
         guard usesLiveActivityUX, defaults.bool(forKey: notifyWhenBackgroundedKey) else { return false }
-        return UIApplication.shared.applicationState != .active
+        return !isAppActive
 #else
         return false
 #endif

@@ -291,21 +291,39 @@ private struct GeneralPanelView: View {
     
     @ViewBuilder
     private var panels: some View {
-#if os(macOS)
+#if os(iOS)
+        if configurationShowsDiffsplitter, DiffsplitterCompletionFeedback.usesLiveActivityUX {
+            configurationSection(header: DiffsplitterCompletionFeedback.completionNotifySectionHeader) {
+                diffsplitterCompletionControls
+            }
+        }
+#endif
+
         configurationSection(header: "Sounds") {
+#if os(macOS)
             Toggle(isOn: $vm.playIndexingDoneSound) {
                 Label {
                     Text(L10n.t("Play a sound when Loupe Machine finishes an index cycle"))
                 } icon: {
-                    Image(systemName: "scope")
+                    Image(systemName: "loupe")
                 }
             }
             configurationSecondaryCaption(
                 L10n.t("Notify with a sound and banner when Loupe Machine finishes an index cycle.")
             )
 
-            diffsplitterSoundControls
+            if configurationShowsDiffsplitter {
+                diffsplitterCompletionControls
+            }
+#else
+            if configurationShowsDiffsplitter, !DiffsplitterCompletionFeedback.usesLiveActivityUX {
+                diffsplitterCompletionControls
+            }
+#endif
 
+            documentSaveSoundControls
+
+#if os(macOS)
             Toggle(isOn: $vm.playToolCycleSound) {
                 Label {
 #if DEBOOGEY_MCE
@@ -326,14 +344,8 @@ private struct GeneralPanelView: View {
                 L10n.t("Play sounds when Apple System Tools complete successfully or halt due to an error.")
             )
 #endif
-        }
-#else
-        if configurationShowsDiffsplitter {
-            configurationSection(header: DiffsplitterCompletionFeedback.completionNotifySectionHeader) {
-                diffsplitterSoundControls
-            }
-        }
 #endif
+        }
 
         configurationSection(header: "Appearance") {
             Toggle(isOn: $vm.animateEmptyDocumentBackgrounds) {
@@ -419,16 +431,36 @@ private struct GeneralPanelView: View {
     }
     
     @ViewBuilder
-    private var diffsplitterSoundControls: some View {
+    private var documentSaveSoundControls: some View {
+        Toggle(isOn: $vm.playDocumentSaveSound) {
+            Label {
+                Text(L10n.t("Play a sound when a Deboogey document is saved"))
+            } icon: {
+                Image(systemName: "square.and.arrow.down")
+            }
+        }
+        configurationSecondaryCaption(
+            configurationShowsDiffsplitter
+                ? L10n.t("Plays when a Loupe Machine, Diffsplitter, or DiffsplitterX document is written successfully.")
+                : L10n.t("Plays when a Loupe Machine document is written successfully.")
+        )
+    }
+
+    @ViewBuilder
+    private var diffsplitterCompletionControls: some View {
         Toggle(isOn: $vm.playDiffsplitterDoneSound) {
             Label {
                 Text(DiffsplitterCompletionFeedback.completionNotifyTitle)
             } icon: {
-                Image("DiffsplitterIconIPOSF")
-                    .renderingMode(.template)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 16, height: 16)
+                if DiffsplitterCompletionFeedback.usesLiveActivityUX {
+                    Image(systemName: DiffsplitterCompletionFeedback.completionNotifySymbolName)
+                } else {
+                    Image("DiffsplitterIconIPOSF")
+                        .renderingMode(.template)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 16, height: 16)
+                }
             }
         }
         configurationSecondaryCaption(DiffsplitterCompletionFeedback.completionNotifyCaption)
@@ -854,7 +886,7 @@ enum Panel: Identifiable, Hashable, Codable {
         if configurationShowsDiffsplitter {
             [.general, .diffsplitter, .entityTracker, .about, .acknowledge]
         } else {
-            [.entityTracker, .about, .acknowledge]
+            [.general, .entityTracker, .about, .acknowledge]
         }
 #else
         [.general, .diffsplitter, .entityTracker, .acknowledge]
@@ -905,7 +937,7 @@ enum Panel: Identifiable, Hashable, Codable {
                     .renderingMode(.template)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 16, height: 16)
+                    .frame(width: 20, height: 20)
             }
         default:
             Label(title, systemImage: systemImage)
@@ -969,6 +1001,10 @@ final class ConfigurationViewModel: ObservableObject {
 
     @Published var playIndexingDoneSound: Bool {
         didSet { vars.playIndexingDoneSound = playIndexingDoneSound }
+    }
+
+    @Published var playDocumentSaveSound: Bool {
+        didSet { vars.playDocumentSaveSound = playDocumentSaveSound }
     }
 
     @Published var playToolCycleSound: Bool {
@@ -1046,6 +1082,7 @@ final class ConfigurationViewModel: ObservableObject {
         self.entityTrackerAutoDeleteTrigger = "login"
         self.entityTrackerAutoDeleteLoupeActivities = false
         self.playIndexingDoneSound = false
+        self.playDocumentSaveSound = false
         self.playToolCycleSound = false
         self.playDiffsplitterDoneSound = false
         self.diffsplitterNotifyWhenBackgrounded = false
@@ -1127,6 +1164,7 @@ final class ConfigurationViewModel: ObservableObject {
         entityTrackerAutoDeleteTrigger = vars.entityTrackerAutoDeleteTrigger
         entityTrackerAutoDeleteLoupeActivities = vars.entityTrackerAutoDeleteLoupeActivities
         playIndexingDoneSound = vars.playIndexingDoneSound
+        playDocumentSaveSound = vars.playDocumentSaveSound
         playToolCycleSound = vars.playToolCycleSound
         playDiffsplitterDoneSound = vars.playDiffsplitterDoneSound
         diffsplitterNotifyWhenBackgrounded = vars.diffsplitterNotifyWhenBackgrounded
@@ -1204,10 +1242,6 @@ private struct PanelDetail: View {
 
 struct ConfigurationRootView: View {
     @StateObject private var vm = ConfigurationViewModel()
-#if os(iOS)
-    @ObservedObject private var diffsplitterAvailability = MCEIOSFeatureSupport.Model.shared
-    @State private var pendingMaintenanceAction: ConfigurationMaintenanceAction?
-#endif
 
     var body: some View {
 #if os(iOS)
@@ -1223,16 +1257,8 @@ struct ConfigurationRootView: View {
                     }
                 }
             }
-            if !diffsplitterAvailability.diffsplitter {
-                Section(header: Text(L10n.t("Maintenance"))) {
-                    ConfigurationMaintenanceRows { pendingMaintenanceAction = $0 }
-                }
-            }
         }
         .navigationTitle(PersistentVariables.settingsDisplayTitle())
-        .configurationMaintenanceAlert(pending: $pendingMaintenanceAction) {
-            vm.performMaintenance($0)
-        }
 #else
         if #available(macOS 14.0, *) {
             ModernNavigationView(vm: vm)
