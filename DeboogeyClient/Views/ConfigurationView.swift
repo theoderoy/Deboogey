@@ -46,6 +46,9 @@ private func groupedSectionThing<Content: View>(
         RoundedRectangle(cornerRadius: 10)
             .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
     )
+#if os(macOS)
+    .shadow(color: Color.black.opacity(0.08), radius: 3, y: 1.5)
+#endif
 }
 
 private struct LegacyGroupedSection<Content: View>: View {
@@ -926,8 +929,62 @@ enum Panel: Identifiable, Hashable, Codable {
         }
     }
 
+    private var iconGradientColors: [Color] {
+        switch self {
+        case .general: return [Color(red: 0.61, green: 0.61, blue: 0.63), Color(red: 0.45, green: 0.45, blue: 0.47)]
+        case .diffsplitter: return [Color(red: 0.10, green: 0.58, blue: 0.34), Color(red: 0.00, green: 0.435, blue: 0.243)]
+        case .entityTracker: return [Color(red: 0.45, green: 0.38, blue: 0.90), Color(red: 0.30, green: 0.24, blue: 0.72)]
+        case .about: return [Color(red: 0.22, green: 0.62, blue: 1.00), Color(red: 0.00, green: 0.42, blue: 0.92)]
+        case .acknowledge: return [Color(red: 1.00, green: 0.82, blue: 0.18), Color(red: 0.95, green: 0.58, blue: 0.00)]
+        }
+    }
+
+    @ViewBuilder
+    private var settingsIconBadge: some View {
+#if os(macOS)
+        let side: CGFloat = 22, corner: CGFloat = 5, asset: CGFloat = 14
+        let symbol: CGFloat = self == .entityTracker ? 9 : 11
+#else
+        let side: CGFloat = 28, corner: CGFloat = 6.5, asset: CGFloat = 18
+        let symbol: CGFloat = self == .entityTracker ? 11 : 14
+#endif
+        ZStack {
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(LinearGradient(colors: iconGradientColors, startPoint: .top, endPoint: .bottom))
+                .frame(width: side, height: side)
+            Group {
+                if self == .diffsplitter {
+                    Image("DiffsplitterIconIPOSF")
+                        .renderingMode(.template)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: asset, height: asset)
+                } else {
+                    Image(systemName: systemImage)
+                        .font(.system(size: symbol, weight: .semibold))
+                        .symbolRenderingMode(.monochrome)
+                }
+            }
+            .foregroundStyle(.white)
+        }
+        .drawingGroup()
+#if os(macOS)
+        .shadow(color: Color.black.opacity(0.22), radius: 1.2, y: 0.8)
+#endif
+        .accessibilityHidden(true)
+    }
+
     @ViewBuilder
     var label: some View {
+        Label {
+            Text(title)
+        } icon: {
+            settingsIconBadge
+        }
+    }
+
+    @ViewBuilder
+    var tabLabel: some View {
         switch self {
         case .diffsplitter:
             Label {
@@ -1267,22 +1324,22 @@ struct ConfigurationRootView: View {
             TabView {
                 GeneralPanelView(vm: vm)
                     .tabItem {
-                        Panel.general.label
+                        Panel.general.tabLabel
                     }
 
                 DiffsplitterPanelView(vm: vm)
                     .tabItem {
-                        Panel.diffsplitter.label
+                        Panel.diffsplitter.tabLabel
                     }
                 
                 EntityTrackerPanelView(vm: vm)
                     .tabItem {
-                        Panel.entityTracker.label
+                        Panel.entityTracker.tabLabel
                     }
                 
                 AcknowledgementsPanelView(vm: vm)
                     .tabItem {
-                        Panel.acknowledge.label
+                        Panel.acknowledge.tabLabel
                     }
             }
             .minimumWindowContentSize(AppWindowSizing.Configuration.legacy)

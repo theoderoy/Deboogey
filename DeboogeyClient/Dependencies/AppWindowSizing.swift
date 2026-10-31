@@ -22,7 +22,7 @@ struct AppWindowSize {
 }
 
 enum AppWindowSizing {
-    static let root = AppWindowSize(width: 448, height: 520)
+    static let root = AppWindowSize(width: 508, height: 453)
     static let loupeMachine = AppWindowSize(width: 960, height: 720)
     static let diffsplitter = AppWindowSize(width: 960, height: 720)
     static let entityTracker = AppWindowSize(width: 560, height: 480)
@@ -64,8 +64,12 @@ extension Scene {
             )
             .defaultPosition(.center)
     }
-}
 
+    func deboogeyRootWindowPlacement() -> some Scene {
+        deboogeyWindowPlacement(AppWindowSizing.root)
+            .windowResizability(.contentSize)
+    }
+}
 extension NSWindow {
     private func layoutHostingContent() {
         contentView?.layoutSubtreeIfNeeded()
@@ -91,6 +95,29 @@ extension NSWindow {
     func applyDefaultContentSize(_ sizing: AppWindowSize) {
         setContentSize(sizing.defaultSize)
         minSize = frameRect(forContentRect: NSRect(origin: .zero, size: sizing.minimumSize)).size
+    }
+
+    func applyFixedLauncherChrome() {
+        var mask = styleMask
+        mask.remove(.resizable)
+        if styleMask != mask { styleMask = mask }
+
+        var behavior = collectionBehavior
+        behavior.remove([.fullScreenPrimary, .fullScreenAuxiliary, .fullScreenAllowsTiling])
+        behavior.insert(.fullScreenNone)
+        if collectionBehavior != behavior { collectionBehavior = behavior }
+
+        isRestorable = false
+        setFrameAutosaveName("")
+        if let zoom = standardWindowButton(.zoomButton) {
+            zoom.isEnabled = false
+            zoom.isHidden = true
+        }
+    }
+
+    func refreshFixedLauncherLayout() {
+        sizeToFittingContentAndCenter()
+        applyFixedLauncherChrome()
     }
 }
 #endif

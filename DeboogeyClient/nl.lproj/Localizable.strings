@@ -291,11 +291,14 @@
 "PlaceholderText2" = "Tekenreeksen, tekst, variabelen, plaatsaanduidingen en dergelijke.";
 "Play a sound when Diffsplitter finishes a comparison" = "Geluid afspelen wanneer Diffsplitter een vergelijking voltooit";
 "Play a sound when Loupe Machine finishes an index cycle" = "Geluid afspelen wanneer Loupe Machine een indexeringscyclus voltooit";
+"Play a sound when a Deboogey document is saved" = "Geluid afspelen wanneer een Deboogey-document wordt bewaard";
 "Play background animations on new document creation" = "Achtergrondanimaties afspelen bij aanmaken van een nieuw document";
 "Play sounds when Apple System Tools complete successfully or halt due to an error." = "Geluiden afspelen wanneer Apple-systeemhulpprogramma’s succesvol eindigen of stoppen door een fout.";
 "Play sounds when Apple System Tools finish or fail" = "Geluiden afspelen wanneer Apple-systeemhulpprogramma’s eindigen of mislukken";
 "Play sounds when Cocoa Debug Menu completes successfully or halts due to an error." = "Geluiden afspelen wanneer Cocoa Debug Menu succesvol eindigt of stopt door een fout.";
 "Play sounds when Cocoa Debug Menu finishes or fails" = "Geluiden afspelen wanneer Cocoa Debug Menu eindigt of mislukt";
+"Plays when a Loupe Machine document is written successfully." = "Wordt afgespeeld wanneer een Loupe Machine-document succesvol is geschreven.";
+"Plays when a Loupe Machine, Diffsplitter, or DiffsplitterX document is written successfully." = "Wordt afgespeeld wanneer een Loupe Machine-, Diffsplitter- of DiffsplitterX-document succesvol is geschreven.";
 "Preferences" = "Voorkeuren";
 "Preparing DiffsplitterX Document…" = "DiffsplitterX-document voorbereiden…";
 "Preparing binary dump…" = "Binaire dump voorbereiden…";

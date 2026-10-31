@@ -291,11 +291,14 @@
 "PlaceholderText2" = "Strings, text, variables, placeholders and the sort.";
 "Play a sound when Diffsplitter finishes a comparison" = "Play a sound when Diffsplitter finishes a comparison";
 "Play a sound when Loupe Machine finishes an index cycle" = "Play a sound when Loupe Machine finishes an index cycle";
+"Play a sound when a Deboogey document is saved" = "Play a sound when a Deboogey document is saved";
 "Play background animations on new document creation" = "Play background animations on new document creation";
 "Play sounds when Apple System Tools complete successfully or halt due to an error." = "Play sounds when Apple System Tools complete successfully or halt due to an error.";
 "Play sounds when Apple System Tools finish or fail" = "Play sounds when Apple System Tools finish or fail";
 "Play sounds when Cocoa Debug Menu completes successfully or halts due to an error." = "Play sounds when Cocoa Debug Menu completes successfully or halts due to an error.";
 "Play sounds when Cocoa Debug Menu finishes or fails" = "Play sounds when Cocoa Debug Menu finishes or fails";
+"Plays when a Loupe Machine document is written successfully." = "Plays when a Loupe Machine document is written successfully.";
+"Plays when a Loupe Machine, Diffsplitter, or DiffsplitterX document is written successfully." = "Plays when a Loupe Machine, Diffsplitter, or DiffsplitterX document is written successfully.";
 "Preferences" = "Preferences";
 "Preparing DiffsplitterX Document…" = "Preparing DiffsplitterX Document…";
 "Preparing binary dump…" = "Preparing binary dump…";

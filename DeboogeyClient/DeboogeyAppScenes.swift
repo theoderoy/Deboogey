@@ -12,6 +12,12 @@ import SwiftUI
 struct DeboogeyRootContentView: View {
     @ViewBuilder
     var body: some View {
+        rootView
+            .modifier(RootLauncherSceneChrome())
+    }
+
+    @ViewBuilder
+    private var rootView: some View {
         if #available(macOS 13.0, *) {
             RootView().modifier(ExternalDocumentWindowHandler())
         } else {
@@ -23,6 +29,34 @@ struct DeboogeyRootContentView: View {
     }
 }
 
+enum DeboogeyLegacyRootLaunch {
+    static func openIfNeeded(_ open: @escaping () -> Void) {
+        if #unavailable(macOS 13.0) {
+            DispatchQueue.main.async(execute: open)
+        }
+    }
+}
+
+@available(macOS 13.0, *)
+struct DeboogeyRootWindowScene<Content: View>: Scene {
+    @ViewBuilder var content: () -> Content
+
+    var body: some Scene {
+        WindowGroup(content: content)
+            .deboogeyRootWindowPlacement()
+    }
+}
+
+private struct RootLauncherSceneChrome: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *) {
+            content.windowFullScreenBehavior(.disabled)
+        } else {
+            content
+        }
+    }
+}
 @available(macOS 13.0, *)
 struct DeboogeyLoupeDocumentCommands: Commands {
     let openMain: () -> Void
