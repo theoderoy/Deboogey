@@ -37,7 +37,6 @@
 "Alphabetical (Action)" = "Alphabétique (action)";
 "Alphabetical (Target)" = "Alphabétique (cible)";
 "Alphabetical (Tool)" = "Alphabétique (outil)";
-"Also notify immediately in the background" = "Notifier aussi immédiatement en arrière-plan";
 "Appearance" = "Apparence";
 "Apply" = "Appliquer";
 "Apply All Pending" = "Appliquer toutes les modifications en attente";
@@ -188,6 +187,7 @@
 "Imported application: %@" = "Application importée : %@";
 "Importing DiffsplitterX Document…" = "Importation du document DiffsplitterX…";
 "Import…" = "Importer…";
+"In-App Tones" = "Tonalités in-app";
 "Include Hidden Files" = "Inclure les fichiers masqués";
 "Indexing" = "Indexation";
 "Indexing Finished" = "Indexation terminée";
@@ -208,6 +208,7 @@
 "Invalid arguments. First argument must be 'enable' or 'disable'" = "Arguments invalides. Le premier argument doit être « enable » ou « disable »";
 "Invalid arguments. Unknown flag: %@" = "Arguments invalides. Option inconnue : %@";
 "Keep Local Changes" = "Conserver les valeurs locales en amont";
+"Keeps comparison progress visible in the background. Manage Live Activities and sounds in Settings." = "Garde la progression de la comparaison visible en arrière-plan. Gérez Live Activities et les sons dans Réglages.";
 "Large File Hex Conversion" = "Conversion hexadécimale des gros fichiers";
 "Large File Size Threshold" = "Seuil de taille des gros fichiers";
 "Learn More" = "En savoir plus";
@@ -218,7 +219,6 @@
 "Listing left archive…" = "Lecture de l’archive de gauche…";
 "Listing right archive…" = "Lecture de l’archive de droite…";
 "Live Activity" = "Live Activity";
-"Live Activity when available, otherwise a banner. Plays a sound after the selected minimum duration." = "Live Activity si disponible, sinon une bannière. Émet un son après la durée minimale sélectionnée.";
 "Loading left…" = "Chargement à gauche…";
 "Loading right…" = "Chargement à droite…";
 "Loading window…" = "Chargement de la fenêtre…";
@@ -266,7 +266,6 @@
 "No network connection" = "Aucune connexion réseau";
 "No upgrade is present at this time." = "Aucune mise à niveau n’est disponible pour le moment.";
 "Notices" = "Avis";
-"Notify with Live Activity when Diffsplitter finishes" = "Notifier avec Live Activity lorsque Diffsplitter se termine";
 "Notify with a sound and banner when Loupe Machine finishes an index cycle." = "Notifie avec un son et une bannière lorsque Loupe Machine termine un cycle d’indexation.";
 "Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration." = "Notifie avec un son et une bannière lorsqu’une comparaison Diffsplitter dure au moins la durée sélectionnée.";
 "OK" = "OK";
@@ -276,13 +275,13 @@
 "On" = "Activé";
 "On Deboogey Launch" = "Au lancement de Deboogey";
 "On Login" = "À la connexion";
+"Open" = "Ouvrir";
 "Open Diffsplitter Document" = "Ouvrir un document Diffsplitter";
-"Open Diffsplitter Document…" = "Ouvrir un document Diffsplitter…";
 "Open Document" = "Ouvrir le document";
 "Open Loupe Machine Document" = "Ouvrir un document Loupe Machine";
-"Open Loupe Machine Document…" = "Ouvrir un document Loupe Machine…";
 "Open a Loupe Machine document before saving." = "Ouvrez un document Loupe Machine avant d’enregistrer.";
 "Open an existing Loupe Machine document to browse and edit its change set." = "Ouvrez un document Loupe Machine existant pour parcourir et modifier son jeu de modifications.";
+"Open…" = "Ouvrir…";
 "Other" = "Autres";
 "PRESET" = "PRÉRÉGLAGE";
 "Parameters pose this build type as %@." = "Les paramètres présentent ce type de build comme %@.";
@@ -355,16 +354,15 @@
 "Session Disk Space" = "Espace disque de session";
 "Settings" = "Réglages";
 "Show Sidebar" = "Afficher la barre latérale";
+"Show a Live Activity while Diffsplitter compares" = "Afficher une Live Activity pendant la comparaison Diffsplitter";
 "Show a notice when a feature requires Command Line Tools for Xcode to be installed." = "Afficher un avis lorsqu’une fonctionnalité nécessite l’installation de Command Line Tools for Xcode.";
 "Show a notice when network connection is required for upgrades." = "Afficher un avis lorsqu’une connexion réseau est requise pour les mises à niveau.";
 "Show a notice when utilities require security adjustments." = "Afficher un avis lorsque des utilitaires nécessitent des ajustements de sécurité.";
-"Skips Minimum Duration during Live Activity and Background Process." = "Ignore la durée minimale pendant Live Activity et processus en arrière-plan.";
 "SkyLight Diagnostics" = "Diagnostics SkyLight";
 "Some features of this app require Command Line Tools for Xcode." = "Certaines fonctionnalités de cette app nécessitent Command Line Tools for Xcode.";
 "Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks." = "Certaines fonctionnalités de cette app nécessitent la levée des restrictions de débogage.\n\nCes restrictions contribuent à protéger votre Mac. Deboogey n’en tire pas parti de façon malveillante, mais ne les ajustez que si vous comprenez les risques.";
 "Sort" = "Trier";
 "Sort by %@" = "Trier par %@";
-"Sounds" = "Sons";
 "Sourced Article" = "Article source";
 "Sources" = "Sources";
 "Special Thanks" = "Remerciements particuliers";

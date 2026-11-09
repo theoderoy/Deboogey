@@ -6,71 +6,30 @@
 //
 
 import Foundation
-#if canImport(AppKit)
-import AppKit
-#endif
 
 nonisolated enum ToolCycleFeedback {
     private static let preferenceKey = "theoderoy.Deboogey.Tools.playCycleSound"
-    private static let soundVolume: Float = 0.3
 
     static func playComplete(
         defaults: UserDefaults = .standard,
         bundle: Bundle = .main
     ) {
-        guard defaults.bool(forKey: preferenceKey) else { return }
-        play(named: "ToolCycleComplete", bundle: bundle, waitUntilFinished: true)
+        play(.toolCycleComplete, defaults: defaults, bundle: bundle)
     }
 
     static func playHalt(
         defaults: UserDefaults = .standard,
         bundle: Bundle = .main
     ) {
-        guard defaults.bool(forKey: preferenceKey) else { return }
-        play(named: "ToolCycleHalt", bundle: bundle, waitUntilFinished: false)
+        play(.toolCycleHalt, defaults: defaults, bundle: bundle)
     }
 
-    private static func play(named name: String, bundle: Bundle, waitUntilFinished: Bool) {
-#if canImport(AppKit)
-        let prepareAndStart: () -> (NSSound, TimeInterval)? = {
-            guard let sound = BundleAIFSound.load(named: name, bundle: bundle, volume: soundVolume) else {
-                return nil
-            }
-            let duration = sound.duration
-            sound.play()
-            return (sound, duration)
-        }
-
-        if !waitUntilFinished {
-            if Thread.isMainThread {
-                _ = prepareAndStart()
-            } else {
-                DispatchQueue.main.async {
-                    _ = prepareAndStart()
-                }
-            }
-            return
-        }
-
-        let started: (NSSound, TimeInterval)?
-        if Thread.isMainThread {
-            started = prepareAndStart()
-        } else {
-            started = DispatchQueue.main.sync {
-                prepareAndStart()
-            }
-        }
-
-        guard let (sound, duration) = started else { return }
-
-        if duration > 0, duration.isFinite {
-            Thread.sleep(forTimeInterval: duration)
-            return
-        }
-
-        while sound.isPlaying {
-            Thread.sleep(forTimeInterval: 0.05)
-        }
-#endif
+    private static func play(
+        _ sound: AppFeedback.Sound,
+        defaults: UserDefaults,
+        bundle: Bundle
+    ) {
+        guard defaults.bool(forKey: preferenceKey) else { return }
+        AppFeedback.play(sound, bundle: bundle)
     }
 }

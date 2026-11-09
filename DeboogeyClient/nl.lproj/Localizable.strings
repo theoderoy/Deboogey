@@ -37,7 +37,6 @@
 "Alphabetical (Action)" = "Alfabetisch (actie)";
 "Alphabetical (Target)" = "Alfabetisch (doel)";
 "Alphabetical (Tool)" = "Alfabetisch (hulpprogramma)";
-"Also notify immediately in the background" = "Ook direct op de achtergrond melden";
 "Appearance" = "Weergave";
 "Apply" = "Toepassen";
 "Apply All Pending" = "Alles in behandeling toepassen";
@@ -188,6 +187,7 @@
 "Imported application: %@" = "Geïmporteerde app: %@";
 "Importing DiffsplitterX Document…" = "DiffsplitterX-document importeren…";
 "Import…" = "Importeer…";
+"In-App Tones" = "In-app tonen";
 "Include Hidden Files" = "Verborgen bestanden opnemen";
 "Indexing" = "Indexeren";
 "Indexing Finished" = "Indexeren voltooid";
@@ -208,6 +208,7 @@
 "Invalid arguments. First argument must be 'enable' or 'disable'" = "Ongeldige argumenten. Het eerste argument moet ‘enable’ of ‘disable’ zijn";
 "Invalid arguments. Unknown flag: %@" = "Ongeldige argumenten. Onbekende vlag: %@";
 "Keep Local Changes" = "Lokale wijzigingen behouden";
+"Keeps comparison progress visible in the background. Manage Live Activities and sounds in Settings." = "Houdt de voortgang van de vergelijking zichtbaar op de achtergrond. Beheer Live Activities en geluiden in Instellingen.";
 "Large File Hex Conversion" = "Hex-conversie grote bestanden";
 "Large File Size Threshold" = "Drempel grootte grote bestanden";
 "Learn More" = "Meer info";
@@ -218,7 +219,6 @@
 "Listing left archive…" = "Linkerarchief weergeven…";
 "Listing right archive…" = "Rechterarchief weergeven…";
 "Live Activity" = "Live Activity";
-"Live Activity when available, otherwise a banner. Plays a sound after the selected minimum duration." = "Live Activity indien beschikbaar, anders een banner. Speelt een geluid af na de geselecteerde minimale duur.";
 "Loading left…" = "Links laden…";
 "Loading right…" = "Rechts laden…";
 "Loading window…" = "Venster laden…";
@@ -266,7 +266,6 @@
 "No network connection" = "Geen netwerkverbinding";
 "No upgrade is present at this time." = "Er is momenteel geen upgrade beschikbaar.";
 "Notices" = "Meldingen";
-"Notify with Live Activity when Diffsplitter finishes" = "Melden met Live Activity wanneer Diffsplitter klaar is";
 "Notify with a sound and banner when Loupe Machine finishes an index cycle." = "Melden met geluid en banner wanneer Loupe Machine een indexeringscyclus voltooit.";
 "Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration." = "Melden met geluid en banner wanneer een Diffsplitter-vergelijking minstens de geselecteerde duur duurt.";
 "OK" = "OK";
@@ -276,13 +275,13 @@
 "On" = "Aan";
 "On Deboogey Launch" = "Bij starten van Deboogey";
 "On Login" = "Bij inloggen";
+"Open" = "Open";
 "Open Diffsplitter Document" = "Diffsplitter-document openen";
-"Open Diffsplitter Document…" = "Diffsplitter-document openen…";
 "Open Document" = "Document openen";
 "Open Loupe Machine Document" = "Loupe Machine-document openen";
-"Open Loupe Machine Document…" = "Loupe Machine-document openen…";
 "Open a Loupe Machine document before saving." = "Open een Loupe Machine-document voordat je bewaart.";
 "Open an existing Loupe Machine document to browse and edit its change set." = "Open een bestaand Loupe Machine-document om de wijzigingsset te bekijken en te bewerken.";
+"Open…" = "Open…";
 "Other" = "Overig";
 "PRESET" = "VOORINSTELLING";
 "Parameters pose this build type as %@." = "Parameters presenteren dit buildtype als %@.";
@@ -355,16 +354,15 @@
 "Session Disk Space" = "Schijfruimte sessie";
 "Settings" = "Instellingen";
 "Show Sidebar" = "Zijbalk tonen";
+"Show a Live Activity while Diffsplitter compares" = "Toon een Live Activity tijdens een Diffsplitter-vergelijking";
 "Show a notice when a feature requires Command Line Tools for Xcode to be installed." = "Toon een melding wanneer een functie vereist dat Command Line Tools for Xcode zijn geïnstalleerd.";
 "Show a notice when network connection is required for upgrades." = "Toon een melding wanneer een netwerkverbinding vereist is voor upgrades.";
 "Show a notice when utilities require security adjustments." = "Toon een melding wanneer hulpprogramma’s beveiligingsaanpassingen vereisen.";
-"Skips Minimum Duration during Live Activity and Background Process." = "Slaat minimale duur over tijdens Live Activity en achtergrondproces.";
 "SkyLight Diagnostics" = "SkyLight Diagnostics";
 "Some features of this app require Command Line Tools for Xcode." = "Sommige functies van deze app vereisen Command Line Tools for Xcode.";
 "Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks." = "Sommige functies van deze app vereisen dat foutopsporingsbeperkingen worden opgeheven.\n\nDit helpt je Mac te beschermen. Deboogey misbruikt dit niet, maar pas dit alleen aan als je de risico’s begrijpt.";
 "Sort" = "Sorteer";
 "Sort by %@" = "Sorteer op %@";
-"Sounds" = "Geluiden";
 "Sourced Article" = "Bronartikel";
 "Sources" = "Bronnen";
 "Special Thanks" = "Speciale dank";

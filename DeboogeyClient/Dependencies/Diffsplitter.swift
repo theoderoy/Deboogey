@@ -10,7 +10,6 @@ import CryptoKit
 import zlib
 import SwiftUI
 import UniformTypeIdentifiers
-import UserNotifications
 import Combine
 #if canImport(AppKit)
 import AppKit
@@ -4062,6 +4061,7 @@ final class DiffsplitterSession: ObservableObject {
         continuedProcessing = nil
         previous?.finish(success: false)
         suppressCompletionBannerForCurrentCompare = false
+        guard DiffsplitterCompletionFeedback.isEnabled else { return }
 
         let generation = compareGeneration
         let handle = await DiffsplitterContinuedProcessing.begin(
@@ -4102,9 +4102,7 @@ final class DiffsplitterSession: ObservableObject {
 
     private func endContinuedProcessing(success: Bool) {
 #if os(iOS)
-        continuedProcessing?.finish(
-            success: success && UIApplication.shared.applicationState != .active
-        )
+        continuedProcessing?.finish(success: success)
         continuedProcessing = nil
 #endif
     }
@@ -5676,12 +5674,21 @@ final class DiffsplitterSession: ObservableObject {
             return true
 #endif
         }()
-        DiffsplitterCompletionFeedback.notifyIfNeeded(
-            elapsed: Date().timeIntervalSince(startedAt),
-            label: label,
-            includeBanner: includeBanner
-        )
-        endContinuedProcessing(success: true)
+#if os(iOS)
+        let continued = continuedProcessing
+        continuedProcessing = nil
+#endif
+        let elapsed = Date().timeIntervalSince(startedAt)
+        Task { @MainActor in
+            await DiffsplitterCompletionFeedback.notifyIfNeeded(
+                elapsed: elapsed,
+                label: label,
+                includeBanner: includeBanner
+            )
+#if os(iOS)
+            continued?.finish(success: true)
+#endif
+        }
         EntityTracker.shared.record(
             source: .diffsplitter,
             arguments: [

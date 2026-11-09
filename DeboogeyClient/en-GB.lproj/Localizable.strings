@@ -37,7 +37,6 @@
 "Alphabetical (Action)" = "Alphabetical (Action)";
 "Alphabetical (Target)" = "Alphabetical (Target)";
 "Alphabetical (Tool)" = "Alphabetical (Tool)";
-"Also notify immediately in the background" = "Also notify immediately in the background";
 "Appearance" = "Appearance";
 "Apply" = "Apply";
 "Apply All Pending" = "Apply All Pending";
@@ -188,6 +187,7 @@
 "Imported application: %@" = "Imported application: %@";
 "Importing DiffsplitterX Document…" = "Importing DiffsplitterX Document…";
 "Import…" = "Import…";
+"In-App Tones" = "In-App Tones";
 "Include Hidden Files" = "Include Hidden Files";
 "Indexing" = "Indexing";
 "Indexing Finished" = "Indexing Finished";
@@ -208,6 +208,7 @@
 "Invalid arguments. First argument must be 'enable' or 'disable'" = "Invalid arguments. First argument must be 'enable' or 'disable'";
 "Invalid arguments. Unknown flag: %@" = "Invalid arguments. Unknown flag: %@";
 "Keep Local Changes" = "Keep Local Changes";
+"Keeps comparison progress visible in the background. Manage Live Activities and sounds in Settings." = "Keeps comparison progress visible in the background. Manage Live Activities and sounds in Settings.";
 "Large File Hex Conversion" = "Large File Hex Conversion";
 "Large File Size Threshold" = "Large File Size Threshold";
 "Learn More" = "Learn More";
@@ -218,7 +219,6 @@
 "Listing left archive…" = "Listing left archive…";
 "Listing right archive…" = "Listing right archive…";
 "Live Activity" = "Live Activity";
-"Live Activity when available, otherwise a banner. Plays a sound after the selected minimum duration." = "Live Activity when available, otherwise a banner. Plays a sound after the selected minimum duration.";
 "Loading left…" = "Loading left…";
 "Loading right…" = "Loading right…";
 "Loading window…" = "Loading window…";
@@ -266,7 +266,6 @@
 "No network connection" = "No network connection";
 "No upgrade is present at this time." = "No upgrade is present at this time.";
 "Notices" = "Notices";
-"Notify with Live Activity when Diffsplitter finishes" = "Notify with Live Activity when Diffsplitter finishes";
 "Notify with a sound and banner when Loupe Machine finishes an index cycle." = "Notify with a sound and banner when Loupe Machine finishes an index cycle.";
 "Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration." = "Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration.";
 "OK" = "OK";
@@ -276,13 +275,13 @@
 "On" = "On";
 "On Deboogey Launch" = "On Deboogey Launch";
 "On Login" = "On Login";
+"Open" = "Open";
 "Open Diffsplitter Document" = "Open Diffsplitter Document";
-"Open Diffsplitter Document…" = "Open Diffsplitter Document…";
 "Open Document" = "Open Document";
 "Open Loupe Machine Document" = "Open Loupe Machine Document";
-"Open Loupe Machine Document…" = "Open Loupe Machine Document…";
 "Open a Loupe Machine document before saving." = "Open a Loupe Machine document before saving.";
 "Open an existing Loupe Machine document to browse and edit its change set." = "Open an existing Loupe Machine document to browse and edit its change set.";
+"Open…" = "Open…";
 "Other" = "Other";
 "PRESET" = "PRESET";
 "Parameters pose this build type as %@." = "Parameters pose this build type as %@.";
@@ -355,16 +354,15 @@
 "Session Disk Space" = "Session Disk Space";
 "Settings" = "Settings";
 "Show Sidebar" = "Show Sidebar";
+"Show a Live Activity while Diffsplitter compares" = "Show a Live Activity while Diffsplitter compares";
 "Show a notice when a feature requires Command Line Tools for Xcode to be installed." = "Show a notice when a feature requires Command Line Tools for Xcode to be installed.";
 "Show a notice when network connection is required for upgrades." = "Show a notice when network connection is required for upgrades.";
 "Show a notice when utilities require security adjustments." = "Show a notice when utilities require security adjustments.";
-"Skips Minimum Duration during Live Activity and Background Process." = "Skips Minimum Duration during Live Activity and Background Process.";
 "SkyLight Diagnostics" = "SkyLight Diagnostics";
 "Some features of this app require Command Line Tools for Xcode." = "Some features of this app require Command Line Tools for Xcode.";
 "Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks." = "Some features of this app require debugging restrictions to be lifted.\n\nThis helps protect your Mac. Deboogey does not take malicious advantage of this, but adjust only if you understand the risks.";
 "Sort" = "Sort";
 "Sort by %@" = "Sort by %@";
-"Sounds" = "Sounds";
 "Sourced Article" = "Sourced Article";
 "Sources" = "Sources";
 "Special Thanks" = "Special Thanks";

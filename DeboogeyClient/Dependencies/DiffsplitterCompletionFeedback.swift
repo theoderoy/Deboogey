@@ -6,13 +6,9 @@
 //
 
 import Foundation
-#if canImport(UIKit)
-import UIKit
-#endif
 
 enum DiffsplitterCompletionFeedback {
     static let soundPreferenceKey = "theoderoy.Deboogey.Diffsplitter.playCompletionSound"
-    static let notifyWhenBackgroundedKey = "theoderoy.Deboogey.Diffsplitter.notifyWhenBackgrounded"
     static let minimumSecondsKey = "theoderoy.Deboogey.Diffsplitter.completionMinimumSeconds"
     static let selectableMinimumSeconds: [Double] = [0] + (5...30).map(Double.init)
     static let minimumSecondsRange: ClosedRange<Double> = 0...30
@@ -50,8 +46,12 @@ enum DiffsplitterCompletionFeedback {
 #endif
     }
 
+    static var isEnabled: Bool {
+        UserDefaults.standard.bool(forKey: soundPreferenceKey)
+    }
+
     static var completionNotifySectionHeader: String {
-        usesLiveActivityUX ? "Live Activity" : "Sounds"
+        usesLiveActivityUX ? "Live Activity" : "In-App Tones"
     }
 
     static var completionNotifySymbolName: String {
@@ -60,13 +60,13 @@ enum DiffsplitterCompletionFeedback {
 
     static var completionNotifyTitle: String {
         usesLiveActivityUX
-            ? L10n.t("Notify with Live Activity when Diffsplitter finishes")
+            ? L10n.t("Show a Live Activity while Diffsplitter compares")
             : L10n.t("Play a sound when Diffsplitter finishes a comparison")
     }
 
     static var completionNotifyCaption: String {
         usesLiveActivityUX
-            ? L10n.t("Live Activity when available, otherwise a banner. Plays a sound after the selected minimum duration.")
+            ? L10n.t("Keeps comparison progress visible in the background. Manage Live Activities and sounds in Settings.")
             : L10n.t("Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration.")
     }
 
@@ -82,41 +82,24 @@ enum DiffsplitterCompletionFeedback {
         elapsed: TimeInterval,
         label: String,
         includeBanner: Bool = true,
-        defaults: UserDefaults = .standard,
-        bundle: Bundle = .main
-    ) {
-        guard defaults.bool(forKey: soundPreferenceKey) else { return }
-        let backgroundNotify = shouldBypassMinimumDuration(defaults: defaults)
-        if !backgroundNotify, includeBanner {
+        defaults: UserDefaults = .standard
+    ) async {
+        let enabled = defaults.bool(forKey: soundPreferenceKey)
+        if usesLiveActivityUX {
+            guard enabled else {
+                await AppFeedback.playIfActive(.processDone)
+                return
+            }
+        } else {
+            guard enabled else { return }
             guard elapsed >= preferredMinimumSeconds(defaults: defaults) else { return }
         }
-        if isAppActive {
-            BundleAIFSound.playProcessDone(bundle: bundle)
-        }
-        if includeBanner || backgroundNotify {
-            BannerNotificationCenter.shared.notify(
-                title: L10n.t("Diffsplitter Finished"),
-                body: L10n.f("%@ finished comparing", label),
-                identifierPrefix: "diffsplitter-complete",
-                playsSound: false
-            )
-        }
-    }
-
-    private static var isAppActive: Bool {
-#if os(iOS)
-        UIApplication.shared.applicationState == .active
-#else
-        true
-#endif
-    }
-
-    private static func shouldBypassMinimumDuration(defaults: UserDefaults) -> Bool {
-#if os(iOS)
-        guard usesLiveActivityUX, defaults.bool(forKey: notifyWhenBackgroundedKey) else { return false }
-        return !isAppActive
-#else
-        return false
-#endif
+        await AppFeedback.deliverCompletion(
+            title: L10n.t("Diffsplitter Finished"),
+            body: L10n.f("%@ finished comparing", label),
+            sound: .processDone,
+            identifierPrefix: "diffsplitter-complete",
+            wantsBanner: includeBanner
+        )
     }
 }

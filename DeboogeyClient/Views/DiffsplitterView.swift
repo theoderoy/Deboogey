@@ -2136,12 +2136,9 @@ struct DiffsplitterEducationView: View {
             .labelsHidden()
             .toggleStyle(.switch)
 
-            if vars.playDiffsplitterDoneSound {
+            if vars.playDiffsplitterDoneSound, !DiffsplitterCompletionFeedback.usesLiveActivityUX {
                 DiffsplitterCompletionDurationControls(
-                    minimumSeconds: $vars.diffsplitterNotifyMinimumSeconds,
-                    notifyWhenBackgrounded: $vars.diffsplitterNotifyWhenBackgrounded,
-                    stacksBackgroundControls: true,
-                    footerUsesForegroundStyle: true
+                    minimumSeconds: $vars.diffsplitterNotifyMinimumSeconds
                 )
             }
 

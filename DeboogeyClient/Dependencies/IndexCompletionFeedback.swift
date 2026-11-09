@@ -15,10 +15,14 @@ enum IndexCompletionFeedback {
         defaults: UserDefaults = .standard
     ) {
         guard defaults.bool(forKey: preferenceKey) else { return }
-        BannerNotificationCenter.shared.notify(
-            title: L10n.t("Indexing Finished"),
-            body: L10n.f("%@ was completely indexed", applicationName),
-            identifierPrefix: "indexing-complete"
-        )
+        Task {
+            await AppFeedback.deliverCompletion(
+                title: L10n.t("Indexing Finished"),
+                body: L10n.f("%@ was completely indexed", applicationName),
+                sound: .processDone,
+                identifierPrefix: "indexing-complete",
+                wantsBanner: true
+            )
+        }
     }
 }

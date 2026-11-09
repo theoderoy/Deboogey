@@ -24,10 +24,6 @@ enum DocumentSaveFeedback {
     ) {
         migrateIfNeeded(defaults: defaults)
         guard defaults.bool(forKey: preferenceKey) else { return }
-        _ = BundleAIFSound.play(
-            named: BundleAIFSound.documentSaveSuccessName,
-            bundle: bundle,
-            volume: BundleAIFSound.documentSaveSuccessVolume
-        )
+        AppFeedback.play(.documentSaved, bundle: bundle)
     }
 }

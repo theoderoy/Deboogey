@@ -302,7 +302,7 @@ private struct GeneralPanelView: View {
         }
 #endif
 
-        configurationSection(header: "Sounds") {
+        configurationSection(header: "In-App Tones") {
 #if os(macOS)
             Toggle(isOn: $vm.playIndexingDoneSound) {
                 Label {
@@ -468,10 +468,9 @@ private struct GeneralPanelView: View {
         }
         configurationSecondaryCaption(DiffsplitterCompletionFeedback.completionNotifyCaption)
 
-        if vm.playDiffsplitterDoneSound {
+        if vm.playDiffsplitterDoneSound, !DiffsplitterCompletionFeedback.usesLiveActivityUX {
             DiffsplitterCompletionDurationControls(
                 minimumSeconds: $vm.diffsplitterNotifyMinimumSeconds,
-                notifyWhenBackgrounded: $vm.diffsplitterNotifyWhenBackgrounded,
                 showsResetButton: true
             )
         }
@@ -1093,10 +1092,6 @@ final class ConfigurationViewModel: ObservableObject {
         didSet { vars.playDiffsplitterDoneSound = playDiffsplitterDoneSound }
     }
 
-    @Published var diffsplitterNotifyWhenBackgrounded: Bool {
-        didSet { vars.diffsplitterNotifyWhenBackgrounded = diffsplitterNotifyWhenBackgrounded }
-    }
-
     @Published var diffsplitterNotifyMinimumSeconds: Double {
         didSet { vars.diffsplitterNotifyMinimumSeconds = diffsplitterNotifyMinimumSeconds }
     }
@@ -1163,7 +1158,6 @@ final class ConfigurationViewModel: ObservableObject {
         self.playDocumentSaveSound = false
         self.playToolCycleSound = false
         self.playDiffsplitterDoneSound = false
-        self.diffsplitterNotifyWhenBackgrounded = false
         self.diffsplitterNotifyMinimumSeconds = 0
         self.diffsplitterStatusPriority = []
         self.diffsplitterIncludeHiddenFiles = false
@@ -1245,7 +1239,6 @@ final class ConfigurationViewModel: ObservableObject {
         playDocumentSaveSound = vars.playDocumentSaveSound
         playToolCycleSound = vars.playToolCycleSound
         playDiffsplitterDoneSound = vars.playDiffsplitterDoneSound
-        diffsplitterNotifyWhenBackgrounded = vars.diffsplitterNotifyWhenBackgrounded
         diffsplitterNotifyMinimumSeconds = vars.diffsplitterNotifyMinimumSeconds
         diffsplitterStatusPriority = vars.diffsplitterStatusPriority
         diffsplitterIncludeHiddenFiles = vars.diffsplitterIncludeHiddenFiles

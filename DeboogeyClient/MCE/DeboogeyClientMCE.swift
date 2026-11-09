@@ -89,23 +89,22 @@ private struct MCEAboutCommands: Commands {
     }
 }
 
-private struct MCELegacyCommands: Commands {
+private struct MCERootCommands: Commands {
+    let openMain: () -> Void
+
     var body: some Commands {
-        DocumentToolCommandSet(
-            createLoupeDocument: { LoupeMachineNavigation.openLegacy(documentAt: nil) },
-            openLoupeDocument: LoupeMachineNavigation.chooseDocumentLegacy,
-            createDiffsplitterDocument: { DiffsplitterNavigation.openLegacy(documentAt: nil) },
-            openDiffsplitterDocument: DiffsplitterNavigation.chooseDocumentLegacy,
-            openMain: { MCEWindowController.open(.main) }
-        )
+        MCEAboutCommands()
+        LegacyDocumentToolCommands(openMain: openMain)
+        LegacyWindowLauncherCommands(openMain: openMain)
     }
 }
 
-private struct MCERootCommands: Commands {
+@available(macOS 13.0, *)
+private struct MCEModernRootCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+
     var body: some Commands {
-        MCEAboutCommands()
-        MCELegacyCommands()
-        LegacyWindowLauncherCommands(openMain: { MCEWindowController.open(.main) })
+        MCERootCommands(openMain: { DeboogeyRootNavigation.open(using: openWindow) })
     }
 }
 
@@ -123,16 +122,23 @@ struct DeboogeyClientMCE: App {
                 DeboogeyRootContentView()
                     .environment(\.locale, L10n.locale)
             }
+            .commands {
+                MCEModernRootCommands()
+            }
         }
         ConfigurationLegacy()
-            .commands { MCERootCommands() }
+            .commands {
+                if #unavailable(macOS 13.0) {
+                    MCERootCommands(openMain: { MCEWindowController.open(.main) })
+                }
+            }
 
         if #available(macOS 14.0, *) {
             ConfigurationModern()
         }
 
         if #available(macOS 13.0, *) {
-            DeboogeyLoupeCommandsScene(openMain: { MCEWindowController.open(.main) })
+            DeboogeyLoupeCommandsScene()
             DeboogeyDiffsplitterScene()
             EntityTrackerScene()
         }

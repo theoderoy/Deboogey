@@ -84,18 +84,6 @@ private struct UpgradeCommands: Commands {
     }
 }
 
-private struct LoupeMachineLegacyCommands: Commands {
-    var body: some Commands {
-        DocumentToolCommandSet(
-            createLoupeDocument: { LoupeMachineNavigation.openLegacy(documentAt: nil) },
-            openLoupeDocument: LoupeMachineNavigation.chooseDocumentLegacy,
-            createDiffsplitterDocument: { DiffsplitterNavigation.openLegacy(documentAt: nil) },
-            openDiffsplitterDocument: DiffsplitterNavigation.chooseDocumentLegacy,
-            openMain: DeboogeyWindowController.openMain
-        )
-    }
-}
-
 private struct SceneSwitcher: Scene {
     let sipSatisfied: Bool
 
@@ -103,7 +91,12 @@ private struct SceneSwitcher: Scene {
     var body: some Scene {
         ConfigurationLegacy()
             .commands {
-                RootPrimaryWindowCommands(sipSatisfied: sipSatisfied)
+                if #unavailable(macOS 13.0) {
+                    RootPrimaryWindowCommands(
+                        sipSatisfied: sipSatisfied,
+                        openMain: DeboogeyWindowController.openMain
+                    )
+                }
             }
 
         if #available(macOS 14.0, *) {
@@ -146,33 +139,51 @@ struct Root: App {
                     .environment(\.sipSatisfied, sipSatisfied)
                     .environment(\.locale, L10n.locale)
             }
+            .commands {
+                RootModernPrimaryWindowCommands(sipSatisfied: sipSatisfied)
+            }
         }
         SceneSwitcher(sipSatisfied: sipSatisfied)
     }
 }
 
+@available(macOS 13.0, *)
+private struct RootModernPrimaryWindowCommands: Commands {
+    let sipSatisfied: Bool
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        RootPrimaryWindowCommands(
+            sipSatisfied: sipSatisfied,
+            openMain: { DeboogeyRootNavigation.open(using: openWindow) }
+        )
+    }
+}
+
 private struct RootPrimaryWindowCommands: Commands {
     let sipSatisfied: Bool
+    let openMain: () -> Void
+
+    private var openCocoaDebugMenu: () -> Void {
+        { DeboogeyWindowController.open(.cocoaDebugMenu, sipSatisfied: sipSatisfied) }
+    }
+
+    private var openSkyLightDiagnostics: (() -> Void)? {
+        DebugVariables.isMarketplaceCandidateEditionBuild
+            ? nil
+            : { DeboogeyWindowController.open(.skyLightDiagnostics, sipSatisfied: sipSatisfied) }
+    }
 
     var body: some Commands {
         AboutCommands()
 #if !DEBOOGEY_MCE
         UpgradeCommands()
 #endif
-        LoupeMachineLegacyCommands()
+        LegacyDocumentToolCommands(openMain: openMain)
         LegacyWindowLauncherCommands(
-            openMain: DeboogeyWindowController.openMain,
-            openCocoaDebugMenu: {
-                DeboogeyWindowController.open(.cocoaDebugMenu, sipSatisfied: sipSatisfied)
-            },
-            openSkyLightDiagnostics: DebugVariables.isMarketplaceCandidateEditionBuild
-                ? nil
-                : {
-                    DeboogeyWindowController.open(
-                        .skyLightDiagnostics,
-                        sipSatisfied: sipSatisfied
-                    )
-                },
+            openMain: openMain,
+            openCocoaDebugMenu: openCocoaDebugMenu,
+            openSkyLightDiagnostics: openSkyLightDiagnostics,
             skyLightDiagnosticsDisabled: sipSatisfied
         )
     }

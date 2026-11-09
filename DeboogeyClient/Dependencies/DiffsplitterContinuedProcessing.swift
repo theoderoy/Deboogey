@@ -77,7 +77,7 @@ enum DiffsplitterContinuedProcessing {
                 title: title,
                 subtitle: subtitle
             )
-            request.strategy = .queue
+            request.strategy = .fail
 
             Task.detached {
                 do {

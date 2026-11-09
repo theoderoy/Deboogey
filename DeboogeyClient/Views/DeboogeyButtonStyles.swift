@@ -68,30 +68,9 @@ struct DeboogeyPriorityListScrollModifier: ViewModifier {
 
 struct DiffsplitterCompletionDurationControls: View {
     @Binding var minimumSeconds: Double
-    @Binding var notifyWhenBackgrounded: Bool
     var showsResetButton: Bool = false
-    var stacksBackgroundControls: Bool = false
-    var footerUsesForegroundStyle: Bool = false
 
     var body: some View {
-        if stacksBackgroundControls {
-            VStack(alignment: .leading, spacing: 16) { durationControlsContent }
-        } else {
-            durationControlsContent
-        }
-    }
-
-    @ViewBuilder
-    private var durationControlsContent: some View {
-        durationSlider
-#if os(iOS)
-        if DiffsplitterCompletionFeedback.usesLiveActivityUX {
-            backgroundNotifyBlock
-        }
-#endif
-    }
-
-    private var durationSlider: some View {
         VStack(alignment: .leading, spacing: showsResetButton ? 8 : 12) {
             HStack {
                 Text(L10n.t("Minimum Duration"))
@@ -124,32 +103,6 @@ struct DiffsplitterCompletionDurationControls: View {
                     step: 1
                 )
             }
-        }
-    }
-
-#if os(iOS)
-    private var backgroundNotifyBlock: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Toggle(isOn: $notifyWhenBackgrounded) {
-                Text(L10n.t("Also notify immediately in the background"))
-            }
-            Text(L10n.t("Skips Minimum Duration during Live Activity and Background Process."))
-                .font(.subheadline)
-                .modifier(FooterForegroundModifier(useForegroundStyle: footerUsesForegroundStyle))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-#endif
-}
-
-private struct FooterForegroundModifier: ViewModifier {
-    let useForegroundStyle: Bool
-
-    func body(content: Content) -> some View {
-        if useForegroundStyle {
-            content.foregroundStyle(.secondary)
-        } else {
-            content.foregroundColor(.secondary)
         }
     }
 }

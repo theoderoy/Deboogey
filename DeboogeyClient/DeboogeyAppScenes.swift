@@ -22,8 +22,8 @@ struct DeboogeyRootContentView: View {
             RootView().modifier(ExternalDocumentWindowHandler())
         } else {
             RootView().modifier(ExternalDocumentHandler(
-                openLoupe: { LoupeMachineNavigation.openLegacy(documentAt: $0) },
-                openDiffsplitter: { DiffsplitterNavigation.openLegacy(documentAt: $0) }
+                openLoupe: { LegacyDocumentRoutes.openLoupe($0) },
+                openDiffsplitter: { LegacyDocumentRoutes.openDiffsplitter($0) }
             ))
         }
     }
@@ -37,13 +37,24 @@ enum DeboogeyLegacyRootLaunch {
     }
 }
 
+enum DeboogeyRootNavigation {
+    static let windowID = "deboogey-root"
+
+    @available(macOS 13.0, *)
+    static func open(using openWindow: OpenWindowAction) {
+        openWindow(id: windowID)
+    }
+}
+
 @available(macOS 13.0, *)
 struct DeboogeyRootWindowScene<Content: View>: Scene {
     @ViewBuilder var content: () -> Content
 
     var body: some Scene {
-        WindowGroup(content: content)
-            .deboogeyRootWindowPlacement()
+        Window(appName ?? "Deboogey", id: DeboogeyRootNavigation.windowID) {
+            content()
+        }
+        .deboogeyRootWindowPlacement()
     }
 }
 
@@ -59,16 +70,19 @@ private struct RootLauncherSceneChrome: ViewModifier {
 }
 @available(macOS 13.0, *)
 struct DeboogeyLoupeDocumentCommands: Commands {
-    let openMain: () -> Void
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
         DocumentToolCommandSet(
             createLoupeDocument: { LoupeMachineNavigation.open(documentAt: nil, using: openWindow) },
-            openLoupeDocument: { LoupeMachineNavigation.chooseDocument(using: openWindow) },
             createDiffsplitterDocument: { DiffsplitterNavigation.open(documentAt: nil, using: openWindow) },
-            openDiffsplitterDocument: { DiffsplitterNavigation.chooseDocument(using: openWindow) },
-            openMain: openMain
+            openDocument: {
+                DocumentOpenPanel.chooseDeboogeyDocument(
+                    openLoupe: { DocumentWindowRoutes.openLoupe($0, using: openWindow) },
+                    openDiffsplitter: { DocumentWindowRoutes.openDiffsplitter($0, using: openWindow) }
+                )
+            },
+            openMain: { DeboogeyRootNavigation.open(using: openWindow) }
         )
     }
 }
@@ -102,11 +116,9 @@ struct DeboogeyLoupeScene: Scene {
 
 @available(macOS 13.0, *)
 struct DeboogeyLoupeCommandsScene: Scene {
-    let openMain: () -> Void
-
     var body: some Scene {
         DeboogeyLoupeWindowGroup().commands {
-            DeboogeyLoupeDocumentCommands(openMain: openMain)
+            DeboogeyLoupeDocumentCommands()
         }
     }
 }
