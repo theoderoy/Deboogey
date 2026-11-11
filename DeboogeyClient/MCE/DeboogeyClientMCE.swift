@@ -234,6 +234,7 @@ struct DeboogeyClientMCE: App {
 private struct MCEIOSRootHost: View {
     @Binding var path: NavigationPath
     @ObservedObject private var diffsplitterAvailability = MCEIOSFeatureSupport.Model.shared
+    @State private var openURLError: String?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -257,19 +258,35 @@ private struct MCEIOSRootHost: View {
         }
         .modifier(MCEIOSHingeDiffsplitterSupport())
         .onOpenURL { url in
-            let ext = url.pathExtension.lowercased()
-            let route: MCEIOSRoute?
-            switch ext {
-            case "loum":
-                route = .loupe(LoupeMachineWindowRequest(action: .open, documentURL: url))
-            case "dsplt", "dspltx":
-                guard diffsplitterAvailability.diffsplitter else { return }
-                route = .diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: url))
-            default:
+            let prepared: URL
+            do {
+                prepared = try DeboogeyDocumentLifecycle.prepareForOpening(url)
+            } catch {
+                openURLError = error.localizedDescription
                 return
             }
-            _ = url.startAccessingSecurityScopedResource()
+            let route: MCEIOSRoute?
+            switch DeboogeyDocumentKind.resolve(for: prepared) {
+            case .loum:
+                route = .loupe(LoupeMachineWindowRequest(action: .open, documentURL: prepared))
+            case .dsplt, .dspltx, .dspltb:
+                guard diffsplitterAvailability.diffsplitter else { return }
+                route = .diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: prepared))
+            case .none:
+                return
+            }
             if let route { path.append(route) }
+        }
+        .alert(
+            L10n.t("Couldn’t Open Document"),
+            isPresented: Binding(
+                get: { openURLError != nil },
+                set: { if !$0 { openURLError = nil } }
+            )
+        ) {
+            Button(L10n.t("OK"), role: .cancel) {}
+        } message: {
+            Text(openURLError ?? "")
         }
     }
 }

@@ -291,7 +291,11 @@ struct LoupeMachineView: View {
             switch result {
             case .success(let urls):
                 guard let url = urls.first else { return }
-                openPickedDocument(at: url)
+                do {
+                    openPickedDocument(at: try DeboogeyDocumentLifecycle.prepareForOpening(url))
+                } catch {
+                    documentError = error.localizedDescription
+                }
             case .failure(let error):
                 documentError = error.localizedDescription
             }
@@ -922,35 +926,21 @@ struct LoupeMachineView: View {
     }
 
     private func sourceApplicationBookmark(relativeTo documentURL: URL?) -> Data? {
-#if os(macOS) && DEBOOGEY_MCE
-        guard let selectedProgramURL, let documentURL else { return nil }
-        return try? selectedProgramURL.bookmarkData(
-            options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
-            includingResourceValuesForKeys: nil,
+        guard let selectedProgramURL else { return nil }
+        return DeboogeySecurityScopedBookmark.createPreferringRelative(
+            for: selectedProgramURL,
             relativeTo: documentURL
         )
-#else
-        return nil
-#endif
     }
 
     private func sourceApplicationURL(
         in document: LoupeMachineDocument,
         relativeTo documentURL: URL
     ) -> URL? {
-#if os(macOS) && DEBOOGEY_MCE
-        if let bookmark = document.sourceApplicationBookmark {
-            var stale = false
-            if let url = try? URL(
-                resolvingBookmarkData: bookmark,
-                options: [.withSecurityScope, .withoutUI],
-                relativeTo: documentURL,
-                bookmarkDataIsStale: &stale
-            ), !stale {
-                return url
-            }
+        if let bookmark = document.sourceApplicationBookmark,
+           let url = DeboogeySecurityScopedBookmark.resolve(bookmark, relativeTo: documentURL) {
+            return url
         }
-#endif
         return document.sourceApplication.map(URL.init(fileURLWithPath:))
     }
 

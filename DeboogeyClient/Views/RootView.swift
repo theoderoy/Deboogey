@@ -281,6 +281,7 @@ struct RootView: View {
             didPrepareStartupFlow = true
             showingWhatsNew = vars.shouldPresentWhatsNew
         }
+        .modifier(DiffsplitterBatchCreationOverlay())
     }
 
     private var branding: some View {
@@ -387,8 +388,8 @@ struct RootView: View {
                 }
                 .padding(RootLauncherMetrics.actionsPadding)
             }
-            .padding(.horizontal, RootLauncherMetrics.horizontalPadding)
-            .padding(.vertical, RootLauncherMetrics.verticalPadding)
+            .padding(.horizontal, RootLauncherMetrics.horizontalPadding + 8)
+            .padding(.vertical, RootLauncherMetrics.verticalPadding + 8)
         }
         .sheet(isPresented: $showingEntityTracker) {
             NavigationView {
@@ -413,6 +414,7 @@ struct RootView: View {
             didPrepareStartupFlow = true
             showingWhatsNew = vars.shouldPresentWhatsNew
         }
+        .modifier(DiffsplitterBatchCreationOverlay())
     }
 #endif
 #else
@@ -830,6 +832,7 @@ struct RootView: View {
                 showUpdateCardOverride = false
             }
         }
+        .modifier(DiffsplitterBatchCreationOverlay())
     }
 
     private func prepareStartupFlowIfNeeded() {
@@ -954,6 +957,9 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
     let openIcon: String
     let openDocument: () -> Void
     let createDocument: () -> Void
+    var supplementalTitle: String? = nil
+    var supplementalIcon: String = "archivebox"
+    var supplementalAction: (() -> Void)? = nil
     @Binding var hasShownEducation: Bool
     var forceEducation: Bool = false
     @ViewBuilder let education: (@escaping () -> Void) -> Education
@@ -966,6 +972,7 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
     private enum Action {
         case open
         case create
+        case supplemental
     }
 
     private var prefersActionAlert: Bool {
@@ -1020,6 +1027,20 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
                 .buttonStyle(.plain)
                 .padding(12)
                 .padding(.horizontal, 4)
+
+                if let supplementalTitle, supplementalAction != nil {
+                    Divider()
+                    Button {
+                        request(.supplemental)
+                    } label: {
+                        Label(L10n.t(supplementalTitle), systemImage: supplementalIcon)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(12)
+                    .padding(.horizontal, 4)
+                }
             }
             .frame(minWidth: 280)
         }
@@ -1032,6 +1053,11 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
             }
             Button(L10n.t("Create New Document…")) {
                 request(.create)
+            }
+            if let supplementalTitle, supplementalAction != nil {
+                Button(L10n.t(supplementalTitle)) {
+                    request(.supplemental)
+                }
             }
             Button(L10n.t("Cancel"), role: .cancel) {}
         }
@@ -1060,6 +1086,7 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
         switch action {
         case .open: openDocument()
         case .create: createDocument()
+        case .supplemental: supplementalAction?()
         }
     }
 }
@@ -1090,6 +1117,7 @@ private struct DeboogeyLoupeLauncherMenu: View {
 private struct DeboogeyDiffsplitterLauncherMenu: View {
     let openDocument: () -> Void
     let createDocument: () -> Void
+    let createBatch: () -> Void
     var prominent: Bool = false
     @AppStorage("theoderoy.Deboogey.Diffsplitter.hasShownEducation")
     private var hasShownEducation = false
@@ -1103,6 +1131,9 @@ private struct DeboogeyDiffsplitterLauncherMenu: View {
             openIcon: "doc.text",
             openDocument: openDocument,
             createDocument: createDocument,
+            supplementalTitle: "Batch Composer",
+            supplementalIcon: "archivebox",
+            supplementalAction: createBatch,
             hasShownEducation: $hasShownEducation
         ) { onContinue in
             DiffsplitterEducationView(onDismiss: onContinue)
@@ -1115,16 +1146,39 @@ private extension View {
     func mceDocumentImporter(
         isPresented: Binding<Bool>,
         contentTypes: [UTType],
-        onOpen: @escaping (URL) -> Void
+        onOpen: @escaping (URL) -> Void,
+        onFailure: @escaping (String) -> Void
     ) -> some View {
         fileImporter(
             isPresented: isPresented,
             allowedContentTypes: contentTypes,
             allowsMultipleSelection: false
         ) { result in
-            guard case .success(let urls) = result, let url = urls.first else { return }
-            _ = url.startAccessingSecurityScopedResource()
-            onOpen(url)
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                do {
+                    onOpen(try DeboogeyDocumentLifecycle.prepareForOpening(url))
+                } catch {
+                    onFailure(error.localizedDescription)
+                }
+            case .failure(let error):
+                onFailure(error.localizedDescription)
+            }
+        }
+    }
+
+    func mceImportErrorAlert(_ message: Binding<String?>) -> some View {
+        alert(
+            L10n.t("Couldn’t Open Document"),
+            isPresented: Binding(
+                get: { message.wrappedValue != nil },
+                set: { if !$0 { message.wrappedValue = nil } }
+            )
+        ) {
+            Button(L10n.t("OK"), role: .cancel) {}
+        } message: {
+            Text(message.wrappedValue ?? "")
         }
     }
 }
@@ -1135,6 +1189,7 @@ private struct DeboogeyLoupeIOSLauncher: View {
     private var hasShownEducation = false
     @State private var showingEducation = false
     @State private var isOpeningDocument = false
+    @State private var importError: String?
 
     var body: some View {
         LauncherButton(
@@ -1156,10 +1211,13 @@ private struct DeboogeyLoupeIOSLauncher: View {
         }
         .mceDocumentImporter(
             isPresented: $isOpeningDocument,
-            contentTypes: [.loupeMachineDocument]
-        ) { url in
-            navigate(.loupe(LoupeMachineWindowRequest(action: .open, documentURL: url)))
-        }
+            contentTypes: [.loupeMachineDocument],
+            onOpen: { url in
+                navigate(.loupe(LoupeMachineWindowRequest(action: .open, documentURL: url)))
+            },
+            onFailure: { importError = $0 }
+        )
+        .mceImportErrorAlert($importError)
     }
 
     private func requestOpen() {
@@ -1174,6 +1232,7 @@ private struct DeboogeyLoupeIOSLauncher: View {
 private struct DeboogeyDiffsplitterIOSLauncher: View {
     let navigate: (MCEIOSRoute) -> Void
     @State private var isOpeningDocument = false
+    @State private var importError: String?
 
     var body: some View {
         DeboogeyDiffsplitterLauncherMenu(
@@ -1181,14 +1240,22 @@ private struct DeboogeyDiffsplitterIOSLauncher: View {
             createDocument: {
                 navigate(.diffsplitter(DiffsplitterWindowRequest(action: .create, documentURL: nil)))
             },
+            createBatch: {
+                DiffsplitterBatchCreation.shared.presentComposer { url in
+                    navigate(.diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: url)))
+                }
+            },
             prominent: true
         )
         .mceDocumentImporter(
             isPresented: $isOpeningDocument,
-            contentTypes: [.diffsplitterDocument, .diffsplitterXDocument]
-        ) { url in
-            navigate(.diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: url)))
-        }
+            contentTypes: [.diffsplitterDocument, .diffsplitterXDocument, .diffsplitterBatchDocument],
+            onOpen: { url in
+                navigate(.diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: url)))
+            },
+            onFailure: { importError = $0 }
+        )
+        .mceImportErrorAlert($importError)
     }
 }
 #endif
@@ -1222,7 +1289,12 @@ private struct DeboogeyDiffsplitterWindowLauncher: View {
     var body: some View {
         DeboogeyDiffsplitterLauncherMenu(
             openDocument: { DiffsplitterNavigation.chooseDocument(using: openWindow) },
-            createDocument: { DiffsplitterNavigation.open(documentAt: nil, using: openWindow) }
+            createDocument: { DiffsplitterNavigation.open(documentAt: nil, using: openWindow) },
+            createBatch: {
+                DiffsplitterBatchCreation.shared.presentComposer { url in
+                    DiffsplitterNavigation.open(documentAt: url, using: openWindow)
+                }
+            }
         )
     }
 }
@@ -1231,7 +1303,12 @@ private struct DeboogeyDiffsplitterLegacyWindowLauncher: View {
     var body: some View {
         DeboogeyDiffsplitterLauncherMenu(
             openDocument: DiffsplitterNavigation.chooseDocumentLegacy,
-            createDocument: { DiffsplitterNavigation.openLegacy(documentAt: nil) }
+            createDocument: { DiffsplitterNavigation.openLegacy(documentAt: nil) },
+            createBatch: {
+                DiffsplitterBatchCreation.shared.presentComposer { url in
+                    DiffsplitterNavigation.openLegacy(documentAt: url)
+                }
+            }
         )
     }
 }
@@ -1301,6 +1378,110 @@ private struct ModernSettingsLauncher: View {
     }
 }
 #endif
+
+#if os(iOS)
+private struct DiffsplitterBatchExportFile: FileDocument {
+    static var readableContentTypes: [UTType] { [.diffsplitterBatchDocument] }
+    static var writableContentTypes: [UTType] { [.diffsplitterBatchDocument] }
+    let data: Data
+    init(data: Data) { self.data = data }
+    init(configuration: ReadConfiguration) throws {
+        guard let data = configuration.file.regularFileContents else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        self.data = data
+    }
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
+    }
+}
+#endif
+
+private struct DiffsplitterBatchCreationOverlay: ViewModifier {
+    @ObservedObject private var creation = DiffsplitterBatchCreation.shared
+#if os(iOS)
+    @State private var isExporting = false
+    @State private var exportFile: DiffsplitterBatchExportFile?
+    @State private var exportName = "Diffsplitter Batch"
+#endif
+
+    func body(content: Content) -> some View {
+        content
+            .allowsHitTesting(!creation.isRunning)
+            .overlay {
+                if let progress = creation.progress {
+                    DiffsplitterBlockingProgress(
+                        progress: progress,
+                        showsCancel: true,
+                        onCancel: { creation.cancel() }
+                    )
+                }
+            }
+            .alert(
+                L10n.t("Diffsplitter Error"),
+                isPresented: Binding(
+                    get: { creation.errorMessage != nil },
+                    set: { if !$0 { creation.errorMessage = nil } }
+                )
+            ) {
+                Button(L10n.t("OK"), role: .cancel) {}
+            } message: {
+                Text(creation.errorMessage ?? "")
+            }
+            .sheet(isPresented: $creation.isComposerPresented, onDismiss: {
+                creation.abandonComposer()
+            }) {
+#if os(macOS)
+                NavigationView {
+                    DiffsplitterBatchComposer()
+                }
+                .frame(
+                    width: AppWindowSizing.batchComposer.defaultSize.width,
+                    height: AppWindowSizing.batchComposer.defaultSize.height
+                )
+#else
+                NavigationStack {
+                    DiffsplitterBatchComposer()
+                }
+#endif
+            }
+#if os(iOS)
+            .onChange(of: creation.pendingExport?.id) { _, newID in
+                if newID != nil {
+                    presentPendingExportIfNeeded()
+                } else if isExporting {
+                    isExporting = false
+                    exportFile = nil
+                }
+            }
+            .fileExporter(
+                isPresented: $isExporting,
+                document: exportFile,
+                contentType: .diffsplitterBatchDocument,
+                defaultFilename: exportName
+            ) { result in
+                creation.consumeExport(result)
+                exportFile = nil
+                isExporting = false
+            }
+#endif
+    }
+
+#if os(iOS)
+    private func presentPendingExportIfNeeded() {
+        guard let pending = creation.pendingExport, !isExporting else { return }
+        exportFile = DiffsplitterBatchExportFile(data: pending.data)
+        let base = (pending.suggestedName as NSString).deletingPathExtension
+        exportName = base.isEmpty ? "Diffsplitter Batch" : base
+        let exportID = pending.id
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            guard creation.pendingExport?.id == exportID, !isExporting else { return }
+            isExporting = true
+        }
+    }
+#endif
+}
 
 #Preview {
     RootView()

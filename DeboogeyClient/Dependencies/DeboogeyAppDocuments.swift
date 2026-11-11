@@ -77,6 +77,18 @@ enum DeboogeyAppDocuments {
     }
 }
 
+enum DeboogeySecurityScopedAccess {
+    static func withAccess<T>(to url: URL, _ body: (URL) throws -> T) rethrows -> T {
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessed {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        return try body(url)
+    }
+}
+
 enum DeboogeyJSONDocument {
     static func encode<T: Encodable>(_ value: T) throws -> Data {
         let encoder = JSONEncoder()

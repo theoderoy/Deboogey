@@ -11,6 +11,8 @@ import zlib
 import SwiftUI
 import UniformTypeIdentifiers
 import Combine
+import AppleArchive
+import System
 #if canImport(AppKit)
 import AppKit
 #endif
@@ -2505,6 +2507,7 @@ nonisolated enum DiffsplitterEngine {
         case unreadable
         case notFileOrDirectory
         case mismatchedKinds
+        case batchRequiresDirectories
         var errorDescription: String? {
             switch self {
             case .binaryFile:
@@ -2515,6 +2518,8 @@ nonisolated enum DiffsplitterEngine {
                 return L10n.t("Choose a regular file, folder, or archive.")
             case .mismatchedKinds:
                 return L10n.t("Both sides must be files, or both sides must be folders or archives.")
+            case .batchRequiresDirectories:
+                return L10n.t("A Diffsplitter Batch compares two folders or archives.")
             }
         }
     }
@@ -2793,6 +2798,67 @@ nonisolated enum DiffsplitterEngine {
         }
         progress?(alignRange.upperBound, alignStatus)
         return rows
+    }
+    static func batchMemberPayload(
+        status: DirEntryStatus,
+        leftURL: URL?,
+        rightURL: URL?,
+        leftSession: DiffsplitterContainerSession?,
+        rightSession: DiffsplitterContainerSession?,
+        ignoreWhitespace: Bool
+    ) throws -> (rows: [AlignedRow], isHexDump: Bool) {
+        guard status != .identical else { return ([], false) }
+        let leftResolved = try leftURL.map {
+            try DiffsplitterContainer.resolvedFileURL(for: $0, session: leftSession)
+        }
+        let rightResolved = try rightURL.map {
+            try DiffsplitterContainer.resolvedFileURL(for: $0, session: rightSession)
+        }
+        if status == .binary {
+            return try hexDumpExport(left: leftResolved, right: rightResolved)
+        }
+        let leftPresentation = try leftResolved.map {
+            try DiffsplitterContent.presentation(resolvedURL: $0)
+        }
+        let rightPresentation = try rightResolved.map {
+            try DiffsplitterContent.presentation(resolvedURL: $0)
+        }
+        if (leftPresentation?.prefersHexDump ?? false) || (rightPresentation?.prefersHexDump ?? false) {
+            return try hexDumpExport(left: leftResolved, right: rightResolved)
+        }
+        let leftLines: [String]
+        let rightLines: [String]
+        switch status {
+        case .added:
+            leftLines = []
+            rightLines = rightPresentation?.content.lines ?? []
+        case .removed:
+            leftLines = leftPresentation?.content.lines ?? []
+            rightLines = []
+        case .modified:
+            leftLines = leftPresentation?.content.lines ?? []
+            rightLines = rightPresentation?.content.lines ?? []
+        case .identical, .binary:
+            return ([], false)
+        }
+        return (
+            try alignLines(left: leftLines, right: rightLines, ignoreWhitespace: ignoreWhitespace),
+            false
+        )
+    }
+
+    private static func hexDumpExport(
+        left: URL?,
+        right: URL?
+    ) throws -> (rows: [AlignedRow], isHexDump: Bool) {
+        let dump = try DiffsplitterBinaryDump.loadWindow(
+            leftURL: left,
+            rightURL: right,
+            leftByteCount: fileByteCount(left) ?? 0,
+            rightByteCount: fileByteCount(right) ?? 0,
+            startLine: 0
+        )
+        return (try DiffsplitterBinaryDump.alignedRowsForExport(from: dump), true)
     }
     private static func decodeSide(
         url: URL?,
@@ -3531,6 +3597,7 @@ nonisolated final class DiffsplitterProgressPublisher: @unchecked Sendable {
 extension UTType {
     static let diffsplitterDocument = UTType(exportedAs: "theoderoy.Deboogey.Diffsplitter", conformingTo: .data)
     static let diffsplitterXDocument = UTType(exportedAs: "theoderoy.Deboogey.DiffsplitterX", conformingTo: .data)
+    static let diffsplitterBatchDocument = UTType(exportedAs: "theoderoy.Deboogey.DiffsplitterBatch", conformingTo: .data)
 }
 
 nonisolated struct DiffsplitterDocument: Codable {
@@ -3545,6 +3612,8 @@ nonisolated struct DiffsplitterDocument: Codable {
     let rightPath: String?
     let leftBookmark: Data?
     let rightBookmark: Data?
+    let leftRelativePath: String?
+    let rightRelativePath: String?
     let comparisonKind: ComparisonKind?
     let ignoreWhitespace: Bool
     let selectedRelativePath: String?
@@ -3553,6 +3622,8 @@ nonisolated struct DiffsplitterDocument: Codable {
         rightPath: String?,
         leftBookmark: Data? = nil,
         rightBookmark: Data? = nil,
+        leftRelativePath: String? = nil,
+        rightRelativePath: String? = nil,
         comparisonKind: ComparisonKind?,
         ignoreWhitespace: Bool = false,
         selectedRelativePath: String? = nil
@@ -3562,6 +3633,8 @@ nonisolated struct DiffsplitterDocument: Codable {
         self.rightPath = rightPath
         self.leftBookmark = leftBookmark
         self.rightBookmark = rightBookmark
+        self.leftRelativePath = leftRelativePath
+        self.rightRelativePath = rightRelativePath
         self.comparisonKind = comparisonKind
         self.ignoreWhitespace = ignoreWhitespace
         self.selectedRelativePath = selectedRelativePath
@@ -3654,6 +3727,581 @@ nonisolated struct DiffsplitterXDocument: Codable {
     }
 }
 
+nonisolated enum DiffsplitterBatchArchive {
+    struct Manifest: Codable {
+        struct Entry: Codable {
+            let relativePath: String
+            let status: String
+            let member: String?
+        }
+        static let currentFormatVersion = 0
+        let formatVersion: Int
+        let leftName: String?
+        let rightName: String?
+        let ignoreWhitespace: Bool
+        let entries: [Entry]
+
+        func directoryEntries() -> [DiffsplitterEngine.DirEntry] {
+            entries.compactMap { entry in
+                guard let status = DiffsplitterEngine.DirEntryStatus(rawValue: entry.status) else { return nil }
+                return DiffsplitterEngine.DirEntry(relativePath: entry.relativePath, status: status)
+            }
+        }
+        var memberFiles: [String: String] {
+            Dictionary(uniqueKeysWithValues: entries.compactMap { entry in
+                entry.member.map { (entry.relativePath, $0) }
+            })
+        }
+    }
+
+    enum ArchiveError: LocalizedError {
+        case unreadable
+        case corrupt
+        var errorDescription: String? {
+            switch self {
+            case .unreadable:
+                return L10n.t("The selected item could not be read.")
+            case .corrupt:
+                return L10n.t("This Diffsplitter Batch could not be read.")
+            }
+        }
+    }
+
+    struct ExtractedArchive: Sendable {
+        let rootURL: URL
+        let containerURL: URL
+
+        func remove() {
+            try? FileManager.default.removeItem(at: containerURL)
+        }
+    }
+
+    static func readManifest(fromExtracted root: URL) throws -> Manifest {
+        let data = try Data(contentsOf: root.appendingPathComponent("manifest.json"))
+        let manifest = try JSONDecoder().decode(Manifest.self, from: data)
+        guard manifest.formatVersion == Manifest.currentFormatVersion else {
+            throw ArchiveError.corrupt
+        }
+        return manifest
+    }
+
+    static func readMember(
+        named name: String,
+        in archive: URL
+    ) throws -> (rows: [DiffsplitterEngine.AlignedRow], isHexDump: Bool) {
+        try decodeMember(extractData(named: name, from: try sandboxArchive(from: archive)))
+    }
+
+    static func readMember(
+        named name: String,
+        fromExtracted root: URL
+    ) throws -> (rows: [DiffsplitterEngine.AlignedRow], isHexDump: Bool) {
+        let wanted = normalizedArchivePath(name)
+        guard let file = locatedFile(
+            named: (wanted as NSString).lastPathComponent,
+            relativePath: wanted,
+            under: root
+        ) else {
+            throw ArchiveError.corrupt
+        }
+        return try decodeMember(Data(contentsOf: file))
+    }
+
+    static func extractAll(from archive: URL) throws -> ExtractedArchive {
+        let source = try sandboxArchive(from: archive)
+        let container = FileManager.default.temporaryDirectory
+            .appendingPathComponent("DiffsplitterBatchOpen-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: container, withIntermediateDirectories: true)
+        do {
+            let localArchive = container.appendingPathComponent("archive.dspltb")
+            try FileManager.default.copyItem(at: source, to: localArchive)
+            let root = container.appendingPathComponent("out", isDirectory: true)
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+            guard let input = ArchiveByteStream.fileStream(
+                path: FilePath(localArchive.path),
+                mode: .readOnly,
+                options: [],
+                permissions: FilePermissions(rawValue: 0o644)
+            ) else {
+                throw ArchiveError.unreadable
+            }
+            defer { try? input.close() }
+            guard let decoder = ArchiveStream.decodeStream(readingFrom: input) else {
+                throw ArchiveError.unreadable
+            }
+            defer { try? decoder.close() }
+            guard let extractor = ArchiveStream.extractStream(
+                extractingTo: FilePath(root.path),
+                flags: [.ignoreOperationNotPermitted]
+            ) else {
+                throw ArchiveError.unreadable
+            }
+            defer { try? extractor.close() }
+            _ = try ArchiveStream.process(readingFrom: decoder, writingTo: extractor)
+            return ExtractedArchive(rootURL: root, containerURL: container)
+        } catch {
+            try? FileManager.default.removeItem(at: container)
+            throw error
+        }
+    }
+
+    private static func sandboxArchive(from archive: URL) throws -> URL {
+        if DeboogeyDurableStore.isStoreURL(archive) {
+            return archive
+        }
+        return try DeboogeySecurityScopedAccess.withAccess(to: archive) { scoped in
+            try DeboogeyDurableStore.persistCopy(of: scoped)
+        }
+    }
+
+    static func inverted(
+        _ source: [DiffsplitterEngine.AlignedRow]
+    ) -> [DiffsplitterEngine.AlignedRow] {
+        source.enumerated().map { index, row in
+            let kind: DiffsplitterEngine.RowKind
+            switch row.kind {
+            case .insert: kind = .delete
+            case .delete: kind = .insert
+            case .equal, .replace: kind = row.kind
+            }
+            return DiffsplitterEngine.AlignedRow(
+                id: index,
+                leftLineNumber: row.rightLineNumber,
+                rightLineNumber: row.leftLineNumber,
+                leftText: row.rightText,
+                rightText: row.leftText,
+                kind: kind
+            )
+        }
+    }
+
+    static func encodeMember(
+        isHexDump: Bool,
+        rows: [DiffsplitterEngine.AlignedRow]
+    ) -> Data {
+        var data = Data()
+        data.reserveCapacity(rows.count * 32)
+        data.append(contentsOf: [0x44, 0x53, 0x42, 0x4D, 1, isHexDump ? 1 : 0])
+        appendUInt32(UInt32(rows.count), to: &data)
+        for row in rows {
+            let kind: UInt8
+            switch row.kind {
+            case .equal: kind = 0
+            case .insert: kind = 1
+            case .delete: kind = 2
+            case .replace: kind = 3
+            }
+            var flags: UInt8 = 0
+            if row.leftLineNumber != nil { flags |= 1 }
+            if row.rightLineNumber != nil { flags |= 2 }
+            if row.leftText != nil { flags |= 4 }
+            if row.rightText != nil { flags |= 8 }
+            data.append(kind)
+            data.append(flags)
+            if let leftLineNumber = row.leftLineNumber {
+                appendInt32(Int32(clamping: leftLineNumber), to: &data)
+            }
+            if let rightLineNumber = row.rightLineNumber {
+                appendInt32(Int32(clamping: rightLineNumber), to: &data)
+            }
+            if let leftText = row.leftText {
+                appendString(leftText, to: &data)
+            }
+            if let rightText = row.rightText {
+                appendString(rightText, to: &data)
+            }
+        }
+        return data
+    }
+
+    private static func decodeMember(
+        _ data: Data
+    ) throws -> (rows: [DiffsplitterEngine.AlignedRow], isHexDump: Bool) {
+        guard data.count >= 10, data.starts(with: [0x44, 0x53, 0x42, 0x4D]), data[4] == 1 else {
+            throw ArchiveError.corrupt
+        }
+        let isHexDump = data[5] == 1
+        var cursor = 6
+        let count = Int(try readUInt32(data, cursor: &cursor))
+        var rows: [DiffsplitterEngine.AlignedRow] = []
+        rows.reserveCapacity(count)
+        for index in 0..<count {
+            guard cursor + 2 <= data.count else { throw ArchiveError.corrupt }
+            let kindByte = data[cursor]
+            let flags = data[cursor + 1]
+            cursor += 2
+            let kind: DiffsplitterEngine.RowKind
+            switch kindByte {
+            case 0: kind = .equal
+            case 1: kind = .insert
+            case 2: kind = .delete
+            case 3: kind = .replace
+            default: throw ArchiveError.corrupt
+            }
+            let leftLineNumber = flags & 1 == 0 ? nil : Int(try readInt32(data, cursor: &cursor))
+            let rightLineNumber = flags & 2 == 0 ? nil : Int(try readInt32(data, cursor: &cursor))
+            let leftText = flags & 4 == 0 ? nil : try readString(data, cursor: &cursor)
+            let rightText = flags & 8 == 0 ? nil : try readString(data, cursor: &cursor)
+            rows.append(DiffsplitterEngine.AlignedRow(
+                id: index,
+                leftLineNumber: leftLineNumber,
+                rightLineNumber: rightLineNumber,
+                leftText: leftText,
+                rightText: rightText,
+                kind: kind
+            ))
+        }
+        return (rows, isHexDump)
+    }
+
+    private static func extractData(named name: String, from archive: URL) throws -> Data {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("DiffsplitterBatchRead-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let localArchive = directory.appendingPathComponent("archive.dspltb")
+        try FileManager.default.copyItem(at: archive, to: localArchive)
+        let extractRoot = directory.appendingPathComponent("out", isDirectory: true)
+        try FileManager.default.createDirectory(at: extractRoot, withIntermediateDirectories: true)
+
+        guard let input = ArchiveByteStream.fileStream(
+            path: FilePath(localArchive.path),
+            mode: .readOnly,
+            options: [],
+            permissions: FilePermissions(rawValue: 0o644)
+        ) else {
+            throw ArchiveError.unreadable
+        }
+        defer { try? input.close() }
+
+        let wanted = normalizedArchivePath(name)
+        let wantedName = (wanted as NSString).lastPathComponent
+        let filter: ArchiveHeader.EntryFilter = { message, path, _ in
+            guard message == .extractBegin else { return .ok }
+            let entry = normalizedArchivePath(path)
+            if entry.isEmpty || entry == "." { return .ok }
+            if entry == wanted || wanted.hasPrefix(entry + "/") || entry.hasPrefix(wanted + "/") {
+                return .ok
+            }
+            return .skip
+        }
+        guard let decoder = ArchiveStream.decodeStream(readingFrom: input) else {
+            throw ArchiveError.unreadable
+        }
+        defer { try? decoder.close() }
+        guard let extractor = ArchiveStream.extractStream(
+            extractingTo: FilePath(extractRoot.path),
+            selectUsing: filter,
+            flags: [.ignoreOperationNotPermitted]
+        ) else {
+            throw ArchiveError.unreadable
+        }
+        defer { try? extractor.close() }
+        _ = try ArchiveStream.process(readingFrom: decoder, writingTo: extractor)
+        if let file = locatedFile(named: wantedName, relativePath: wanted, under: extractRoot) {
+            return try Data(contentsOf: file)
+        }
+        throw ArchiveError.corrupt
+    }
+
+    private static func normalizedArchivePath(_ path: FilePath) -> String {
+        path.components
+            .map(\.string)
+            .filter { !$0.isEmpty && $0 != "." }
+            .joined(separator: "/")
+    }
+
+    private static func normalizedArchivePath(_ name: String) -> String {
+        name.split(separator: "/")
+            .map(String.init)
+            .filter { !$0.isEmpty && $0 != "." }
+            .joined(separator: "/")
+    }
+
+    static func archiveDirectory(at source: URL, to destination: URL) throws {
+        let temporary = FileManager.default.temporaryDirectory
+            .appendingPathComponent("DiffsplitterBatchWrite-\(UUID().uuidString).dspltb")
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        do {
+            guard let output = ArchiveByteStream.fileStream(
+                path: FilePath(temporary.path),
+                mode: .writeOnly,
+                options: [.create, .truncate],
+                permissions: FilePermissions(rawValue: 0o644)
+            ) else {
+                throw ArchiveError.unreadable
+            }
+            defer { try? output.close() }
+            let threads = max(1, ProcessInfo.processInfo.activeProcessorCount)
+            guard let encoder = ArchiveStream.encodeStream(
+                writingTo: output,
+                threadCount: threads
+            ) else {
+                throw ArchiveError.unreadable
+            }
+            defer { try? encoder.close() }
+            try encoder.writeDirectoryContents(
+                archiveFrom: FilePath(source.path),
+                keySet: .defaultForArchive,
+                threadCount: threads
+            )
+        }
+        let payload = try Data(contentsOf: temporary)
+        try DeboogeySecurityScopedAccess.withAccess(to: destination) { scoped in
+            try payload.write(to: scoped, options: .atomic)
+        }
+    }
+
+    private static func locatedFile(
+        named name: String,
+        relativePath: String,
+        under root: URL
+    ) -> URL? {
+        let direct = root.appendingPathComponent(relativePath)
+        var isDirectory: ObjCBool = false
+        if FileManager.default.fileExists(atPath: direct.path, isDirectory: &isDirectory),
+           !isDirectory.boolValue {
+            return direct
+        }
+        guard let enumerator = FileManager.default.enumerator(
+            at: root,
+            includingPropertiesForKeys: [.isRegularFileKey]
+        ) else { return nil }
+        var basenameMatch: URL?
+        for case let url as URL in enumerator {
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+            guard values?.isRegularFile == true else { continue }
+            let relative = url.path.replacingOccurrences(of: root.path + "/", with: "")
+            if normalizedArchivePath(relative) == relativePath {
+                return url
+            }
+            if url.lastPathComponent == name {
+                basenameMatch = url
+            }
+        }
+        return basenameMatch
+    }
+
+    private static func appendUInt32(_ value: UInt32, to data: inout Data) {
+        var little = value.littleEndian
+        withUnsafeBytes(of: &little) { data.append(contentsOf: $0) }
+    }
+    private static func appendInt32(_ value: Int32, to data: inout Data) {
+        appendUInt32(UInt32(bitPattern: value), to: &data)
+    }
+    private static func appendString(_ value: String, to data: inout Data) {
+        let bytes = Data(value.utf8)
+        appendUInt32(UInt32(bytes.count), to: &data)
+        data.append(bytes)
+    }
+    private static func readUInt32(_ data: Data, cursor: inout Int) throws -> UInt32 {
+        guard cursor + 4 <= data.count else { throw ArchiveError.corrupt }
+        let value = data.withUnsafeBytes { raw in
+            raw.loadUnaligned(fromByteOffset: cursor, as: UInt32.self).littleEndian
+        }
+        cursor += 4
+        return value
+    }
+    private static func readInt32(_ data: Data, cursor: inout Int) throws -> Int32 {
+        Int32(bitPattern: try readUInt32(data, cursor: &cursor))
+    }
+    private static func readString(_ data: Data, cursor: inout Int) throws -> String {
+        let count = Int(try readUInt32(data, cursor: &cursor))
+        guard count >= 0, cursor + count <= data.count else { throw ArchiveError.corrupt }
+        let bytes = data.subdata(in: cursor..<(cursor + count))
+        cursor += count
+        guard let string = String(data: bytes, encoding: .utf8) else { throw ArchiveError.corrupt }
+        return string
+    }
+}
+
+nonisolated enum DiffsplitterBatchBuilder {
+    static func write(
+        to destination: URL,
+        leftName: String,
+        rightName: String,
+        ignoreWhitespace: Bool,
+        entries: [DiffsplitterEngine.DirEntry],
+        leftMap: [String: URL],
+        rightMap: [String: URL],
+        leftSession: DiffsplitterContainerSession?,
+        rightSession: DiffsplitterContainerSession?,
+        progressRange: ClosedRange<Double> = 0...1,
+        progress: @escaping @Sendable (_ fraction: Double, _ status: String) -> Void
+    ) throws {
+        let staging = FileManager.default.temporaryDirectory
+            .appendingPathComponent("DiffsplitterBatch-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: staging) }
+        let memberDirectory = staging.appendingPathComponent("m", isDirectory: true)
+        try FileManager.default.createDirectory(at: memberDirectory, withIntermediateDirectories: true)
+        let targets = entries.filter { $0.status != .identical }
+        let total = targets.count
+        let preparing = L10n.t("Preparing Diffsplitter Batch…")
+        var memberNames = [String?](repeating: nil, count: total)
+        if total > 0 {
+            var firstError: Error?
+            let errorLock = NSLock()
+            let namesLock = NSLock()
+            var completedCount = 0
+            let progressLock = NSLock()
+            let gate = DispatchSemaphore(value: DiffsplitterEngine.maxConcurrentFileStatus)
+            let span = (progressRange.upperBound - progressRange.lowerBound) * 0.85
+            DispatchQueue.concurrentPerform(iterations: total) { index in
+                if Task.isCancelled { return }
+                errorLock.lock()
+                let alreadyFailed = firstError != nil
+                errorLock.unlock()
+                if alreadyFailed { return }
+                gate.wait()
+                defer { gate.signal() }
+                if Task.isCancelled { return }
+                let entry = targets[index]
+                do {
+                    let payload = try DiffsplitterEngine.batchMemberPayload(
+                        status: entry.status,
+                        leftURL: leftMap[entry.relativePath],
+                        rightURL: rightMap[entry.relativePath],
+                        leftSession: leftSession,
+                        rightSession: rightSession,
+                        ignoreWhitespace: ignoreWhitespace
+                    )
+                    let filename = String(format: "%08d", index)
+                    let memberName = "m/\(filename)"
+                    let encoded = DiffsplitterBatchArchive.encodeMember(
+                        isHexDump: payload.isHexDump,
+                        rows: payload.rows
+                    )
+                    try encoded.write(to: memberDirectory.appendingPathComponent(filename), options: .atomic)
+                    namesLock.lock()
+                    memberNames[index] = memberName
+                    namesLock.unlock()
+                } catch {
+                    errorLock.lock()
+                    if firstError == nil { firstError = error }
+                    errorLock.unlock()
+                    return
+                }
+                progressLock.lock()
+                completedCount += 1
+                let completed = completedCount
+                progressLock.unlock()
+                let fraction = progressRange.lowerBound + span * (Double(completed) / Double(total))
+                progress(fraction, preparing)
+            }
+            try Task.checkCancellation()
+            errorLock.lock()
+            let error = firstError
+            errorLock.unlock()
+            if let error { throw error }
+            guard memberNames.allSatisfy({ $0 != nil }) else { throw CancellationError() }
+        }
+        var namesByPath: [String: String] = [:]
+        for (index, entry) in targets.enumerated() {
+            if let name = memberNames[index] {
+                namesByPath[entry.relativePath] = name
+            }
+        }
+        let manifest = DiffsplitterBatchArchive.Manifest(
+            formatVersion: DiffsplitterBatchArchive.Manifest.currentFormatVersion,
+            leftName: leftName,
+            rightName: rightName,
+            ignoreWhitespace: ignoreWhitespace,
+            entries: entries.map { entry in
+                DiffsplitterBatchArchive.Manifest.Entry(
+                    relativePath: entry.relativePath,
+                    status: entry.status.rawValue,
+                    member: namesByPath[entry.relativePath]
+                )
+            }
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        try encoder.encode(manifest).write(
+            to: staging.appendingPathComponent("manifest.json"),
+            options: .atomic
+        )
+        let archiving = L10n.t("Writing Diffsplitter Batch…")
+        progress(progressRange.lowerBound + (progressRange.upperBound - progressRange.lowerBound) * 0.9, archiving)
+        try DiffsplitterBatchArchive.archiveDirectory(at: staging, to: destination)
+        progress(progressRange.upperBound, archiving)
+    }
+
+    static func writeFromRoots(
+        left: URL,
+        right: URL,
+        to destination: URL,
+        ignoreWhitespace: Bool,
+        progress: @escaping @Sendable (_ fraction: Double, _ status: String) -> Void
+    ) async throws {
+        let kind = try DiffsplitterEngine.resolveComparisonKind(left: left, right: right)
+        guard kind == .directories else {
+            throw DiffsplitterEngine.ReadError.batchRequiresDirectories
+        }
+        let leftSession = try DiffsplitterContainerSession()
+        let rightSession = try DiffsplitterContainerSession()
+        defer {
+            leftSession.close()
+            rightSession.close()
+        }
+        let comparing = L10n.t("Comparing…")
+        progress(0, comparing)
+        let mapFraction: @Sendable (Int, Int?) -> Double = { completed, expected in
+            if let expected, expected > 0 {
+                return min(1, Double(completed) / Double(expected))
+            }
+            return completed > 0 ? 0.5 : 0
+        }
+        let maps = try await withThrowingTaskGroup(
+            of: (Bool, [String: URL]).self
+        ) { group -> ([String: URL], [String: URL]) in
+            group.addTask {
+                let map = try DiffsplitterEngine.buildSideFileMap(at: left, session: leftSession) { completed, expected in
+                    progress(0.17 * mapFraction(completed, expected), comparing)
+                }
+                return (true, map)
+            }
+            group.addTask {
+                let map = try DiffsplitterEngine.buildSideFileMap(at: right, session: rightSession) { completed, expected in
+                    progress(0.17 + 0.18 * mapFraction(completed, expected), comparing)
+                }
+                return (false, map)
+            }
+            var leftMap: [String: URL]?
+            var rightMap: [String: URL]?
+            for try await (isLeft, map) in group {
+                if isLeft {
+                    leftMap = map
+                } else {
+                    rightMap = map
+                }
+            }
+            guard let leftMap, let rightMap else {
+                throw DiffsplitterEngine.ReadError.unreadable
+            }
+            return (leftMap, rightMap)
+        }
+        let entries = try DiffsplitterEngine.compareDirectoryMaps(left: maps.0, right: maps.1) { completed, total in
+            let local = total > 0 ? Double(completed) / Double(total) : 1
+            progress(0.35 + 0.15 * local, comparing)
+        }
+        try write(
+            to: destination,
+            leftName: left.lastPathComponent,
+            rightName: right.lastPathComponent,
+            ignoreWhitespace: ignoreWhitespace,
+            entries: entries,
+            leftMap: maps.0,
+            rightMap: maps.1,
+            leftSession: leftSession,
+            rightSession: rightSession,
+            progressRange: 0.5...1,
+            progress: progress
+        )
+    }
+}
+
 nonisolated struct DiffsplitterWindowRequest: Codable, Hashable {
     enum Action: String, Codable, Hashable {
         case create
@@ -3697,9 +4345,14 @@ enum DiffsplitterNavigation {
     private static func chooseDocument(open: @escaping (URL) -> Void) {
         DocumentOpenPanel.choose(
             title: L10n.t("Open Diffsplitter Document"),
-            contentTypes: [.diffsplitterDocument, .diffsplitterXDocument],
-            open: open
-        )
+            contentTypes: [.diffsplitterDocument, .diffsplitterXDocument, .diffsplitterBatchDocument]
+        ) { url in
+            do {
+                open(try DeboogeyDocumentLifecycle.prepareForOpening(url))
+            } catch {
+                open(url)
+            }
+        }
     }
 #endif
 }
@@ -3758,7 +4411,9 @@ enum DiffsplitterFileAccess {
         panel.begin { response in
             guard response == .OK, let url = panel.url else { return }
             do {
-                try text.data(using: .utf8)?.write(to: url, options: .atomic)
+                try DeboogeySecurityScopedAccess.withAccess(to: url) { scoped in
+                    try text.data(using: .utf8)?.write(to: scoped, options: .atomic)
+                }
             } catch {
                 onError(error.localizedDescription)
             }
@@ -3790,6 +4445,19 @@ enum DiffsplitterFileAccess {
             completion: completion
         )
     }
+    static func exportBatchDocument(
+        title: String,
+        suggestedName: String,
+        completion: @escaping (URL?) -> Void
+    ) {
+        presentSavePanel(
+            title: title,
+            suggestedName: suggestedName,
+            contentType: .diffsplitterBatchDocument,
+            requiredExtension: "dspltb",
+            completion: completion
+        )
+    }
     private static func presentSavePanel(
         title: String,
         suggestedName: String,
@@ -3802,12 +4470,15 @@ enum DiffsplitterFileAccess {
         panel.allowedContentTypes = [contentType]
         panel.nameFieldStringValue = DeboogeyAppDocuments.sanitizedFilename(suggestedName)
         panel.begin { response in
-            guard response == .OK, var url = panel.url else {
+            guard response == .OK, let panelURL = panel.url else {
                 completion(nil)
                 return
             }
-            if url.pathExtension.lowercased() != requiredExtension {
-                url = url.appendingPathExtension(requiredExtension)
+            let url: URL
+            if panelURL.pathExtension.lowercased() == requiredExtension {
+                url = panelURL
+            } else {
+                url = panelURL.deletingPathExtension().appendingPathExtension(requiredExtension)
             }
             completion(url)
         }
@@ -3982,8 +4653,16 @@ final class DiffsplitterSession: ObservableObject {
     @Published var savedDocumentData: Data?
     @Published var documentError: String?
     @Published var isEmbeddedDocument = false
+    @Published var isBatchDocument = false
+    @Published var isBlockingBatchTransfer = false
     @Published var embeddedLeftName: String?
     @Published var embeddedRightName: String?
+    private var batchMemberFiles: [String: String] = [:]
+    private var batchExtract: DiffsplitterBatchArchive.ExtractedArchive?
+    private var batchLeftName: String?
+    private var batchRightName: String?
+    private var batchSourceIgnoreWhitespace = false
+    private var batchSidesInverted = false
     @Published var leftDropTargeted = false
     @Published var rightDropTargeted = false
     @Published var aeaSessionKeys: [String: String] = [:]
@@ -4002,12 +4681,14 @@ final class DiffsplitterSession: ObservableObject {
     enum PendingExport: Identifiable {
         case saveDocument(suggestedName: String)
         case exportDiffsplitterX(suggestedName: String, data: Data)
+        case exportBatch(suggestedName: String, data: Data)
         case exportText(suggestedName: String, text: String)
 
         var id: String {
             switch self {
             case .saveDocument: return "save"
             case .exportDiffsplitterX: return "dspltx"
+            case .exportBatch: return "dspltb"
             case .exportText: return "text"
             }
         }
@@ -4027,7 +4708,12 @@ final class DiffsplitterSession: ObservableObject {
     private var compareGeneration: UInt64 = 0
     var reduceMotion = false
     var hasBothSides: Bool { leftURL != nil && rightURL != nil }
-    var isReady: Bool { isEmbeddedDocument || (hasBothSides && comparisonKind != nil) }
+    var isReady: Bool { isBatchDocument || isEmbeddedDocument || (hasBothSides && comparisonKind != nil) }
+    var canExportBatch: Bool {
+        guard !isBlockingBatchTransfer, !isTransferringDocument, !isComparing else { return false }
+        guard !isBatchDocument, !isEmbeddedDocument else { return false }
+        return comparisonKind == .directories && hasBothSides
+    }
     var canExportDiffsplitterX: Bool {
         if documentTransferProgress != nil { return false }
         if !rows.isEmpty { return true }
@@ -4046,6 +4732,7 @@ final class DiffsplitterSession: ObservableObject {
         compareTask?.cancel()
         documentTransferTask?.cancel()
         documentTransferProgress = nil
+        isBlockingBatchTransfer = false
         endContinuedProcessing(success: false)
 #if os(iOS)
         suppressCompletionBannerForCurrentCompare = false
@@ -4056,20 +4743,28 @@ final class DiffsplitterSession: ObservableObject {
     }
 #if os(iOS)
     @MainActor
-    private func beginContinuedProcessing(subtitle: String) async {
+    private func beginContinuedProcessing(
+        title: String = L10n.t("Diffsplitter"),
+        subtitle: String
+    ) async {
         let previous = continuedProcessing
         continuedProcessing = nil
         previous?.finish(success: false)
         suppressCompletionBannerForCurrentCompare = false
         guard DiffsplitterCompletionFeedback.isEnabled else { return }
+        guard !isBatchDocument, !isEmbeddedDocument else {
+            suppressCompletionBannerForCurrentCompare = true
+            return
+        }
 
         let generation = compareGeneration
         let handle = await DiffsplitterContinuedProcessing.begin(
-            title: L10n.t("Diffsplitter"),
+            title: title,
             subtitle: subtitle,
             onExpire: { [weak self] in
                 Task { @MainActor [weak self] in
                     self?.compareTask?.cancel()
+                    self?.documentTransferTask?.cancel()
                 }
             }
         )
@@ -4138,7 +4833,11 @@ final class DiffsplitterSession: ObservableObject {
         isPresentingSidePicker = false
         pendingSidePick = nil
         guard let side, let url else { return }
-        assign(url, to: side)
+        do {
+            assign(try DeboogeyDocumentLifecycle.prepareSideItem(url), to: side)
+        } catch {
+            setupError = error.localizedDescription
+        }
     }
 
     func handleSidePickerDismissed() {
@@ -4172,7 +4871,7 @@ final class DiffsplitterSession: ObservableObject {
                 return
             }
             do {
-                let durableURL = try Self.durableCopyOfDroppedURL(url)
+                let durableURL = try DeboogeyDocumentLifecycle.durableCopy(of: url)
                 DispatchQueue.main.async { self.assign(durableURL, to: side) }
             } catch {
                 self.reportDropFailure(error.localizedDescription)
@@ -4192,18 +4891,11 @@ final class DiffsplitterSession: ObservableObject {
     private func reportDropFailure(_ message: String) {
         DispatchQueue.main.async { self.setupError = message }
     }
-
-    nonisolated private static func durableCopyOfDroppedURL(_ url: URL) throws -> URL {
-        let fm = FileManager.default
-        let directory = fm.temporaryDirectory
-            .appendingPathComponent("DiffsplitterDrops", isDirectory: true)
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try fm.createDirectory(at: directory, withIntermediateDirectories: true)
-        let destination = directory.appendingPathComponent(url.lastPathComponent)
-        try fm.copyItem(at: url, to: destination)
-        return destination
-    }
     func assign(_ url: URL, to side: Side) {
+        guard !isBlockingBatchTransfer else { return }
+        if isBatchDocument {
+            exitBatchDocumentMode()
+        }
         if isEmbeddedDocument {
             exitEmbeddedDocumentMode(clearRows: true)
         }
@@ -4223,21 +4915,14 @@ final class DiffsplitterSession: ObservableObject {
         recompare()
     }
     private static func preparedSecurityScopedURL(_ url: URL) -> URL {
-#if os(macOS) && DEBOOGEY_MCE
-        var stale = false
-        if let bookmark = try? url.bookmarkData(
-            options: [.withSecurityScope],
-            includingResourceValuesForKeys: nil,
-            relativeTo: nil
-        ), let resolved = try? URL(
-            resolvingBookmarkData: bookmark,
-            options: [.withSecurityScope, .withoutUI],
-            relativeTo: nil,
-            bookmarkDataIsStale: &stale
-        ), !stale {
+        if DeboogeyDurableStore.isStoreURL(url)
+            || DeboogeyDocumentLifecycle.isInsideAppContainer(url) {
+            return url
+        }
+        if let bookmark = DeboogeySecurityScopedBookmark.create(for: url, relativeTo: nil),
+           let resolved = DeboogeySecurityScopedBookmark.resolve(bookmark, relativeTo: nil) {
             return resolved
         }
-#endif
         return url
     }
     func stopAccess(for side: Side) {
@@ -4267,6 +4952,16 @@ final class DiffsplitterSession: ObservableObject {
         documentAccessing = false
     }
     func swapSides() {
+        guard !isBlockingBatchTransfer else { return }
+        if isBatchDocument {
+            if selectedRelativePath != nil {
+                directoryMemberSidesFlipped.toggle()
+                invertDisplayedComparisonSides()
+                return
+            }
+            invertBatchSides()
+            return
+        }
         if isEmbeddedDocument {
             swapEmbeddedSides()
             return
@@ -4352,6 +5047,42 @@ final class DiffsplitterSession: ObservableObject {
             )
         })
     }
+    private func exitBatchDocumentMode() {
+        isBatchDocument = false
+        batchMemberFiles = [:]
+        clearBatchExtract()
+        batchLeftName = nil
+        batchRightName = nil
+        batchSourceIgnoreWhitespace = false
+        batchSidesInverted = false
+        directoryEntries = []
+        comparisonKind = nil
+        selectedRelativePath = nil
+        directoryMemberSidesFlipped = false
+        directoryBrowsePrefix = ""
+        clearBinaryDump()
+        applyRows([])
+    }
+
+    private func clearBatchExtract() {
+        batchExtract?.remove()
+        batchExtract = nil
+    }
+    private func invertBatchSides() {
+        let previousLeftName = batchLeftName
+        batchLeftName = batchRightName
+        batchRightName = previousLeftName
+        directoryEntries = directoryEntries.map { entry in
+            let status: DiffsplitterEngine.DirEntryStatus
+            switch entry.status {
+            case .added: status = .removed
+            case .removed: status = .added
+            case .modified, .identical, .binary: status = entry.status
+            }
+            return DiffsplitterEngine.DirEntry(relativePath: entry.relativePath, status: status)
+        }
+        batchSidesInverted.toggle()
+    }
     private func exitEmbeddedDocumentMode(clearRows: Bool) {
         isEmbeddedDocument = false
         embeddedLeftName = nil
@@ -4396,6 +5127,13 @@ final class DiffsplitterSession: ObservableObject {
         isEmbeddedDocument = false
         embeddedLeftName = nil
         embeddedRightName = nil
+        isBatchDocument = false
+        batchMemberFiles = [:]
+        clearBatchExtract()
+        batchLeftName = nil
+        batchRightName = nil
+        batchSourceIgnoreWhitespace = false
+        batchSidesInverted = false
         if !keepingDocument {
             stopDocumentAccess()
             documentURL = nil
@@ -4420,10 +5158,12 @@ final class DiffsplitterSession: ObservableObject {
         rightSession?.unloadInspectMaterializations()
     }
     func openDirectoryMember(_ path: String) {
+        guard !isBlockingBatchTransfer else { return }
         directoryMemberSidesFlipped = false
         selectedRelativePath = path
     }
     func enterDirectoryBrowsePrefix(_ prefix: String) {
+        guard !isBlockingBatchTransfer else { return }
         selectedRelativePath = nil
         directoryMemberSidesFlipped = false
         clearBinaryDump()
@@ -4431,6 +5171,7 @@ final class DiffsplitterSession: ObservableObject {
         directoryBrowsePrefix = prefix
     }
     func leaveDirectoryBrowseLevel(toRoot: Bool = false) {
+        guard !isBlockingBatchTransfer else { return }
         selectedRelativePath = nil
         directoryMemberSidesFlipped = false
         clearBinaryDump()
@@ -4444,6 +5185,7 @@ final class DiffsplitterSession: ObservableObject {
         directoryBrowsePrefix = parent == "/" ? "" : parent
     }
     func leaveDirectoryDetail() {
+        guard !isBlockingBatchTransfer else { return }
         compareTask?.cancel()
         clearBinaryDump()
         unloadInspectMaterializations()
@@ -4454,7 +5196,11 @@ final class DiffsplitterSession: ObservableObject {
         isComparing = false
         applyRows([])
         if shouldCommitDirectorySwap {
-            swapDirectoryRootsAndRecompare()
+            if isBatchDocument {
+                invertBatchSides()
+            } else {
+                swapDirectoryRootsAndRecompare()
+            }
         }
     }
 
@@ -4589,6 +5335,7 @@ final class DiffsplitterSession: ObservableObject {
         return rank(next) > rank(current) ? next : current
     }
     func activateDirectoryBrowserItem(_ item: DirectoryBrowserItem) {
+        guard !isBlockingBatchTransfer else { return }
         switch item.kind {
         case .folder:
             enterDirectoryBrowsePrefix(item.fullPath)
@@ -4608,6 +5355,11 @@ final class DiffsplitterSession: ObservableObject {
         binaryDumpOffsetField = "0"
     }
     func applyIgnoreWhitespaceChange() {
+        guard !isBlockingBatchTransfer else { return }
+        if isBatchDocument {
+            realignBatchMemberForIgnoreWhitespace()
+            return
+        }
         if isEmbeddedDocument {
             realignEmbeddedRowsForIgnoreWhitespace()
             return
@@ -4621,6 +5373,9 @@ final class DiffsplitterSession: ObservableObject {
             return
         }
         recompare()
+    }
+    private func realignBatchMemberForIgnoreWhitespace() {
+        loadStoredBatchMember()
     }
     private func realignEmbeddedRowsForIgnoreWhitespace() {
         guard !isBinaryDumpActive else { return }
@@ -4671,7 +5426,7 @@ final class DiffsplitterSession: ObservableObject {
         }
     }
     func recompare() {
-        guard !isEmbeddedDocument else { return }
+        guard !isEmbeddedDocument, !isBatchDocument, !isBlockingBatchTransfer else { return }
         guard let leftURL, let rightURL else {
             comparisonKind = nil
             rows = []
@@ -4954,6 +5709,11 @@ final class DiffsplitterSession: ObservableObject {
         let binaryDump: DiffsplitterBinaryDump.Session?
     }
     func loadSelectedDirectoryFile() {
+        if isBatchDocument {
+            loadStoredBatchMember()
+            return
+        }
+        guard !isBlockingBatchTransfer else { return }
         guard comparisonKind == .directories,
               let path = selectedRelativePath,
               let entry = directoryEntries.first(where: { $0.relativePath == path }),
@@ -4975,6 +5735,98 @@ final class DiffsplitterSession: ObservableObject {
             return
         }
         beginDirectoryMemberCompare(path: path, entry: entry)
+    }
+    private func loadStoredBatchMember() {
+        guard let path = selectedRelativePath,
+              let entry = directoryEntries.first(where: { $0.relativePath == path }),
+              entry.status != .identical,
+              let memberName = batchMemberFiles[path]
+        else {
+            clearBinaryDump()
+            applyRows([])
+            return
+        }
+        let extractedRoot = batchExtract?.rootURL
+        let archiveURL = documentURL
+        guard extractedRoot != nil || archiveURL != nil else {
+            clearBinaryDump()
+            applyRows([])
+            return
+        }
+        compareTask?.cancel()
+        let generation = bumpCompareGeneration()
+        isComparing = true
+        clearBinaryDump()
+        applyRows([])
+        memberLoadProgress = DiffsplitterIndexProgress(
+            fractionCompleted: 0,
+            status: L10n.t("Loading…")
+        )
+        let ignoreWhitespace = self.ignoreWhitespace
+        let sourceIgnoreWhitespace = batchSourceIgnoreWhitespace
+        let invert = batchSidesInverted != directoryMemberSidesFlipped
+        compareTask = Task.detached(priority: .userInitiated) { [weak self] in
+#if os(iOS)
+            await self?.beginContinuedProcessing(subtitle: L10n.t("Loading…"))
+#endif
+            let result = Result {
+                let payload: (rows: [DiffsplitterEngine.AlignedRow], isHexDump: Bool)
+                if let extractedRoot {
+                    payload = try DiffsplitterBatchArchive.readMember(
+                        named: memberName,
+                        fromExtracted: extractedRoot
+                    )
+                } else if let archiveURL {
+                    payload = try DiffsplitterBatchArchive.readMember(
+                        named: memberName,
+                        in: archiveURL
+                    )
+                } else {
+                    throw DiffsplitterBatchArchive.ArchiveError.unreadable
+                }
+                var rows = payload.rows
+                if !payload.isHexDump, ignoreWhitespace != sourceIgnoreWhitespace {
+                    rows = try DiffsplitterEngine.alignLines(
+                        left: rows.compactMap(\.leftText),
+                        right: rows.compactMap(\.rightText),
+                        ignoreWhitespace: ignoreWhitespace
+                    )
+                }
+                if invert {
+                    rows = DiffsplitterBatchArchive.inverted(rows)
+                }
+                return (rows, payload.isHexDump)
+            }
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                guard generation == self.compareGeneration, !Task.isCancelled else {
+                    self.endContinuedProcessingIfCurrent(generation: generation, success: false)
+                    return
+                }
+                self.isComparing = false
+                self.memberLoadProgress = nil
+                self.endContinuedProcessing(success: true)
+                switch result {
+                case .success(let payload):
+                    if payload.1 {
+                        let dump = DiffsplitterBinaryDump.sessionFromEmbeddedAlignedRows(payload.0)
+                        self.binaryDump = dump
+                        self.binaryDumpOffsetField = String(
+                            format: "%08x",
+                            dump.windowStartLine * DiffsplitterBinaryDump.bytesPerLine
+                        )
+                        self.rows = []
+                        self.visibleRowCount = 0
+                    } else {
+                        self.applyRows(payload.0)
+                    }
+                case .failure(let error):
+                    if !(error is CancellationError) {
+                        self.setupError = error.localizedDescription
+                    }
+                }
+            }
+        }
     }
 
     private struct NestedExpandPayload: Sendable {
@@ -5746,6 +6598,141 @@ final class DiffsplitterSession: ObservableObject {
         pendingExport = .exportText(suggestedName: "Diffsplitter.diff", text: text)
 #endif
     }
+    func cancelBatchTransfer() {
+        guard isBlockingBatchTransfer else { return }
+        documentTransferTask?.cancel()
+    }
+    func suggestedBatchName() -> String {
+        let left = leftURL?.lastPathComponent ?? batchLeftName ?? "Left"
+        let right = rightURL?.lastPathComponent ?? batchRightName ?? "Right"
+        return DeboogeyAppDocuments.sanitizedFilename("\(left) vs \(right).dspltb")
+    }
+    func exportDiffsplitterBatchDocument() {
+        guard canExportBatch else { return }
+        let suggestedName = suggestedBatchName()
+#if os(macOS)
+        DiffsplitterFileAccess.exportBatchDocument(
+            title: L10n.t("Export Diffsplitter Batch"),
+            suggestedName: suggestedName
+        ) { [weak self] url in
+            guard let self, let url else { return }
+            self.beginBatchExport(destination: url, suggestedName: suggestedName)
+        }
+#else
+        beginBatchExport(destination: nil, suggestedName: suggestedName)
+#endif
+    }
+    private func beginBatchExport(destination: URL?, suggestedName: String) {
+        guard canExportBatch else { return }
+        _ = bumpCompareGeneration()
+        compareTask?.cancel()
+        documentTransferTask?.cancel()
+        isBlockingBatchTransfer = true
+        let initial = DiffsplitterIndexProgress(
+            fractionCompleted: 0,
+            status: L10n.t("Preparing Diffsplitter Batch…")
+        )
+        documentTransferProgress = initial
+        AppFeedback.play(.batchComposerStart)
+        let entries = directoryEntries
+        let leftMap = leftFileMap
+        let rightMap = rightFileMap
+        let leftSession = self.leftSession
+        let rightSession = self.rightSession
+        let ignoreWhitespace = self.ignoreWhitespace
+        let leftName = leftURL?.lastPathComponent ?? L10n.t("Left")
+        let rightName = rightURL?.lastPathComponent ?? L10n.t("Right")
+        documentTransferTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            var succeeded = false
+            var handedOff = false
+            defer {
+                if !handedOff {
+                    self.documentTransferProgress = nil
+                    self.isBlockingBatchTransfer = false
+                    self.endContinuedProcessing(success: succeeded)
+                }
+            }
+#if os(iOS)
+            await self.beginContinuedProcessing(
+                title: L10n.t("Batch Composer"),
+                subtitle: L10n.t("Creating Diffsplitter Batch…")
+            )
+#endif
+            do {
+                let outputURL: URL
+#if os(macOS)
+                guard let destination else { return }
+                outputURL = destination
+#else
+                outputURL = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("DiffsplitterBatch-\(UUID().uuidString).dspltb")
+                defer {
+                    if !handedOff {
+                        try? FileManager.default.removeItem(at: outputURL)
+                    }
+                }
+#endif
+                try await Task.detached(priority: .userInitiated) { [weak self] in
+                    let publisher = DiffsplitterProgressPublisher { progress in
+                        Task { @MainActor [weak self] in
+                            guard let self, self.isBlockingBatchTransfer else { return }
+                            self.documentTransferProgress = progress
+                            self.publishContinuedProgress(progress)
+                        }
+                    }
+                    try DiffsplitterBatchBuilder.write(
+                        to: outputURL,
+                        leftName: leftName,
+                        rightName: rightName,
+                        ignoreWhitespace: ignoreWhitespace,
+                        entries: entries,
+                        leftMap: leftMap,
+                        rightMap: rightMap,
+                        leftSession: leftSession,
+                        rightSession: rightSession
+                    ) { fraction, status in
+                        publisher.publish(
+                            fractionCompleted: fraction,
+                            status: status,
+                            force: fraction >= 1
+                        )
+                    }
+                }.value
+                try Task.checkCancellation()
+#if os(macOS)
+                self.recordBatchExport(named: destination.lastPathComponent)
+                DocumentSaveFeedback.playSoundIfEnabled()
+                succeeded = true
+#else
+                let encoded = try Data(contentsOf: outputURL)
+                try? FileManager.default.removeItem(at: outputURL)
+                handedOff = true
+                self.pendingExport = .exportBatch(suggestedName: suggestedName, data: encoded)
+#endif
+            } catch is CancellationError {
+                return
+            } catch {
+                if !Task.isCancelled {
+                    self.documentError = error.localizedDescription
+                }
+            }
+        }
+    }
+    private func recordBatchExport(named filename: String) {
+        EntityTracker.shared.record(
+            source: .diffsplitter,
+            arguments: [
+                TrackedEntity.DiffsplitterActivity.batchExported.rawValue,
+                filename
+            ]
+        )
+    }
+    private func finishBatchHandoff(success: Bool) {
+        documentTransferProgress = nil
+        isBlockingBatchTransfer = false
+        endContinuedProcessing(success: success)
+    }
     func exportDiffsplitterXDocument() {
         guard canExportDiffsplitterX else { return }
         documentTransferTask?.cancel()
@@ -5810,7 +6797,9 @@ final class DiffsplitterSession: ObservableObject {
                 )
                 await Task.yield()
                 try await Task.detached(priority: .userInitiated) {
-                    try encoded.write(to: url, options: .atomic)
+                    try DeboogeySecurityScopedAccess.withAccess(to: url) { scoped in
+                        try encoded.write(to: scoped, options: .atomic)
+                    }
                 }.value
                 EntityTracker.shared.record(
                     source: .diffsplitter,
@@ -5859,6 +6848,14 @@ final class DiffsplitterSession: ObservableObject {
         return try DiffsplitterBinaryDump.alignedRowsForExport(from: dump)
     }
     func sideDisplayNames() -> (left: String, right: String) {
+        if isBatchDocument {
+            let left = batchLeftName ?? L10n.t("Left")
+            let right = batchRightName ?? L10n.t("Right")
+            if let path = selectedRelativePath {
+                return ("\(left)/\(path)", "\(right)/\(path)")
+            }
+            return (left, right)
+        }
         if isEmbeddedDocument {
             return (
                 embeddedLeftName ?? L10n.t("Left"),
@@ -5890,52 +6887,53 @@ final class DiffsplitterSession: ObservableObject {
             rightPath: rightURL?.path,
             leftBookmark: sideBookmark(leftURL, relativeTo: documentURL),
             rightBookmark: sideBookmark(rightURL, relativeTo: documentURL),
+            leftRelativePath: sideRelativePath(leftURL, relativeTo: documentURL),
+            rightRelativePath: sideRelativePath(rightURL, relativeTo: documentURL),
             comparisonKind: comparisonKind,
             ignoreWhitespace: ignoreWhitespace,
             selectedRelativePath: selectedRelativePath
         )
     }
     func sideBookmark(_ url: URL?, relativeTo documentURL: URL?) -> Data? {
-#if os(macOS) && DEBOOGEY_MCE
+        guard let url else { return nil }
+        return DeboogeySecurityScopedBookmark.create(for: url, relativeTo: documentURL)
+            ?? DeboogeySecurityScopedBookmark.create(for: url, relativeTo: nil)
+    }
+    func sideRelativePath(_ url: URL?, relativeTo documentURL: URL?) -> String? {
         guard let url, let documentURL else { return nil }
-        return try? url.bookmarkData(
-            options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
-            includingResourceValuesForKeys: nil,
-            relativeTo: documentURL
-        )
-#else
-        return nil
-#endif
+        return DeboogeyDocumentLifecycle.relativePathIfCoLocated(sideURL: url, documentURL: documentURL)
     }
     func resolveSideURL(
         path: String?,
+        relativePath: String? = nil,
         bookmark: Data?,
         relativeTo documentURL: URL
     ) -> URL? {
-#if os(macOS) && DEBOOGEY_MCE
-        if let bookmark {
-            var stale = false
-            if let url = try? URL(
-                resolvingBookmarkData: bookmark,
-                options: [.withSecurityScope, .withoutUI],
-                relativeTo: documentURL,
-                bookmarkDataIsStale: &stale
-            ), !stale {
-                return url
-            }
-        }
-#endif
-        return path.map { URL(fileURLWithPath: $0) }
+        DeboogeyDocumentLifecycle.resolveLinkedURL(
+            path: path,
+            relativePath: relativePath,
+            bookmark: bookmark,
+            relativeTo: documentURL
+        )
     }
     var hasUnsavedDocumentChanges: Bool {
-        guard !isEmbeddedDocument else { return false }
+        guard !isEmbeddedDocument, !isBatchDocument else { return false }
         guard hasBothSides else { return false }
         return (try? currentDocument.encoded()) != savedDocumentData
     }
     func openDocument(at url: URL) {
-        if url.pathExtension.lowercased() == "dspltx" {
+        switch DeboogeyDocumentKind.resolve(for: url) {
+        case .dspltx:
             openDiffsplitterXDocument(at: url)
             return
+        case .dspltb:
+            openDiffsplitterBatchDocument(at: url)
+            return
+        case .loum:
+            documentError = L10n.t("This Loupe Machine document can’t be opened in Diffsplitter.")
+            return
+        case .dsplt, .none:
+            break
         }
         do {
             startDocumentAccess(at: url)
@@ -5949,11 +6947,13 @@ final class DiffsplitterSession: ObservableObject {
             selectedRelativePath = document.selectedRelativePath
             let left = resolveSideURL(
                 path: document.leftPath,
+                relativePath: document.leftRelativePath,
                 bookmark: document.leftBookmark,
                 relativeTo: documentURL
             )
             let right = resolveSideURL(
                 path: document.rightPath,
+                relativePath: document.rightRelativePath,
                 bookmark: document.rightBookmark,
                 relativeTo: documentURL
             )
@@ -5970,6 +6970,74 @@ final class DiffsplitterSession: ObservableObject {
             stopDocumentAccess()
             documentURL = nil
             documentError = error.localizedDescription
+        }
+    }
+    func openDiffsplitterBatchDocument(at url: URL) {
+        documentTransferTask?.cancel()
+        startDocumentAccess(at: url)
+        guard let documentURL else {
+            documentError = L10n.t("The selected item could not be read.")
+            return
+        }
+        let scopedURL = documentURL
+        isBlockingBatchTransfer = true
+        documentTransferProgress = DiffsplitterIndexProgress(
+            fractionCompleted: 0,
+            status: L10n.t("Importing Diffsplitter Batch…")
+        )
+        documentTransferTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                if !Task.isCancelled || self.documentURL != nil {
+                    self.documentTransferProgress = nil
+                    self.isBlockingBatchTransfer = false
+                }
+            }
+            var extractedHold: DiffsplitterBatchArchive.ExtractedArchive?
+            do {
+                let opened = try await Task.detached(priority: .userInitiated) {
+                    let extracted = try DiffsplitterBatchArchive.extractAll(from: scopedURL)
+                    do {
+                        let manifest = try DiffsplitterBatchArchive.readManifest(
+                            fromExtracted: extracted.rootURL
+                        )
+                        return (manifest, extracted)
+                    } catch {
+                        extracted.remove()
+                        throw error
+                    }
+                }.value
+                extractedHold = opened.1
+                try Task.checkCancellation()
+                self.clearSession(keepingDocument: true)
+                self.savedDocumentData = nil
+                self.isBatchDocument = true
+                self.batchExtract = opened.1
+                extractedHold = nil
+                self.batchLeftName = opened.0.leftName
+                self.batchRightName = opened.0.rightName
+                self.batchSourceIgnoreWhitespace = opened.0.ignoreWhitespace
+                self.batchSidesInverted = false
+                self.ignoreWhitespace = opened.0.ignoreWhitespace
+                self.comparisonKind = .directories
+                self.directoryEntries = opened.0.directoryEntries()
+                self.batchMemberFiles = opened.0.memberFiles
+                self.selectedRelativePath = nil
+                self.directoryBrowsePrefix = ""
+                self.applyRows([])
+            } catch is CancellationError {
+                extractedHold?.remove()
+                return
+            } catch {
+                extractedHold?.remove()
+                if !Task.isCancelled {
+                    self.stopDocumentAccess()
+                    self.documentURL = nil
+                    self.isBatchDocument = false
+                    self.clearBatchExtract()
+                    self.documentError = error.localizedDescription
+                }
+            }
         }
     }
     func openDiffsplitterXDocument(at url: URL) {
@@ -6043,6 +7111,7 @@ final class DiffsplitterSession: ObservableObject {
         let needsNewLocation = forceSaveAs
             || documentURL == nil
             || documentURL?.pathExtension.lowercased() == "dspltx"
+            || documentURL?.pathExtension.lowercased() == "dspltb"
         if needsNewLocation {
             let suggestedName = suggestedRedirectDocumentName()
 #if os(macOS)
@@ -6099,7 +7168,9 @@ final class DiffsplitterSession: ObservableObject {
                 : .documentCreated
             let document = currentDocument(relativeTo: url)
             let data = try document.encoded()
-            try data.write(to: url, options: .atomic)
+            try DeboogeySecurityScopedAccess.withAccess(to: url) { scoped in
+                try data.write(to: scoped, options: .atomic)
+            }
             startDocumentAccess(at: url)
             savedDocumentData = data
             documentError = nil
@@ -6115,11 +7186,13 @@ final class DiffsplitterSession: ObservableObject {
         }
     }
     func saveDraftForClosing(completion: @escaping (Bool) -> Void) {
-        guard hasBothSides, !isEmbeddedDocument else {
+        guard hasBothSides, !isEmbeddedDocument, !isBatchDocument else {
             completion(true)
             return
         }
-        if documentURL == nil || documentURL?.pathExtension.lowercased() == "dspltx" {
+        if documentURL == nil
+            || documentURL?.pathExtension.lowercased() == "dspltx"
+            || documentURL?.pathExtension.lowercased() == "dspltb" {
             let suggestedName = suggestedRedirectDocumentName()
 #if os(macOS)
             DiffsplitterFileAccess.saveDocument(
@@ -6204,10 +7277,10 @@ final class DiffsplitterSession: ObservableObject {
             case .saveDocument:
                 completion?(url)
             case .exportDiffsplitterX(_, let data):
-                let accessed = url.startAccessingSecurityScopedResource()
-                defer { if accessed { url.stopAccessingSecurityScopedResource() } }
                 do {
-                    try data.write(to: url, options: .atomic)
+                    try DeboogeySecurityScopedAccess.withAccess(to: url) { scoped in
+                        try data.write(to: scoped, options: .atomic)
+                    }
                     EntityTracker.shared.record(
                         source: .diffsplitter,
                         arguments: [
@@ -6220,11 +7293,29 @@ final class DiffsplitterSession: ObservableObject {
                     documentError = error.localizedDescription
                     completion?(nil)
                 }
-            case .exportText(_, let text):
-                let accessed = url.startAccessingSecurityScopedResource()
-                defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+            case .exportBatch(_, let data):
                 do {
-                    try text.data(using: .utf8)?.write(to: url, options: .atomic)
+                    try DeboogeySecurityScopedAccess.withAccess(to: url) { scoped in
+                        try data.write(to: scoped, options: .atomic)
+                    }
+                    recordBatchExport(named: url.lastPathComponent)
+                    DocumentSaveFeedback.playSoundIfEnabled()
+                    finishBatchHandoff(success: true)
+                    let prepared = try DeboogeyDocumentLifecycle.persistForOpen(
+                        data: data,
+                        preferredFilename: url.lastPathComponent
+                    )
+                    completion?(prepared)
+                } catch {
+                    documentError = error.localizedDescription
+                    finishBatchHandoff(success: false)
+                    completion?(nil)
+                }
+            case .exportText(_, let text):
+                do {
+                    try DeboogeySecurityScopedAccess.withAccess(to: url) { scoped in
+                        try text.data(using: .utf8)?.write(to: scoped, options: .atomic)
+                    }
                 } catch {
                     documentError = error.localizedDescription
                 }
@@ -6233,6 +7324,9 @@ final class DiffsplitterSession: ObservableObject {
                 completion?(url)
             }
         case .failure(let error):
+            if isBlockingBatchTransfer {
+                finishBatchHandoff(success: false)
+            }
             let nsError = error as NSError
             if nsError.domain == NSCocoaErrorDomain, nsError.code == NSUserCancelledError {
                 completion?(nil)
@@ -6241,6 +7335,298 @@ final class DiffsplitterSession: ObservableObject {
             documentError = error.localizedDescription
             completion?(nil)
         }
+    }
+#endif
+}
+
+@MainActor
+final class DiffsplitterBatchCreation: ObservableObject {
+    static let shared = DiffsplitterBatchCreation()
+
+    struct PendingExport: Identifiable {
+        let id = UUID()
+        let suggestedName: String
+        let data: Data
+    }
+
+    @Published var isComposerPresented = false
+    @Published private(set) var progress: DiffsplitterIndexProgress?
+    @Published private(set) var pendingExport: PendingExport?
+    @Published var errorMessage: String?
+    private var task: Task<Void, Never>?
+    private var onFinished: ((URL) -> Void)?
+    private var composerHandedOff = false
+#if os(iOS)
+    private var continuedProcessing: DiffsplitterContinuedProcessing.Handle?
+    private var queuedComposerStart: QueuedComposerStart?
+#endif
+
+    var isRunning: Bool { progress != nil || pendingExport != nil }
+
+    func cancel() {
+        task?.cancel()
+#if os(iOS)
+        if pendingExport != nil {
+            pendingExport = nil
+            finish(success: false, url: nil)
+        }
+#endif
+    }
+
+    func consumeExport(_ result: Result<URL, Error>) {
+        let export = pendingExport
+        pendingExport = nil
+        switch result {
+        case .success(let url):
+            do {
+                let openURL: URL
+                if let export {
+                    openURL = try DeboogeyDocumentLifecycle.persistForOpen(
+                        data: export.data,
+                        preferredFilename: url.lastPathComponent
+                    )
+                } else {
+                    openURL = try DeboogeyDocumentLifecycle.prepareForOpening(url)
+                }
+                recordExport(named: url.lastPathComponent)
+                DocumentSaveFeedback.playSoundIfEnabled()
+                finish(success: true, url: openURL)
+            } catch {
+                errorMessage = error.localizedDescription
+                finish(success: false, url: nil)
+            }
+        case .failure(let error):
+            let nsError = error as NSError
+            if nsError.domain != NSCocoaErrorDomain || nsError.code != NSUserCancelledError {
+                errorMessage = error.localizedDescription
+            }
+            finish(success: false, url: nil)
+        }
+    }
+
+    func presentComposer(onFinished: @escaping (URL) -> Void) {
+        guard !isRunning else { return }
+        composerHandedOff = false
+#if os(iOS)
+        queuedComposerStart = nil
+#endif
+        self.onFinished = onFinished
+        isComposerPresented = true
+    }
+
+    func abandonComposer() {
+        if composerHandedOff {
+#if os(iOS)
+            flushQueuedComposerStart()
+#endif
+            return
+        }
+        onFinished = nil
+#if os(iOS)
+        queuedComposerStart = nil
+#endif
+    }
+
+    func beginFromComposer(left: URL, right: URL, ignoreWhitespace: Bool, openOnCreation: Bool = true) {
+        guard !isRunning else { return }
+        composerHandedOff = true
+        isComposerPresented = false
+        let suggestedName = DeboogeyAppDocuments.sanitizedFilename(
+            "\(left.lastPathComponent) vs \(right.lastPathComponent).dspltb"
+        )
+        let finish: (URL) -> Void
+        if openOnCreation {
+            finish = onFinished ?? { _ in }
+        } else {
+            onFinished = nil
+            finish = { _ in }
+        }
+#if os(macOS)
+        DiffsplitterFileAccess.exportBatchDocument(
+            title: L10n.t("Create Diffsplitter Batch"),
+            suggestedName: suggestedName
+        ) { [weak self] destination in
+            guard let self else { return }
+            guard let destination else {
+                self.onFinished = nil
+                self.composerHandedOff = false
+                return
+            }
+            self.start(
+                left: left,
+                right: right,
+                destination: destination,
+                suggestedName: suggestedName,
+                ignoreWhitespace: ignoreWhitespace,
+                onFinished: finish
+            )
+        }
+#else
+        queuedComposerStart = QueuedComposerStart(
+            left: left,
+            right: right,
+            suggestedName: suggestedName,
+            ignoreWhitespace: ignoreWhitespace,
+            onFinished: finish
+        )
+#endif
+    }
+
+    func start(
+        left: URL,
+        right: URL,
+        destination: URL?,
+        suggestedName: String,
+        ignoreWhitespace: Bool = false,
+        onFinished: @escaping (URL) -> Void
+    ) {
+        guard !isRunning else { return }
+        do {
+            let kind = try DiffsplitterEngine.resolveComparisonKind(left: left, right: right)
+            guard kind == .directories else {
+                throw DiffsplitterEngine.ReadError.batchRequiresDirectories
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+        self.onFinished = onFinished
+        progress = DiffsplitterIndexProgress(
+            fractionCompleted: 0,
+            status: L10n.t("Preparing Diffsplitter Batch…")
+        )
+        AppFeedback.play(.batchComposerStart)
+        let leftAccess = left.startAccessingSecurityScopedResource()
+        let rightAccess = right.startAccessingSecurityScopedResource()
+        task = Task { @MainActor [weak self] in
+            defer {
+                if leftAccess { left.stopAccessingSecurityScopedResource() }
+                if rightAccess { right.stopAccessingSecurityScopedResource() }
+            }
+            guard let self else { return }
+#if os(iOS)
+            if DiffsplitterCompletionFeedback.isEnabled {
+                self.continuedProcessing = await DiffsplitterContinuedProcessing.begin(
+                    title: L10n.t("Batch Composer"),
+                    subtitle: L10n.t("Creating Diffsplitter Batch…"),
+                    onExpire: { [weak self] in
+                        Task { @MainActor [weak self] in
+                            self?.task?.cancel()
+                        }
+                    }
+                )
+            }
+#endif
+            do {
+                let outputURL = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("DiffsplitterBatch-\(UUID().uuidString).dspltb")
+                defer { try? FileManager.default.removeItem(at: outputURL) }
+                try await Task.detached(priority: .userInitiated) { [weak self] in
+                    let publisher = DiffsplitterProgressPublisher { snapshot in
+                        Task { @MainActor [weak self] in
+                            guard let self, self.progress != nil else { return }
+                            self.progress = snapshot
+#if os(iOS)
+                            self.continuedProcessing?.update(snapshot)
+#endif
+                        }
+                    }
+                    try await DiffsplitterBatchBuilder.writeFromRoots(
+                        left: left,
+                        right: right,
+                        to: outputURL,
+                        ignoreWhitespace: ignoreWhitespace,
+                        progress: { fraction, status in
+                            publisher.publish(
+                                fractionCompleted: fraction,
+                                status: status,
+                                force: fraction >= 1
+                            )
+                        }
+                    )
+                }.value
+                try Task.checkCancellation()
+                let encoded = try Data(contentsOf: outputURL)
+                if let destination {
+                    try DeboogeySecurityScopedAccess.withAccess(to: destination) { scoped in
+                        try encoded.write(to: scoped, options: .atomic)
+                    }
+                    let openURL = try DeboogeyDocumentLifecycle.persistForOpen(
+                        data: encoded,
+                        preferredFilename: destination.lastPathComponent
+                    )
+                    self.recordExport(named: destination.lastPathComponent)
+                    DocumentSaveFeedback.playSoundIfEnabled()
+                    self.finish(success: true, url: openURL)
+                } else {
+                    let saving = DiffsplitterIndexProgress(
+                        fractionCompleted: 1,
+                        status: L10n.t("Choose where to save…")
+                    )
+                    self.progress = saving
+#if os(iOS)
+                    self.continuedProcessing?.update(saving)
+#endif
+                    self.pendingExport = PendingExport(
+                        suggestedName: suggestedName,
+                        data: encoded
+                    )
+                }
+            } catch is CancellationError {
+                self.finish(success: false, url: nil)
+            } catch {
+                if !Task.isCancelled {
+                    self.errorMessage = error.localizedDescription
+                }
+                self.finish(success: false, url: nil)
+            }
+        }
+    }
+
+    private func recordExport(named filename: String) {
+        EntityTracker.shared.record(
+            source: .diffsplitter,
+            arguments: [
+                TrackedEntity.DiffsplitterActivity.batchExported.rawValue,
+                filename
+            ]
+        )
+    }
+
+    private func finish(success: Bool, url: URL?) {
+        progress = nil
+        pendingExport = nil
+        let callback = onFinished
+        onFinished = nil
+#if os(iOS)
+        continuedProcessing?.finish(success: success)
+        continuedProcessing = nil
+#endif
+        if success, let url {
+            callback?(url)
+        }
+    }
+
+#if os(iOS)
+    private struct QueuedComposerStart {
+        let left: URL
+        let right: URL
+        let suggestedName: String
+        let ignoreWhitespace: Bool
+        let onFinished: (URL) -> Void
+    }
+
+    private func flushQueuedComposerStart() {
+        guard let queued = queuedComposerStart else { return }
+        queuedComposerStart = nil
+        start(
+            left: queued.left,
+            right: queued.right,
+            destination: nil,
+            suggestedName: queued.suggestedName,
+            ignoreWhitespace: queued.ignoreWhitespace,
+            onFinished: queued.onFinished
+        )
     }
 #endif
 }

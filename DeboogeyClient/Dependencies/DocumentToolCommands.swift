@@ -45,6 +45,11 @@ struct DocumentToolCommandSet: Commands {
                 DocumentSaveDispatcher.exportDiffsplitterX()
             }
             .disabled(!saveBridge.canExportDiffsplitterX)
+
+            Button(L10n.t("Export Diffsplitter Batch…")) {
+                DocumentSaveDispatcher.exportBatch()
+            }
+            .disabled(!saveBridge.canExportBatch)
         }
     }
 }
@@ -96,9 +101,9 @@ struct ExternalDocumentHandler: ViewModifier {
 
     func body(content: Content) -> some View {
         content.onOpenURL { url in
-            _ = url.startAccessingSecurityScopedResource()
+            let prepared = (try? DeboogeyDocumentLifecycle.prepareForOpening(url)) ?? url
             DocumentOpenPanel.route(
-                url,
+                prepared,
                 openLoupe: openLoupe,
                 openDiffsplitter: openDiffsplitter
             )

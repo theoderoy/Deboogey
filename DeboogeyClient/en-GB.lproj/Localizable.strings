@@ -20,9 +20,11 @@
 "%d value(s) changed outside Loupe Machine after this document was saved." = "%d value(s) changed outside Loupe Machine after this document was saved.";
 ".dsplt file was created — %@" = ".dsplt file was created — %@";
 ".dsplt file was modified — %@" = ".dsplt file was modified — %@";
+".dspltb file was exported — %@" = ".dspltb file was exported — %@";
 ".dspltx file was exported — %@" = ".dspltx file was exported — %@";
 ".loum file was created — %@" = ".loum file was created — %@";
 ".loum file was modified — %@" = ".loum file was modified — %@";
+"A Diffsplitter Batch compares two folders or archives." = "A Diffsplitter Batch compares two folders or archives.";
 "ACTION" = "ACTION";
 "AEA Decryption Key" = "AEA Decryption Key";
 "About %@ in memory for materialized files, plus %@ for the visible window" = "About %@ in memory for materialized files, plus %@ for the visible window";
@@ -51,6 +53,7 @@
 "Auto-Restart" = "Auto-Restart";
 "Auxiliary upgrades have been enabled." = "Auxiliary upgrades have been enabled.";
 "Back" = "Back";
+"Batch Composer" = "Batch Composer";
 "Binary" = "Binary";
 "Binary Size Threshold" = "Binary Size Threshold";
 "Binary dump" = "Binary dump";
@@ -67,6 +70,7 @@
 "Choose a macOS application bundle ending in .app." = "Choose a macOS application bundle ending in .app.";
 "Choose a regular file, folder, or archive." = "Choose a regular file, folder, or archive.";
 "Choose where Diffsplitter stores large dumps while you inspect them. Storing on disk demands less horsepower, while memory (RAM) can be faster on powerful machines." = "Choose where Diffsplitter stores large dumps while you inspect them. Storing on disk demands less horsepower, while memory (RAM) can be faster on powerful machines.";
+"Choose where to save…" = "Choose where to save…";
 "Clear Entire Log…" = "Clear Entire Log…";
 "Clears all preferences and then quits the app." = "Clears all preferences and then quits the app.";
 "Clears the Entity Tracker log except file, compare, and indexing entries" = "Clears the Entity Tracker log except file, compare, and indexing entries";
@@ -84,11 +88,16 @@
 "Continue" = "Continue";
 "Contributor" = "Contributor";
 "Copy Unified Diff" = "Copy Unified Diff";
+"Could not decompress the ZIP member." = "Could not decompress the ZIP member.";
 "Could not decrypt the Apple Encrypted Archive: %@" = "Could not decrypt the Apple Encrypted Archive: %@";
 "Could not expand the archive: %@" = "Could not expand the archive: %@";
 "Could not mount the disk image: %@" = "Could not mount the disk image: %@";
 "Could not restore one or both sides. Choose the missing items again." = "Could not restore one or both sides. Choose the missing items again.";
+"Couldn’t Open Document" = "Couldn’t Open Document";
+"Create Batch…" = "Create Batch…";
+"Create Diffsplitter Batch" = "Create Diffsplitter Batch";
 "Create New Document…" = "Create New Document…";
+"Creating Diffsplitter Batch…" = "Creating Diffsplitter Batch…";
 "Custom…" = "Custom…";
 "Date (Newest First)" = "Date (Newest First)";
 "Date (Oldest First)" = "Date (Oldest First)";
@@ -127,6 +136,7 @@
 "Downloading upgrade" = "Downloading upgrade";
 "Drag to reorder. Items nearer the top win when a folder contains mixed changes." = "Drag to reorder. Items nearer the top win when a folder contains mixed changes.";
 "Drop a file, folder, or archive here" = "Drop a file, folder, or archive here";
+"Drop a folder or archive here" = "Drop a folder or archive here";
 "Drop a program here to inspect its flags." = "Drop a program here to inspect its flags.";
 "Drop two text files, or two folders or archives — one on each side — to compare them." = "Drop two text files, or two folders or archives — one on each side — to compare them.";
 "Edition" = "Edition";
@@ -146,6 +156,8 @@
 "Expanding archive…" = "Expanding archive…";
 "Expanding left…" = "Expanding left…";
 "Expanding right…" = "Expanding right…";
+"Export Diffsplitter Batch" = "Export Diffsplitter Batch";
+"Export Diffsplitter Batch…" = "Export Diffsplitter Batch…";
 "Export DiffsplitterX Document" = "Export DiffsplitterX Document";
 "Export DiffsplitterX Document…" = "Export DiffsplitterX Document…";
 "Export Unified Diff" = "Export Unified Diff";
@@ -185,6 +197,7 @@
 "Import" = "Import";
 "Import macOS Application" = "Import macOS Application";
 "Imported application: %@" = "Imported application: %@";
+"Importing Diffsplitter Batch…" = "Importing Diffsplitter Batch…";
 "Importing DiffsplitterX Document…" = "Importing DiffsplitterX Document…";
 "Import…" = "Import…";
 "In-App Tones" = "In-App Tones";
@@ -269,6 +282,7 @@
 "Notify with a sound and banner when Loupe Machine finishes an index cycle." = "Notify with a sound and banner when Loupe Machine finishes an index cycle.";
 "Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration." = "Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration.";
 "OK" = "OK";
+"OPTIONS" = "OPTIONS";
 "Off" = "Off";
 "Offload Large Dumps to Temporary Storage" = "Offload Large Dumps to Temporary Storage";
 "Offset" = "Offset";
@@ -281,6 +295,8 @@
 "Open Loupe Machine Document" = "Open Loupe Machine Document";
 "Open a Loupe Machine document before saving." = "Open a Loupe Machine document before saving.";
 "Open an existing Loupe Machine document to browse and edit its change set." = "Open an existing Loupe Machine document to browse and edit its change set.";
+"Open on Creation" = "Open on Creation";
+"Open the batch after it is created" = "Open the batch after it is created";
 "Open…" = "Open…";
 "Other" = "Other";
 "PRESET" = "PRESET";
@@ -299,6 +315,7 @@
 "Plays when a Loupe Machine document is written successfully." = "Plays when a Loupe Machine document is written successfully.";
 "Plays when a Loupe Machine, Diffsplitter, or DiffsplitterX document is written successfully." = "Plays when a Loupe Machine, Diffsplitter, or DiffsplitterX document is written successfully.";
 "Preferences" = "Preferences";
+"Preparing Diffsplitter Batch…" = "Preparing Diffsplitter Batch…";
 "Preparing DiffsplitterX Document…" = "Preparing DiffsplitterX Document…";
 "Preparing binary dump…" = "Preparing binary dump…";
 "Preparing upgrade" = "Preparing upgrade";
@@ -311,6 +328,7 @@
 "Quits the app gracefully after applying the change" = "Quits the app gracefully after applying the change";
 "Release" = "Release";
 "Release %@" = "Release %@";
+"Remove" = "Remove";
 "Remove %d Selected from Log" = "Remove %d Selected from Log";
 "Remove %d Superseded" = "Remove %d Superseded";
 "Remove from Log" = "Remove from Log";
@@ -335,6 +353,7 @@
 "Revert to Document Values" = "Revert to Document Values";
 "Right" = "Right";
 "Run" = "Run";
+"SOURCES" = "SOURCES";
 "Save" = "Save";
 "Save As…" = "Save As…";
 "Save Change Set" = "Save Change Set";
@@ -378,12 +397,18 @@
 "Take a look at the system's internal diagnostics, such as the refresh rate, collision boxes, screen activity and more." = "Take a look at the system's internal diagnostics, such as the refresh rate, collision boxes, screen activity and more.";
 "Tester" = "Tester";
 "Text" = "Text";
+"The ZIP archive is invalid." = "The ZIP archive is invalid.";
+"The ZIP archive is truncated or unreadable." = "The ZIP archive is truncated or unreadable.";
+"The ZIP member could not be found." = "The ZIP member could not be found.";
 "The application preferences could not be saved." = "The application preferences could not be saved.";
 "The dropped item could not be opened." = "The dropped item could not be opened.";
 "The selected application is unavailable." = "The selected application is unavailable.";
 "The selected item could not be read." = "The selected item could not be read.";
 "These notices will not be shown until System Integrity Protection is adjusted." = "These notices will not be shown until System Integrity Protection is adjusted.";
 "This Apple Encrypted Archive needs a decryption key." = "This Apple Encrypted Archive needs a decryption key.";
+"This Diffsplitter Batch could not be read." = "This Diffsplitter Batch could not be read.";
+"This Loupe Machine document can’t be opened in Diffsplitter." = "This Loupe Machine document can’t be opened in Diffsplitter.";
+"This ZIP member uses an unsupported compression method." = "This ZIP member uses an unsupported compression method.";
 "This archive has too many entries to compare in Diffsplitter." = "This archive has too many entries to compare in Diffsplitter.";
 "This build contains experimental features and is not officially notarised by Apple. Use caution when running it." = "This build contains experimental features and is not officially notarised by Apple. Use caution when running it.";
 "This file looks binary and cannot be shown as text." = "This file looks binary and cannot be shown as text.";
@@ -392,10 +417,12 @@
 "This will quit the application. Relaunch it and look in the menu bar to see the new entry at your disposal." = "This will quit the application. Relaunch it and look in the menu bar to see the new entry at your disposal.";
 "This will quit the application. The menu bar entry will be removed." = "This will quit the application. The menu bar entry will be removed.";
 "This will restore settings to their defaults without clearing other stored data, then quit the app." = "This will restore settings to their defaults without clearing other stored data, then quit the app.";
+"Treat whitespace-only differences as identical" = "Treat whitespace-only differences as identical";
 "Trigger" = "Trigger";
 "Unassigned" = "Unassigned";
 "Unified Diff Copied" = "Unified Diff Copied";
 "Unknown AppleScript error" = "Unknown AppleScript error";
+"Untitled" = "Untitled";
 "Untitled — Diffsplitter" = "Untitled — Diffsplitter";
 "Untitled — Loupe Machine" = "Untitled — Loupe Machine";
 "Untitled.loum" = "Untitled.loum";
@@ -413,6 +440,7 @@
 "Why is Diffsplitter unavailable?" = "Why is Diffsplitter unavailable?";
 "Will not be honored when Reduce Motion is turned on in Accessibility." = "Will not be honoured when Reduce Motion is turned on in Accessibility.";
 "Window %@–%@ of %@ (%d lines in memory)" = "Window %@–%@ of %@ (%d lines in memory)";
+"Writing Diffsplitter Batch…" = "Writing Diffsplitter Batch…";
 "Writing DiffsplitterX Document…" = "Writing DiffsplitterX Document…";
 "You might need to manually code-sign after upgrading." = "You might need to manually code-sign after upgrading.";
 "Your session pair will be lost if you don’t save it." = "Your session pair will be lost if you don’t save it.";

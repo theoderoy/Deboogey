@@ -19,9 +19,11 @@ import UIKit
 struct DiffsplitterCommandActions {
     let canSave: Bool
     let canExportDiffsplitterX: Bool
+    let canExportBatch: Bool
     let save: () -> Void
     let saveAs: () -> Void
     let exportDiffsplitterX: () -> Void
+    let exportBatch: () -> Void
 }
 
 @MainActor
@@ -29,30 +31,37 @@ final class DiffsplitterCommandRouter: ObservableObject {
     static let shared = DiffsplitterCommandRouter()
     @Published private(set) var canSave = false
     @Published private(set) var canExportDiffsplitterX = false
+    @Published private(set) var canExportBatch = false
     private var actionsByWindow: [ObjectIdentifier: DiffsplitterCommandActions] = [:]
     func register(_ actions: DiffsplitterCommandActions, for window: NSWindow) {
         actionsByWindow[ObjectIdentifier(window)] = actions
         if NSApp.keyWindow === window {
             canSave = actions.canSave
             canExportDiffsplitterX = actions.canExportDiffsplitterX
-            if canSave || canExportDiffsplitterX { LoupeMachineCommandRouter.shared.resignActiveSave() }
+            canExportBatch = actions.canExportBatch
+            if canSave || canExportDiffsplitterX || canExportBatch {
+                LoupeMachineCommandRouter.shared.resignActiveSave()
+            }
         }
     }
     func activate(_ window: NSWindow) {
         let actions = actionsByWindow[ObjectIdentifier(window)]
         canSave = actions?.canSave == true
         canExportDiffsplitterX = actions?.canExportDiffsplitterX == true
+        canExportBatch = actions?.canExportBatch == true
         LoupeMachineCommandRouter.shared.resignActiveSave()
     }
     func resignActiveSave() {
         canSave = false
         canExportDiffsplitterX = false
+        canExportBatch = false
     }
     func unregister(_ window: NSWindow) {
         actionsByWindow.removeValue(forKey: ObjectIdentifier(window))
         if NSApp.keyWindow === window {
             canSave = false
             canExportDiffsplitterX = false
+            canExportBatch = false
         }
     }
     @discardableResult
@@ -74,6 +83,14 @@ final class DiffsplitterCommandRouter: ObservableObject {
         actions.exportDiffsplitterX()
         return true
     }
+    @discardableResult
+    func exportBatchIfPossible() -> Bool {
+        guard let window = NSApp.keyWindow,
+              let actions = actionsByWindow[ObjectIdentifier(window)],
+              actions.canExportBatch else { return false }
+        actions.exportBatch()
+        return true
+    }
 }
 
 @MainActor
@@ -84,12 +101,18 @@ enum DocumentSaveDispatcher {
     static var canExportDiffsplitterX: Bool {
         DiffsplitterCommandRouter.shared.canExportDiffsplitterX
     }
+    static var canExportBatch: Bool {
+        DiffsplitterCommandRouter.shared.canExportBatch
+    }
     static func save(saveAs: Bool) {
         if DiffsplitterCommandRouter.shared.saveIfPossible(saveAs: saveAs) { return }
         LoupeMachineCommandRouter.shared.save(saveAs: saveAs)
     }
     static func exportDiffsplitterX() {
         _ = DiffsplitterCommandRouter.shared.exportDiffsplitterXIfPossible()
+    }
+    static func exportBatch() {
+        _ = DiffsplitterCommandRouter.shared.exportBatchIfPossible()
     }
 }
 
@@ -101,6 +124,8 @@ final class DocumentSaveDispatcherBridge: ObservableObject {
     private var diffExportBag: AnyCancellable?
     @Published private(set) var canSave = false
     @Published private(set) var canExportDiffsplitterX = false
+    @Published private(set) var canExportBatch = false
+    private var diffBatchBag: AnyCancellable?
     private init() {
         loupeBag = LoupeMachineCommandRouter.shared.$canSave.sink { [weak self] _ in
             self?.refresh()
@@ -111,11 +136,15 @@ final class DocumentSaveDispatcherBridge: ObservableObject {
         diffExportBag = DiffsplitterCommandRouter.shared.$canExportDiffsplitterX.sink { [weak self] _ in
             self?.refresh()
         }
+        diffBatchBag = DiffsplitterCommandRouter.shared.$canExportBatch.sink { [weak self] _ in
+            self?.refresh()
+        }
         refresh()
     }
     private func refresh() {
         canSave = DocumentSaveDispatcher.canSave
         canExportDiffsplitterX = DocumentSaveDispatcher.canExportDiffsplitterX
+        canExportBatch = DocumentSaveDispatcher.canExportBatch
     }
 }
 
@@ -125,10 +154,10 @@ final class DocumentSaveDispatcherBridge: ObservableObject {
 #if os(iOS)
 private struct DiffsplitterExportDocument: FileDocument {
     static var readableContentTypes: [UTType] {
-        [.diffsplitterDocument, .diffsplitterXDocument, .plainText]
+        [.diffsplitterDocument, .diffsplitterXDocument, .diffsplitterBatchDocument, .plainText]
     }
     static var writableContentTypes: [UTType] {
-        [.diffsplitterDocument, .diffsplitterXDocument, .plainText]
+        [.diffsplitterDocument, .diffsplitterXDocument, .diffsplitterBatchDocument, .plainText]
     }
 
     let data: Data
@@ -149,6 +178,52 @@ private struct DiffsplitterExportDocument: FileDocument {
     }
 }
 #endif
+
+struct DiffsplitterBlockingProgress: View {
+    let progress: DiffsplitterIndexProgress
+    var showsCancel = false
+    var onCancel: () -> Void = {}
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.18)
+                .ignoresSafeArea()
+            VStack(spacing: 16) {
+                Image("DiffsplitterIdent")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 56, height: 56)
+                    .accessibilityHidden(true)
+                Text(percentText)
+                    .font(.title.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.primary)
+                ProgressView(value: min(max(progress.fractionCompleted, 0), 1))
+                    .progressViewStyle(.linear)
+                    .tint(DiffsplitterPalette.brandGreen)
+                    .frame(maxWidth: 280)
+                Text(progress.status)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 300)
+                if showsCancel {
+                    Button(L10n.t("Cancel"), action: onCancel)
+                        .keyboardShortcut(.cancelAction)
+                }
+            }
+            .padding(28)
+            .frame(minWidth: 320)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(progress.status)
+    }
+
+    private var percentText: String {
+        let percent = Int((min(max(progress.fractionCompleted, 0), 1) * 100).rounded())
+        return "\(percent)%"
+    }
+}
 
 struct DiffsplitterView: View {
 #if os(macOS)
@@ -224,11 +299,13 @@ struct DiffsplitterView: View {
                 hasUnsavedChanges: session.hasUnsavedDocumentChanges,
                 documentURL: session.documentURL,
                 commandActions: DiffsplitterCommandActions(
-                    canSave: session.hasBothSides,
+                    canSave: session.hasBothSides && !session.isBlockingBatchTransfer,
                     canExportDiffsplitterX: session.canExportDiffsplitterX,
+                    canExportBatch: session.canExportBatch,
                     save: { session.saveDocument(forceSaveAs: false) },
                     saveAs: { session.saveDocument(forceSaveAs: true) },
-                    exportDiffsplitterX: { session.exportDiffsplitterXDocument() }
+                    exportDiffsplitterX: { session.exportDiffsplitterXDocument() },
+                    exportBatch: { session.exportDiffsplitterBatchDocument() }
                 ),
                 saveDraft: session.saveDraftForClosing
             )
@@ -287,6 +364,7 @@ struct DiffsplitterView: View {
                     }
                 }
                 .accessibilityLabel(L10n.t("Back"))
+                .disabled(session.isBlockingBatchTransfer)
             }
             if showsBookFoldNavTitleSwap {
                 ToolbarItem(placement: .principal) {
@@ -465,27 +543,14 @@ struct DiffsplitterView: View {
         .onDisappear {
             session.cancelAndClose()
         }
+        .allowsHitTesting(!session.isBlockingBatchTransfer)
         .overlay {
             if let progress = session.documentTransferProgress {
-                ZStack {
-                    Color.primary.opacity(0.12)
-                        .ignoresSafeArea()
-                    VStack(spacing: 12) {
-                        ProgressView()
-#if os(macOS)
-                            .controlSize(.large)
-#endif
-                        Text(progress.status)
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(24)
-                    .frame(minWidth: 240)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(progress.status)
+                DiffsplitterBlockingProgress(
+                    progress: progress,
+                    showsCancel: session.isBlockingBatchTransfer,
+                    onCancel: { session.cancelBatchTransfer() }
+                )
             }
         }
     }
@@ -508,6 +573,12 @@ struct DiffsplitterView: View {
             beginExport(
                 DiffsplitterExportDocument(data: data),
                 type: .diffsplitterXDocument,
+                filename: suggestedName
+            )
+        case .exportBatch(let suggestedName, let data):
+            beginExport(
+                DiffsplitterExportDocument(data: data),
+                type: .diffsplitterBatchDocument,
                 filename: suggestedName
             )
         case .exportText(let suggestedName, let text):
@@ -768,14 +839,14 @@ struct DiffsplitterView: View {
     private var directoryNavigationRoot: some View {
         if let path = session.selectedRelativePath {
             directoryMemberDetail(path: path)
-                .modifier(DiffsplitterDirectoryBackToolbarModifier {
+                .modifier(DiffsplitterDirectoryBackToolbarModifier(isEnabled: !session.isBlockingBatchTransfer) {
                     session.leaveDirectoryDetail()
                 })
         } else if session.directoryBrowsePrefix.isEmpty {
             directoryListRoot
         } else {
             directoryListRoot
-                .modifier(DiffsplitterDirectoryBackToolbarModifier {
+                .modifier(DiffsplitterDirectoryBackToolbarModifier(isEnabled: !session.isBlockingBatchTransfer) {
                     session.leaveDirectoryBrowseLevel()
                 })
         }
@@ -845,6 +916,7 @@ struct DiffsplitterView: View {
             .help(L10n.t("Export DiffsplitterX Document…"))
             .accessibilityLabel(L10n.t("Export DiffsplitterX Document…"))
         }
+        exportBatchToolbarButton
 #endif
     }
 #if os(iOS)
@@ -893,7 +965,7 @@ struct DiffsplitterView: View {
         .accessibilityLabel(L10n.t("Ignore Whitespace"))
         .accessibilityValue(session.ignoreWhitespace ? L10n.t("On") : L10n.t("Off"))
         .accessibilityAddTraits(session.ignoreWhitespace ? .isSelected : [])
-        .disabled(session.isBinaryDumpActive)
+        .disabled(session.isBinaryDumpActive || session.isBlockingBatchTransfer)
         if isShowingDirectoryList {
             Button {
                 session.swapSides()
@@ -929,7 +1001,22 @@ struct DiffsplitterView: View {
             .accessibilityLabel(L10n.t("Export DiffsplitterX Document…"))
 #endif
         }
+#if os(macOS)
+        exportBatchToolbarButton
+#endif
     }
+
+    private var exportBatchToolbarButton: some View {
+        Button {
+            session.exportDiffsplitterBatchDocument()
+        } label: {
+            Image(systemName: "archivebox")
+        }
+        .disabled(!session.canExportBatch)
+        .help(L10n.t("Export Diffsplitter Batch…"))
+        .accessibilityLabel(L10n.t("Export Diffsplitter Batch…"))
+    }
+
     private static var diffsplitterXExportSymbolName: String {
 #if os(macOS)
         if #available(macOS 13.0, *) {
@@ -952,6 +1039,7 @@ struct DiffsplitterView: View {
             Label(L10n.t("Back"), systemImage: "chevron.left")
         }
         .help(L10n.t("Back"))
+        .disabled(session.isBlockingBatchTransfer)
     }
     private var directoryListRoot: some View {
         let items = directoryBrowserItems
@@ -959,6 +1047,14 @@ struct DiffsplitterView: View {
             directoryListHeader(items: items)
             Divider()
             List(items) { item in
+#if os(iOS)
+                directoryBrowserRow(item)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        session.activateDirectoryBrowserItem(item)
+                    }
+#else
                 Button {
                     session.activateDirectoryBrowserItem(item)
                 } label: {
@@ -967,6 +1063,7 @@ struct DiffsplitterView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+#endif
             }
             .modifier(DirectoryListStyleModifier())
         }
@@ -1683,7 +1780,7 @@ struct DiffsplitterView: View {
     }
 }
 
-private struct DiffsplitterEmptyBackground: View {
+struct DiffsplitterEmptyBackground: View {
     var animationsEnabled: Bool = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
@@ -1816,6 +1913,7 @@ private struct DirectoryListStyleModifier: ViewModifier {
 }
 
 private struct DiffsplitterDirectoryBackToolbarModifier: ViewModifier {
+    var isEnabled: Bool = true
     let action: () -> Void
     func body(content: Content) -> some View {
 #if os(macOS)
@@ -1826,6 +1924,7 @@ private struct DiffsplitterDirectoryBackToolbarModifier: ViewModifier {
                         Label(L10n.t("Back"), systemImage: "chevron.left")
                     }
                     .help(L10n.t("Back"))
+                    .disabled(!isEnabled)
                 }
             }
         } else {
@@ -1837,7 +1936,7 @@ private struct DiffsplitterDirectoryBackToolbarModifier: ViewModifier {
     }
 }
 
-private enum DiffsplitterPalette {
+enum DiffsplitterPalette {
     static let leftAccent = Color(red: 1.0, green: 0.18, blue: 0.26)
     static let rightAccent = Color(red: 0.10, green: 0.88, blue: 0.42)
     static let brandGreen = Color(red: 0.0, green: 0.435, blue: 0.243)
@@ -1905,9 +2004,11 @@ private struct DiffsplitterWindowCoordinator: NSViewRepresentable {
         var commandActions = DiffsplitterCommandActions(
             canSave: false,
             canExportDiffsplitterX: false,
+            canExportBatch: false,
             save: {},
             saveAs: {},
-            exportDiffsplitterX: {}
+            exportDiffsplitterX: {},
+            exportBatch: {}
         )
         var saveDraft: ((@escaping (Bool) -> Void) -> Void)?
         private var closeApproved = false

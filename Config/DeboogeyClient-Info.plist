@@ -60,6 +60,24 @@
 				<string>theoderoy.Deboogey.DiffsplitterX</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeIconFile</key>
+			<string>DiffsplitterXDocumentIcon</string>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>dspltb</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>Diffsplitter Batch</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>theoderoy.Deboogey.DiffsplitterBatch</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleDisplayName</key>
 	<string>$(APP_BUNDLE_DISPLAY_NAME)</string>
@@ -151,6 +169,28 @@
 				</array>
 				<key>public.mime-type</key>
 				<string>application/vnd.deboogey.diffsplitterx+json</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+				<string>public.content</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Diffsplitter Batch</string>
+			<key>UTTypeIconFile</key>
+			<string>DiffsplitterXDocumentIcon</string>
+			<key>UTTypeIdentifier</key>
+			<string>theoderoy.Deboogey.DiffsplitterBatch</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>dspltb</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/vnd.deboogey.diffsplitter-batch</string>
 			</dict>
 		</dict>
 	</array>

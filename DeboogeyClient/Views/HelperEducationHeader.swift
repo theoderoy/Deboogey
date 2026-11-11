@@ -66,6 +66,7 @@ extension View {
 }
 
 struct HelperToolSheetFooter: View {
+    var runTitle: String = "Run"
     let isRunning: Bool
     let runDisabled: Bool
     let onCancel: () -> Void
@@ -78,7 +79,7 @@ struct HelperToolSheetFooter: View {
                 Button(L10n.t("Cancel"), action: onCancel)
                     .disabled(isRunning)
                 Spacer()
-                Button(L10n.t("Run"), action: onRun)
+                Button(L10n.t(runTitle), action: onRun)
                     .keyboardShortcut(.defaultAction)
                     .disabled(runDisabled)
             }

@@ -82,6 +82,7 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
         case documentCreated = "__dspltDocumentCreated"
         case documentModified = "__dspltDocumentModified"
         case documentExported = "__dspltxDocumentExported"
+        case batchExported = "__dspltbDocumentExported"
 
         var summaryFormat: String {
             switch self {
@@ -89,6 +90,7 @@ struct TrackedEntity: Identifiable, Codable, Equatable {
             case .documentCreated: return L10n.t(".dsplt file was created — %@")
             case .documentModified: return L10n.t(".dsplt file was modified — %@")
             case .documentExported: return L10n.t(".dspltx file was exported — %@")
+            case .batchExported: return L10n.t(".dspltb file was exported — %@")
             }
         }
     }

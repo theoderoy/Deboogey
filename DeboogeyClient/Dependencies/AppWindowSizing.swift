@@ -32,6 +32,7 @@ enum AppWindowSizing {
 #else
     static let cocoaDebugMenu = AppWindowSize(width: 520, height: 650)
 #endif
+    static let batchComposer = AppWindowSize(width: 520, height: 470)
 
     enum Configuration {
         static let sidebarWidth: CGFloat = 200

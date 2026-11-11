@@ -16,6 +16,7 @@ enum DocumentOpenPanel {
         .loupeMachineDocument,
         .diffsplitterDocument,
         .diffsplitterXDocument,
+        .diffsplitterBatchDocument,
     ]
 
     static func choose(
@@ -51,12 +52,12 @@ enum DocumentOpenPanel {
         openLoupe: (URL) -> Void,
         openDiffsplitter: (URL) -> Void
     ) {
-        switch url.pathExtension.lowercased() {
-        case "loum":
+        switch DeboogeyDocumentKind.resolve(for: url) {
+        case .loum:
             openLoupe(url)
-        case "dsplt", "dspltx":
+        case .dsplt, .dspltx, .dspltb:
             openDiffsplitter(url)
-        default:
+        case .none:
             break
         }
     }

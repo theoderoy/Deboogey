@@ -20,9 +20,11 @@
 "%d value(s) changed outside Loupe Machine after this document was saved." = "%d waarde(n) zijn buiten Loupe Machine gewijzigd nadat dit document is bewaard.";
 ".dsplt file was created — %@" = ".dsplt-bestand is aangemaakt — %@";
 ".dsplt file was modified — %@" = ".dsplt-bestand is gewijzigd — %@";
+".dspltb file was exported — %@" = ".dspltb-bestand is geëxporteerd — %@";
 ".dspltx file was exported — %@" = ".dspltx-bestand is geëxporteerd — %@";
 ".loum file was created — %@" = ".loum-bestand is aangemaakt — %@";
 ".loum file was modified — %@" = ".loum-bestand is gewijzigd — %@";
+"A Diffsplitter Batch compares two folders or archives." = "Een Diffsplitter-batch vergelijkt twee mappen of archieven.";
 "ACTION" = "ACTION";
 "AEA Decryption Key" = "AEA-ontsleutelingssleutel";
 "About %@ in memory for materialized files, plus %@ for the visible window" = "Ongeveer %@ in geheugen voor gematerialiseerde bestanden, plus %@ voor het zichtbare venster";
@@ -51,6 +53,7 @@
 "Auto-Restart" = "Automatisch herstarten";
 "Auxiliary upgrades have been enabled." = "Aanvullende upgrades zijn ingeschakeld.";
 "Back" = "Terug";
+"Batch Composer" = "Batch Composer";
 "Binary" = "Binair";
 "Binary Size Threshold" = "Drempel binaire grootte";
 "Binary dump" = "Binaire dump";
@@ -67,6 +70,7 @@
 "Choose a macOS application bundle ending in .app." = "Kies een macOS-appbundel die eindigt op .app.";
 "Choose a regular file, folder, or archive." = "Kies een gewoon bestand, een map of een archief.";
 "Choose where Diffsplitter stores large dumps while you inspect them. Storing on disk demands less horsepower, while memory (RAM) can be faster on powerful machines." = "Kies waar Diffsplitter grote dumps opslaat tijdens inspectie. Opslaan op schijf vraagt minder rekenkracht, terwijl geheugen (RAM) sneller kan zijn op krachtige machines.";
+"Choose where to save…" = "Kies waar je wilt bewaren…";
 "Clear Entire Log…" = "Volledig logboek wissen…";
 "Clears all preferences and then quits the app." = "Wist alle voorkeuren en sluit daarna de app.";
 "Clears the Entity Tracker log except file, compare, and indexing entries" = "Wist het Entity Tracker-logboek behalve bestands-, vergelijkings- en indexeringsitems";
@@ -84,11 +88,16 @@
 "Continue" = "Ga door";
 "Contributor" = "Bijdrager";
 "Copy Unified Diff" = "Unified diff kopiëren";
+"Could not decompress the ZIP member." = "Kan het ZIP-onderdeel niet decomprimeren.";
 "Could not decrypt the Apple Encrypted Archive: %@" = "Kon het Apple Encrypted Archive niet ontsleutelen: %@";
 "Could not expand the archive: %@" = "Kon het archief niet uitpakken: %@";
 "Could not mount the disk image: %@" = "Kon de schijfkopie niet aankoppelen: %@";
 "Could not restore one or both sides. Choose the missing items again." = "Kon een of beide zijden niet herstellen. Kies de ontbrekende items opnieuw.";
+"Couldn’t Open Document" = "Document kon niet worden geopend";
+"Create Batch…" = "Batch aanmaken…";
+"Create Diffsplitter Batch" = "Diffsplitter-batch aanmaken";
 "Create New Document…" = "Nieuw document aanmaken…";
+"Creating Diffsplitter Batch…" = "Diffsplitter-batch maken…";
 "Custom…" = "Aangepast…";
 "Date (Newest First)" = "Datum (nieuwste eerst)";
 "Date (Oldest First)" = "Datum (oudste eerst)";
@@ -127,6 +136,7 @@
 "Downloading upgrade" = "Upgrade downloaden";
 "Drag to reorder. Items nearer the top win when a folder contains mixed changes." = "Sleep om te herschikken. Items hoger in de lijst winnen wanneer een map gemengde wijzigingen bevat.";
 "Drop a file, folder, or archive here" = "Zet hier een bestand, map of archief neer";
+"Drop a folder or archive here" = "Zet hier een map of archief neer";
 "Drop a program here to inspect its flags." = "Zet hier een programma neer om de vlaggen te inspecteren.";
 "Drop two text files, or two folders or archives — one on each side — to compare them." = "Zet twee tekstbestanden, of twee mappen of archieven neer — één aan elke kant — om ze te vergelijken.";
 "Edition" = "Editie";
@@ -146,6 +156,8 @@
 "Expanding archive…" = "Archief uitpakken…";
 "Expanding left…" = "Links uitpakken…";
 "Expanding right…" = "Rechts uitpakken…";
+"Export Diffsplitter Batch" = "Diffsplitter-batch exporteren";
+"Export Diffsplitter Batch…" = "Diffsplitter-batch exporteren…";
 "Export DiffsplitterX Document" = "DiffsplitterX-document exporteren";
 "Export DiffsplitterX Document…" = "DiffsplitterX-document exporteren…";
 "Export Unified Diff" = "Unified diff exporteren";
@@ -185,6 +197,7 @@
 "Import" = "Importeer";
 "Import macOS Application" = "macOS-app importeren";
 "Imported application: %@" = "Geïmporteerde app: %@";
+"Importing Diffsplitter Batch…" = "Diffsplitter-batch importeren…";
 "Importing DiffsplitterX Document…" = "DiffsplitterX-document importeren…";
 "Import…" = "Importeer…";
 "In-App Tones" = "In-app tonen";
@@ -269,6 +282,7 @@
 "Notify with a sound and banner when Loupe Machine finishes an index cycle." = "Melden met geluid en banner wanneer Loupe Machine een indexeringscyclus voltooit.";
 "Notify with a sound and banner when a Diffsplitter comparison takes at least the selected duration." = "Melden met geluid en banner wanneer een Diffsplitter-vergelijking minstens de geselecteerde duur duurt.";
 "OK" = "OK";
+"OPTIONS" = "OPTIES";
 "Off" = "Uit";
 "Offload Large Dumps to Temporary Storage" = "Grote dumps naar tijdelijke opslag verplaatsen";
 "Offset" = "Offset";
@@ -281,6 +295,8 @@
 "Open Loupe Machine Document" = "Loupe Machine-document openen";
 "Open a Loupe Machine document before saving." = "Open een Loupe Machine-document voordat je bewaart.";
 "Open an existing Loupe Machine document to browse and edit its change set." = "Open een bestaand Loupe Machine-document om de wijzigingsset te bekijken en te bewerken.";
+"Open on Creation" = "Openen bij aanmaken";
+"Open the batch after it is created" = "Open de batch nadat deze is aangemaakt";
 "Open…" = "Open…";
 "Other" = "Overig";
 "PRESET" = "VOORINSTELLING";
@@ -299,6 +315,7 @@
 "Plays when a Loupe Machine document is written successfully." = "Wordt afgespeeld wanneer een Loupe Machine-document succesvol is geschreven.";
 "Plays when a Loupe Machine, Diffsplitter, or DiffsplitterX document is written successfully." = "Wordt afgespeeld wanneer een Loupe Machine-, Diffsplitter- of DiffsplitterX-document succesvol is geschreven.";
 "Preferences" = "Voorkeuren";
+"Preparing Diffsplitter Batch…" = "Diffsplitter-batch voorbereiden…";
 "Preparing DiffsplitterX Document…" = "DiffsplitterX-document voorbereiden…";
 "Preparing binary dump…" = "Binaire dump voorbereiden…";
 "Preparing upgrade" = "Upgrade voorbereiden";
@@ -311,6 +328,7 @@
 "Quits the app gracefully after applying the change" = "Sluit de app netjes af na het toepassen van de wijziging";
 "Release" = "Release";
 "Release %@" = "Release %@";
+"Remove" = "Verwijder";
 "Remove %d Selected from Log" = "%d geselecteerde uit logboek verwijderen";
 "Remove %d Superseded" = "%d vervangen verwijderen";
 "Remove from Log" = "Uit logboek verwijderen";
@@ -335,6 +353,7 @@
 "Revert to Document Values" = "Documentwaarden herstellen";
 "Right" = "Rechts";
 "Run" = "Voer uit";
+"SOURCES" = "BRONNEN";
 "Save" = "Bewaar";
 "Save As…" = "Bewaar als…";
 "Save Change Set" = "Wijzigingsset bewaren";
@@ -378,12 +397,18 @@
 "Take a look at the system's internal diagnostics, such as the refresh rate, collision boxes, screen activity and more." = "Bekijk de interne diagnostiek van het systeem, zoals vernieuwingsfrequentie, botsingsvakken, schermactiviteit en meer.";
 "Tester" = "Tester";
 "Text" = "Tekst";
+"The ZIP archive is invalid." = "Het ZIP-archief is ongeldig.";
+"The ZIP archive is truncated or unreadable." = "Het ZIP-archief is afgekapt of onleesbaar.";
+"The ZIP member could not be found." = "Het ZIP-onderdeel is niet gevonden.";
 "The application preferences could not be saved." = "De voorkeuren van de app konden niet worden bewaard.";
 "The dropped item could not be opened." = "Het neergezette item kon niet worden geopend.";
 "The selected application is unavailable." = "De geselecteerde app is niet beschikbaar.";
 "The selected item could not be read." = "Het geselecteerde item kon niet worden gelezen.";
 "These notices will not be shown until System Integrity Protection is adjusted." = "Deze meldingen worden niet getoond totdat System Integrity Protection is aangepast.";
 "This Apple Encrypted Archive needs a decryption key." = "Dit Apple Encrypted Archive heeft een ontsleutelingssleutel nodig.";
+"This Diffsplitter Batch could not be read." = "Deze Diffsplitter-batch kon niet worden gelezen.";
+"This Loupe Machine document can’t be opened in Diffsplitter." = "Dit Loupe Machine-document kan niet worden geopend in Diffsplitter.";
+"This ZIP member uses an unsupported compression method." = "Dit ZIP-onderdeel gebruikt een niet-ondersteunde compressiemethode.";
 "This archive has too many entries to compare in Diffsplitter." = "Dit archief bevat te veel items om in Diffsplitter te vergelijken.";
 "This build contains experimental features and is not officially notarised by Apple. Use caution when running it." = "Deze build bevat experimentele functies en is niet officieel door Apple genotariseerd. Wees voorzichtig bij gebruik.";
 "This file looks binary and cannot be shown as text." = "Dit bestand lijkt binair en kan niet als tekst worden getoond.";
@@ -392,10 +417,12 @@
 "This will quit the application. Relaunch it and look in the menu bar to see the new entry at your disposal." = "Dit sluit de app af. Start opnieuw en kijk in de menubalk om de nieuwe vermelding te zien.";
 "This will quit the application. The menu bar entry will be removed." = "Dit sluit de app af. De menubalkvermelding wordt verwijderd.";
 "This will restore settings to their defaults without clearing other stored data, then quit the app." = "Dit herstelt de standaardinstellingen zonder andere opgeslagen gegevens te wissen, en sluit daarna de app.";
+"Treat whitespace-only differences as identical" = "Behandel verschillen die alleen witruimte zijn als identiek";
 "Trigger" = "Trigger";
 "Unassigned" = "Niet toegewezen";
 "Unified Diff Copied" = "Unified diff gekopieerd";
 "Unknown AppleScript error" = "Onbekende AppleScript-fout";
+"Untitled" = "Naamloos";
 "Untitled — Diffsplitter" = "Naamloos — Diffsplitter";
 "Untitled — Loupe Machine" = "Naamloos — Loupe Machine";
 "Untitled.loum" = "Naamloos.loum";
@@ -413,6 +440,7 @@
 "Why is Diffsplitter unavailable?" = "Waarom is Diffsplitter niet beschikbaar?";
 "Will not be honored when Reduce Motion is turned on in Accessibility." = "Wordt niet toegepast wanneer Beweging verminderen is ingeschakeld in Toegankelijkheid.";
 "Window %@–%@ of %@ (%d lines in memory)" = "Venster %@–%@ van %@ (%d regels in geheugen)";
+"Writing Diffsplitter Batch…" = "Diffsplitter-batch schrijven…";
 "Writing DiffsplitterX Document…" = "DiffsplitterX-document schrijven…";
 "You might need to manually code-sign after upgrading." = "Mogelijk moet je na het upgraden handmatig code-signeren.";
 "Your session pair will be lost if you don’t save it." = "Je sessiepaar gaat verloren als je het niet bewaart.";
