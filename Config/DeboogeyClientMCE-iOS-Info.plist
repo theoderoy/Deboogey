@@ -118,8 +118,15 @@
 			</array>
 			<key>UTTypeDescription</key>
 			<string>Loupe Machine Document</string>
-			<key>UTTypeIconFile</key>
-			<string>LoumDocumentIcon</string>
+			<key>UTTypeIconFiles</key>
+			<array>
+				<string>LoumDocumentFace</string>
+			</array>
+			<key>UTTypeIcons</key>
+			<dict>
+				<key>UTTypeIconText</key>
+				<string>LOUM</string>
+			</dict>
 			<key>UTTypeIdentifier</key>
 			<string>theoderoy.Deboogey.LoupeMachine</string>
 			<key>UTTypeTagSpecification</key>
@@ -140,8 +147,15 @@
 			</array>
 			<key>UTTypeDescription</key>
 			<string>Diffsplitter Document</string>
-			<key>UTTypeIconFile</key>
-			<string>DiffsplitterDocumentIcon</string>
+			<key>UTTypeIconFiles</key>
+			<array>
+				<string>DiffsplitterDocumentFace</string>
+			</array>
+			<key>UTTypeIcons</key>
+			<dict>
+				<key>UTTypeIconText</key>
+				<string>DSPLT</string>
+			</dict>
 			<key>UTTypeIdentifier</key>
 			<string>theoderoy.Deboogey.Diffsplitter</string>
 			<key>UTTypeTagSpecification</key>
@@ -162,8 +176,15 @@
 			</array>
 			<key>UTTypeDescription</key>
 			<string>DiffsplitterX Document</string>
-			<key>UTTypeIconFile</key>
-			<string>DiffsplitterXDocumentIcon</string>
+			<key>UTTypeIconFiles</key>
+			<array>
+				<string>DiffsplitterXDocumentFace</string>
+			</array>
+			<key>UTTypeIcons</key>
+			<dict>
+				<key>UTTypeIconText</key>
+				<string>DSPLTX</string>
+			</dict>
 			<key>UTTypeIdentifier</key>
 			<string>theoderoy.Deboogey.DiffsplitterX</string>
 			<key>UTTypeTagSpecification</key>
@@ -184,8 +205,15 @@
 			</array>
 			<key>UTTypeDescription</key>
 			<string>Diffsplitter Batch</string>
-			<key>UTTypeIconFile</key>
-			<string>DiffsplitterXDocumentIcon</string>
+			<key>UTTypeIconFiles</key>
+			<array>
+				<string>DiffsplitterBatchDocumentFace</string>
+			</array>
+			<key>UTTypeIcons</key>
+			<dict>
+				<key>UTTypeIconText</key>
+				<string>BATCH</string>
+			</dict>
 			<key>UTTypeIdentifier</key>
 			<string>theoderoy.Deboogey.DiffsplitterBatch</string>
 			<key>UTTypeTagSpecification</key>

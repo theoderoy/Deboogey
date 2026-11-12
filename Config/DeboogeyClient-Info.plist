@@ -7,14 +7,16 @@
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>LoumDocumentIcon</string>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>loum</string>
 			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>LoumDocumentIcon</string>
 			<key>CFBundleTypeName</key>
 			<string>Loupe Machine Document</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<false/>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSHandlerRank</key>
@@ -25,14 +27,16 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>DiffsplitterDocumentIcon</string>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>dsplt</string>
 			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>DiffsplitterDocumentIcon</string>
 			<key>CFBundleTypeName</key>
 			<string>Diffsplitter Document</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<false/>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSHandlerRank</key>
@@ -43,14 +47,16 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>DiffsplitterXDocumentIcon</string>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>dspltx</string>
 			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>DiffsplitterXDocumentIcon</string>
 			<key>CFBundleTypeName</key>
 			<string>DiffsplitterX Document</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<false/>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSHandlerRank</key>
@@ -61,14 +67,16 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>DiffsplitterXDocumentIcon</string>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>dspltb</string>
 			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>DiffsplitterBatchDocumentIcon</string>
 			<key>CFBundleTypeName</key>
 			<string>Diffsplitter Batch</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<false/>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSHandlerRank</key>
@@ -184,7 +192,7 @@
 			<key>UTTypeDescription</key>
 			<string>Diffsplitter Batch</string>
 			<key>UTTypeIconFile</key>
-			<string>DiffsplitterXDocumentIcon</string>
+			<string>DiffsplitterBatchDocumentIcon</string>
 			<key>UTTypeIdentifier</key>
 			<string>theoderoy.Deboogey.DiffsplitterBatch</string>
 			<key>UTTypeTagSpecification</key>
