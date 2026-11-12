@@ -1067,12 +1067,20 @@ struct DiffsplitterView: View {
             }
             .modifier(DirectoryListStyleModifier())
         }
+#if os(iOS)
         .navigationTitle(directoryListNavigationTitle)
+#endif
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func directoryListHeader(items: [DiffsplitterSession.DirectoryBrowserItem]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
+#if os(macOS)
+            Text(directoryListNavigationTitle)
+                .font(.headline)
+                .lineLimit(1)
+                .truncationMode(.middle)
+#endif
             HStack {
                 TextField(L10n.t("Search paths"), text: $session.directoryFilter)
                     .textFieldStyle(.roundedBorder)
@@ -1163,11 +1171,13 @@ struct DiffsplitterView: View {
             }
             evenColumns
         }
+#if os(iOS)
         .navigationTitle(
             showsBookFoldNavTitleSwap
                 ? ""
                 : (path as NSString).lastPathComponent
         )
+#endif
         .onAppear {
             session.loadSelectedDirectoryFile()
         }
