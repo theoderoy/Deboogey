@@ -19,6 +19,12 @@ struct WhatsNewView: View {
     private let entries: [WhatsNewEntry] = [
         WhatsNewEntry(
             scope: .unified,
+            title: "Architecture",
+            description: "Starting from Release 9 and Internal 31, Deboogey will no longer support Intel-based Macs.",
+            variant: .notice
+        ),
+        WhatsNewEntry(
+            scope: .unified,
             icon: "hand.wave",
             color: .accentColor,
             title: "PlaceholderText1",
@@ -101,14 +107,37 @@ private enum WhatsNewEntryScope {
     }
 }
 
+private enum WhatsNewEntryVariant {
+    case standard
+    case notice
+}
+
 private struct WhatsNewEntry: Identifiable {
     let scope: WhatsNewEntryScope
     let icon: String
     let color: Color
     let title: String
     let description: String
+    let variant: WhatsNewEntryVariant
 
     var id: String { title }
+    var isNotice: Bool { variant == .notice }
+
+    init(
+        scope: WhatsNewEntryScope,
+        icon: String = "exclamationmark.triangle.fill",
+        color: Color = .yellow,
+        title: String,
+        description: String,
+        variant: WhatsNewEntryVariant = .standard
+    ) {
+        self.scope = scope
+        self.icon = icon
+        self.color = color
+        self.title = title
+        self.description = description
+        self.variant = variant
+    }
 }
 
 private struct ContinueButton: View {
@@ -130,10 +159,11 @@ private struct FeatureRow: View {
     let entry: WhatsNewEntry
 
     private var usesAssetIcon: Bool {
+        guard !entry.isNotice else { return false }
 #if canImport(AppKit)
-        NSImage(named: entry.icon) != nil
+        return NSImage(named: entry.icon) != nil
 #else
-        UIImage(named: entry.icon) != nil
+        return UIImage(named: entry.icon) != nil
 #endif
     }
 
@@ -163,6 +193,14 @@ private struct FeatureRow: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, entry.isNotice ? 12 : 0)
+        .padding(.vertical, entry.isNotice ? 8 : 0)
+        .background {
+            if entry.isNotice {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.yellow.opacity(0.12))
             }
         }
     }

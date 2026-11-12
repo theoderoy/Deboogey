@@ -8,6 +8,9 @@
 import AVFoundation
 import Foundation
 import UserNotifications
+#if os(iOS)
+import CryptoKit
+#endif
 #if canImport(AppKit)
 import AppKit
 #endif
@@ -148,14 +151,15 @@ private final class Playback: NSObject, AVAudioPlayerDelegate {
 private final class NoticeCenter: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NoticeCenter()
 
-    private static let soundFileName = "ProcessDone.caf"
+    private static let soundResourceName = "ProcessDone"
+    private static let soundExtension = "caf"
     private static let ownershipKey = "theoderoy.Deboogey.noticeSound"
 
     private let center = UNUserNotificationCenter.current()
     private let lock = NSLock()
     private var didInstall = false
     private var didAskAuthorization = false
-    private var didInstallSound = false
+    private var installedSoundFileName: String?
 
     func install() {
         lock.lock()
@@ -163,6 +167,9 @@ private final class NoticeCenter: NSObject, UNUserNotificationCenterDelegate {
         guard !didInstall else { return }
         didInstall = true
         center.delegate = self
+#if os(macOS)
+        removeStaleUserProcessDoneSoundsUnlocked()
+#endif
     }
 
     func requestAuthorizationIfNeeded() {
@@ -204,14 +211,15 @@ private final class NoticeCenter: NSObject, UNUserNotificationCenterDelegate {
         let playSound = includeSound && settings.soundSetting != .disabled
         if playSound {
 #if os(macOS)
-            if settings.soundSetting == .notSupported {
-                AppFeedback.play(.processDone)
-            } else {
-                content.sound = processDoneSound
-            }
+            AppFeedback.play(.processDone)
+            removeStaleUserProcessDoneSounds()
 #else
-            content.sound = processDoneSound
-            content.userInfo = [Self.ownershipKey: Self.soundFileName]
+            if let soundFileName = installSoundIfNeeded() {
+                content.sound = UNNotificationSound(named: UNNotificationSoundName(soundFileName))
+                content.userInfo = [Self.ownershipKey: soundFileName]
+            } else {
+                content.sound = .default
+            }
 #endif
         }
         let request = UNNotificationRequest(
@@ -239,54 +247,89 @@ private final class NoticeCenter: NSObject, UNUserNotificationCenterDelegate {
         }
 #else
         let options: UNNotificationPresentationOptions = [.banner, .list]
-        if notification.request.content.sound != nil {
-            AppFeedback.play(.processDone)
-        }
 #endif
         completionHandler(options)
     }
 
-    private var processDoneSound: UNNotificationSound {
-        installSoundIfNeeded()
-        return UNNotificationSound(named: UNNotificationSoundName(Self.soundFileName))
-    }
-
-    private func installSoundIfNeeded() {
 #if os(iOS)
+    private func installSoundIfNeeded() -> String? {
         lock.lock()
-        if didInstallSound {
+        if let installedSoundFileName {
             lock.unlock()
-            return
+            return installedSoundFileName
         }
         lock.unlock()
-        guard let source = AppFeedback.resourceURL(named: "ProcessDone", ext: "caf", bundle: .main),
-              let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first else { return }
+        guard let source = AppFeedback.resourceURL(
+            named: Self.soundResourceName,
+            ext: Self.soundExtension,
+            bundle: .main
+        ),
+              let digest = fileDigest(at: source),
+              let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first
+        else { return nil }
+        let fileName = "\(Self.soundResourceName)-\(digest).\(Self.soundExtension)"
         let folder = library.appendingPathComponent("Sounds", isDirectory: true)
-        let destination = folder.appendingPathComponent(Self.soundFileName)
+        let destination = folder.appendingPathComponent(fileName)
         let files = FileManager.default
         do {
             try files.createDirectory(at: folder, withIntermediateDirectories: true)
-            if files.fileExists(atPath: destination.path) {
-                let sourceSize = try source.resourceValues(forKeys: [.fileSizeKey]).fileSize
-                let destinationSize = try destination.resourceValues(forKeys: [.fileSizeKey]).fileSize
-                if sourceSize == destinationSize {
-                    markSoundInstalled()
-                    return
-                }
-                try files.removeItem(at: destination)
+            if !files.fileExists(atPath: destination.path) {
+                try files.copyItem(at: source, to: destination)
             }
-            try files.copyItem(at: source, to: destination)
-            markSoundInstalled()
+            removeStaleProcessDoneSounds(in: folder, keeping: fileName)
+            lock.lock()
+            installedSoundFileName = fileName
+            lock.unlock()
+            return fileName
         } catch {
-            return
+            return nil
         }
-#endif
     }
 
-    private func markSoundInstalled() {
+    private func fileDigest(at url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url, options: [.mappedIfSafe]) else { return nil }
+        return SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
+    }
+#endif
+
+#if os(macOS)
+    private func removeStaleUserProcessDoneSounds() {
         lock.lock()
-        didInstallSound = true
-        lock.unlock()
+        defer { lock.unlock() }
+        removeStaleUserProcessDoneSoundsUnlocked()
+    }
+
+    private func removeStaleUserProcessDoneSoundsUnlocked() {
+        if installedSoundFileName != nil { return }
+        let folder = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Sounds", isDirectory: true)
+        removeStaleProcessDoneSounds(in: folder, keeping: nil)
+        installedSoundFileName = "cleared"
+    }
+#endif
+
+    private func removeStaleProcessDoneSounds(in folder: URL, keeping currentFileName: String?) {
+        let files = FileManager.default
+        guard let contents = try? files.contentsOfDirectory(
+            at: folder,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { return }
+#if os(iOS)
+        let allowedExtensions: Set<String> = [Self.soundExtension]
+#else
+        let allowedExtensions: Set<String> = ["caf", "aif", "aiff", "wav"]
+#endif
+        let prefix = "\(Self.soundResourceName)-"
+        for url in contents {
+            let name = url.lastPathComponent
+            let ext = url.pathExtension.lowercased()
+            guard allowedExtensions.contains(ext) else { continue }
+            let stem = String(name.dropLast(ext.count + 1))
+            guard stem == Self.soundResourceName || stem.hasPrefix(prefix) else { continue }
+            if let currentFileName, name == currentFileName { continue }
+            try? files.removeItem(at: url)
+        }
     }
 
     private func notificationSettings() async -> UNNotificationSettings {

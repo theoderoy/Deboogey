@@ -12,6 +12,7 @@
 "%d MB" = "%d Mo";
 "%d changed" = "%d modifié(s)";
 "%d entries" = "%d entrées";
+"%d flags found" = "%d drapeaux trouvés";
 "%d indexed item(s)" = "%d élément(s) indexé(s)";
 "%d item(s)" = "%d élément(s)";
 "%d levels" = "%d niveaux";
@@ -44,6 +45,7 @@
 "Apply All Pending" = "Appliquer toutes les modifications en attente";
 "Apply Currently Viewed" = "Appliquer la modification affichée";
 "Apply changes to application data?" = "Appliquer les modifications aux données de l’application ?";
+"Architecture" = "Architecture";
 "Archive Entry Limit" = "Limite d’entrées d’archive";
 "Archive Nest Depth" = "Profondeur d’imbrication des archives";
 "Archiving upgrade" = "Archivage de la mise à niveau";
@@ -211,6 +213,7 @@
 "Inspect Dump" = "Inspecter le dump";
 "Inspect and adjust Cocoa debugging parameters." = "Inspectez et ajustez les paramètres de débogage Cocoa.";
 "Inspect the sandbox of individual programs and adjust parameters." = "Inspectez le bac à sable de programmes précis et ajustez leurs paramètres.";
+"Inspecting %@…" = "Inspection de %@…";
 "Inspecting flags…" = "Inspection des drapeaux…";
 "Install" = "Installer";
 "Installing upgrade" = "Installation de la mise à niveau";
@@ -222,6 +225,7 @@
 "Invalid arguments. Unknown flag: %@" = "Arguments invalides. Option inconnue : %@";
 "Keep Local Changes" = "Conserver les valeurs locales en amont";
 "Keeps comparison progress visible in the background. Manage Live Activities and sounds in Settings." = "Garde la progression de la comparaison visible en arrière-plan. Gérez Live Activities et les sons dans Réglages.";
+"Keeps indexing progress visible in the background. Manage Live Activities and sounds in Settings." = "Garde la progression de l’indexation visible en arrière-plan. Gérez Live Activities et les sons dans Réglages.";
 "Large File Hex Conversion" = "Conversion hexadécimale des gros fichiers";
 "Large File Size Threshold" = "Seuil de taille des gros fichiers";
 "Learn More" = "En savoir plus";
@@ -374,6 +378,7 @@
 "Settings" = "Réglages";
 "Show Sidebar" = "Afficher la barre latérale";
 "Show a Live Activity while Diffsplitter compares" = "Afficher une Live Activity pendant la comparaison Diffsplitter";
+"Show a Live Activity while Loupe Machine indexes" = "Afficher une Live Activity pendant l’indexation Loupe Machine";
 "Show a notice when a feature requires Command Line Tools for Xcode to be installed." = "Afficher un avis lorsqu’une fonctionnalité nécessite l’installation de Command Line Tools for Xcode.";
 "Show a notice when network connection is required for upgrades." = "Afficher un avis lorsqu’une connexion réseau est requise pour les mises à niveau.";
 "Show a notice when utilities require security adjustments." = "Afficher un avis lorsque des utilitaires nécessitent des ajustements de sécurité.";
@@ -385,6 +390,7 @@
 "Sourced Article" = "Article source";
 "Sources" = "Sources";
 "Special Thanks" = "Remerciements particuliers";
+"Starting from Release 9 and Internal 31, Deboogey will no longer support Intel-based Macs." = "À partir de la version Release 9 et Internal 31, Deboogey ne prendra plus en charge les Mac Intel.";
 "Step %d of %d" = "Étape %d sur %d";
 "Superseded" = "Remplacé";
 "Swap" = "Inverser";

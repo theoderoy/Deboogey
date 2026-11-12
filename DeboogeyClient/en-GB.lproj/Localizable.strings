@@ -12,6 +12,7 @@
 "%d MB" = "%d MB";
 "%d changed" = "%d changed";
 "%d entries" = "%d entries";
+"%d flags found" = "%d flags found";
 "%d indexed item(s)" = "%d indexed item(s)";
 "%d item(s)" = "%d item(s)";
 "%d levels" = "%d levels";
@@ -44,6 +45,7 @@
 "Apply All Pending" = "Apply All Pending";
 "Apply Currently Viewed" = "Apply Currently Viewed";
 "Apply changes to application data?" = "Apply changes to application data?";
+"Architecture" = "Architecture";
 "Archive Entry Limit" = "Archive Entry Limit";
 "Archive Nest Depth" = "Archive Nest Depth";
 "Archiving upgrade" = "Archiving upgrade";
@@ -211,6 +213,7 @@
 "Inspect Dump" = "Inspect Dump";
 "Inspect and adjust Cocoa debugging parameters." = "Inspect and adjust Cocoa debugging parameters.";
 "Inspect the sandbox of individual programs and adjust parameters." = "Inspect the sandbox of individual programs and adjust parameters.";
+"Inspecting %@…" = "Inspecting %@…";
 "Inspecting flags…" = "Inspecting flags…";
 "Install" = "Install";
 "Installing upgrade" = "Installing upgrade";
@@ -222,6 +225,7 @@
 "Invalid arguments. Unknown flag: %@" = "Invalid arguments. Unknown flag: %@";
 "Keep Local Changes" = "Keep Local Changes";
 "Keeps comparison progress visible in the background. Manage Live Activities and sounds in Settings." = "Keeps comparison progress visible in the background. Manage Live Activities and sounds in Settings.";
+"Keeps indexing progress visible in the background. Manage Live Activities and sounds in Settings." = "Keeps indexing progress visible in the background. Manage Live Activities and sounds in Settings.";
 "Large File Hex Conversion" = "Large File Hex Conversion";
 "Large File Size Threshold" = "Large File Size Threshold";
 "Learn More" = "Learn More";
@@ -374,6 +378,7 @@
 "Settings" = "Settings";
 "Show Sidebar" = "Show Sidebar";
 "Show a Live Activity while Diffsplitter compares" = "Show a Live Activity while Diffsplitter compares";
+"Show a Live Activity while Loupe Machine indexes" = "Show a Live Activity while Loupe Machine indexes";
 "Show a notice when a feature requires Command Line Tools for Xcode to be installed." = "Show a notice when a feature requires Command Line Tools for Xcode to be installed.";
 "Show a notice when network connection is required for upgrades." = "Show a notice when network connection is required for upgrades.";
 "Show a notice when utilities require security adjustments." = "Show a notice when utilities require security adjustments.";
@@ -385,6 +390,7 @@
 "Sourced Article" = "Sourced Article";
 "Sources" = "Sources";
 "Special Thanks" = "Special Thanks";
+"Starting from Release 9 and Internal 31, Deboogey will no longer support Intel-based Macs." = "Starting from Release 9 and Internal 31, Deboogey will no longer support Intel-based Macs.";
 "Step %d of %d" = "Step %d of %d";
 "Superseded" = "Superseded";
 "Swap" = "Swap";

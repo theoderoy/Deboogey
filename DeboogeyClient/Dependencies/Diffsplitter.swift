@@ -4703,6 +4703,11 @@ final class DiffsplitterSession: ObservableObject {
     private var documentTransferTask: Task<Void, Never>?
 #if os(iOS)
     private var continuedProcessing: DiffsplitterContinuedProcessing.Handle?
+#endif
+#if DEBOOGEY_MAC_LIVE_ACTIVITIES
+    private var macLiveActivity: DiffsplitterMacLiveActivity.Handle?
+#endif
+#if os(iOS) || DEBOOGEY_MAC_LIVE_ACTIVITIES
     private var suppressCompletionBannerForCurrentCompare = false
 #endif
     private var compareGeneration: UInt64 = 0
@@ -4734,30 +4739,30 @@ final class DiffsplitterSession: ObservableObject {
         documentTransferProgress = nil
         isBlockingBatchTransfer = false
         endContinuedProcessing(success: false)
-#if os(iOS)
+#if os(iOS) || DEBOOGEY_MAC_LIVE_ACTIVITIES
         suppressCompletionBannerForCurrentCompare = false
 #endif
         closeContainerSessions()
         stopAccess(for: .left)
         stopAccess(for: .right)
     }
-#if os(iOS)
     @MainActor
     private func beginContinuedProcessing(
         title: String = L10n.t("Diffsplitter"),
         subtitle: String
     ) async {
-        let previous = continuedProcessing
-        continuedProcessing = nil
-        previous?.finish(success: false)
+#if os(iOS) || DEBOOGEY_MAC_LIVE_ACTIVITIES
         suppressCompletionBannerForCurrentCompare = false
         guard DiffsplitterCompletionFeedback.isEnabled else { return }
         guard !isBatchDocument, !isEmbeddedDocument else {
             suppressCompletionBannerForCurrentCompare = true
             return
         }
-
         let generation = compareGeneration
+#if os(iOS)
+        let previous = continuedProcessing
+        continuedProcessing = nil
+        previous?.finish(success: false)
         let handle = await DiffsplitterContinuedProcessing.begin(
             title: title,
             subtitle: subtitle,
@@ -4773,12 +4778,23 @@ final class DiffsplitterSession: ObservableObject {
             return
         }
         continuedProcessing = handle
+#else
+        let previous = macLiveActivity
+        macLiveActivity = nil
+        previous?.end(success: false)
+        let handle = await DiffsplitterMacLiveActivity.begin(label: title, status: subtitle)
+        guard generation == compareGeneration else {
+            handle?.end(success: false)
+            return
+        }
+        macLiveActivity = handle
+#endif
         suppressCompletionBannerForCurrentCompare = handle != nil
         if let handle, let progress = indexProgress ?? memberLoadProgress {
             handle.update(progress)
         }
-    }
 #endif
+    }
     private func publishIndexProgress(_ progress: DiffsplitterIndexProgress) {
         indexProgress = progress
         publishContinuedProgress(progress)
@@ -4792,6 +4808,8 @@ final class DiffsplitterSession: ObservableObject {
     private func publishContinuedProgress(_ progress: DiffsplitterIndexProgress) {
 #if os(iOS)
         continuedProcessing?.update(progress)
+#elseif DEBOOGEY_MAC_LIVE_ACTIVITIES
+        macLiveActivity?.update(progress)
 #endif
     }
 
@@ -4799,6 +4817,9 @@ final class DiffsplitterSession: ObservableObject {
 #if os(iOS)
         continuedProcessing?.finish(success: success)
         continuedProcessing = nil
+#elseif DEBOOGEY_MAC_LIVE_ACTIVITIES
+        macLiveActivity?.end(success: success)
+        macLiveActivity = nil
 #endif
     }
 
@@ -5392,9 +5413,7 @@ final class DiffsplitterSession: ObservableObject {
             status: L10n.t("Aligning…")
         )
         compareTask = Task.detached(priority: .userInitiated) {
-#if os(iOS)
             await self.beginContinuedProcessing(subtitle: L10n.t("Aligning…"))
-#endif
             let result = Result {
                 try DiffsplitterEngine.alignLines(
                     left: leftLines,
@@ -5450,9 +5469,7 @@ final class DiffsplitterSession: ObservableObject {
         let rightName = rightURL.lastPathComponent
         let compareStartedAt = Date()
         compareTask = Task.detached(priority: .userInitiated) {
-#if os(iOS)
             await self.beginContinuedProcessing(subtitle: L10n.t("Comparing…"))
-#endif
             var builtLeftSession: DiffsplitterContainerSession?
             var builtRightSession: DiffsplitterContainerSession?
             let reporter = DiffsplitterIndexProgressReporter { progress in
@@ -5766,9 +5783,7 @@ final class DiffsplitterSession: ObservableObject {
         let sourceIgnoreWhitespace = batchSourceIgnoreWhitespace
         let invert = batchSidesInverted != directoryMemberSidesFlipped
         compareTask = Task.detached(priority: .userInitiated) { [weak self] in
-#if os(iOS)
             await self?.beginContinuedProcessing(subtitle: L10n.t("Loading…"))
-#endif
             let result = Result {
                 let payload: (rows: [DiffsplitterEngine.AlignedRow], isHexDump: Bool)
                 if let extractedRoot {
@@ -5861,13 +5876,11 @@ final class DiffsplitterSession: ObservableObject {
         let compareStartedAt = Date()
         let generation = bumpCompareGeneration()
         compareTask = Task.detached(priority: .userInitiated) {
-#if os(iOS)
             await self.beginContinuedProcessing(
                 subtitle: expandingAEA
                     ? L10n.t("Expanding AEA…")
                     : L10n.t("Expanding archive…")
             )
-#endif
             let progressPublish = DiffsplitterProgressPublisher { progress in
                 Task { @MainActor [self] in
                     self.publishMemberLoadProgress(progress)
@@ -6075,9 +6088,7 @@ final class DiffsplitterSession: ObservableObject {
         let compareStartedAt = Date()
         let generation = bumpCompareGeneration()
         compareTask = Task.detached(priority: .userInitiated) {
-#if os(iOS)
             await self.beginContinuedProcessing(subtitle: L10n.t("Loading…"))
-#endif
             let progressPublish = DiffsplitterProgressPublisher { progress in
                 Task { @MainActor [self] in
                     self.publishMemberLoadProgress(progress)
@@ -6314,9 +6325,7 @@ final class DiffsplitterSession: ObservableObject {
         let compareStartedAt = Date()
         let generation = bumpCompareGeneration()
         compareTask = Task.detached(priority: .userInitiated) {
-#if os(iOS)
             await self.beginContinuedProcessing(subtitle: L10n.t("Loading…"))
-#endif
             let result = Result {
                 try DiffsplitterEngine.alignDirectoryEntry(
                     status: .binary,
@@ -6368,9 +6377,7 @@ final class DiffsplitterSession: ObservableObject {
         let compareStartedAt = Date()
         let generation = bumpCompareGeneration()
         compareTask = Task.detached(priority: .userInitiated) {
-#if os(iOS)
             await self.beginContinuedProcessing(subtitle: L10n.t("Preparing binary dump…"))
-#endif
             let progressPublish = DiffsplitterProgressPublisher { progress in
                 Task { @MainActor [self] in
                     self.publishMemberLoadProgress(progress)
@@ -6518,7 +6525,7 @@ final class DiffsplitterSession: ObservableObject {
     private func finishSuccessfulCompare(label: String, startedAt: Date, generation: UInt64) {
         guard generation == compareGeneration else { return }
         let includeBanner: Bool = {
-#if os(iOS)
+#if os(iOS) || DEBOOGEY_MAC_LIVE_ACTIVITIES
             let suppress = suppressCompletionBannerForCurrentCompare
             suppressCompletionBannerForCurrentCompare = false
             return !suppress
@@ -6529,6 +6536,9 @@ final class DiffsplitterSession: ObservableObject {
 #if os(iOS)
         let continued = continuedProcessing
         continuedProcessing = nil
+#elseif DEBOOGEY_MAC_LIVE_ACTIVITIES
+        let macActivity = macLiveActivity
+        macLiveActivity = nil
 #endif
         let elapsed = Date().timeIntervalSince(startedAt)
         Task { @MainActor in
@@ -6539,6 +6549,8 @@ final class DiffsplitterSession: ObservableObject {
             )
 #if os(iOS)
             continued?.finish(success: true)
+#elseif DEBOOGEY_MAC_LIVE_ACTIVITIES
+            macActivity?.end(success: true)
 #endif
         }
         EntityTracker.shared.record(
@@ -6653,12 +6665,10 @@ final class DiffsplitterSession: ObservableObject {
                     self.endContinuedProcessing(success: succeeded)
                 }
             }
-#if os(iOS)
             await self.beginContinuedProcessing(
                 title: L10n.t("Batch Composer"),
                 subtitle: L10n.t("Creating Diffsplitter Batch…")
             )
-#endif
             do {
                 let outputURL: URL
 #if os(macOS)
@@ -6702,7 +6712,9 @@ final class DiffsplitterSession: ObservableObject {
                 try Task.checkCancellation()
 #if os(macOS)
                 self.recordBatchExport(named: destination.lastPathComponent)
-                DocumentSaveFeedback.playSoundIfEnabled()
+                if !DiffsplitterCompletionFeedback.suppressesBatchExportSaveSound {
+                    DocumentSaveFeedback.playSoundIfEnabled()
+                }
                 succeeded = true
 #else
                 let encoded = try Data(contentsOf: outputURL)
@@ -7299,7 +7311,9 @@ final class DiffsplitterSession: ObservableObject {
                         try data.write(to: scoped, options: .atomic)
                     }
                     recordBatchExport(named: url.lastPathComponent)
-                    DocumentSaveFeedback.playSoundIfEnabled()
+                    if !DiffsplitterCompletionFeedback.suppressesBatchExportSaveSound {
+                        DocumentSaveFeedback.playSoundIfEnabled()
+                    }
                     finishBatchHandoff(success: true)
                     let prepared = try DeboogeyDocumentLifecycle.persistForOpen(
                         data: data,
@@ -7360,6 +7374,9 @@ final class DiffsplitterBatchCreation: ObservableObject {
     private var continuedProcessing: DiffsplitterContinuedProcessing.Handle?
     private var queuedComposerStart: QueuedComposerStart?
 #endif
+#if DEBOOGEY_MAC_LIVE_ACTIVITIES
+    private var macLiveActivity: DiffsplitterMacLiveActivity.Handle?
+#endif
 
     var isRunning: Bool { progress != nil || pendingExport != nil }
 
@@ -7389,7 +7406,9 @@ final class DiffsplitterBatchCreation: ObservableObject {
                     openURL = try DeboogeyDocumentLifecycle.prepareForOpening(url)
                 }
                 recordExport(named: url.lastPathComponent)
-                DocumentSaveFeedback.playSoundIfEnabled()
+                if !DiffsplitterCompletionFeedback.suppressesBatchExportSaveSound {
+                    DocumentSaveFeedback.playSoundIfEnabled()
+                }
                 finish(success: true, url: openURL)
             } catch {
                 errorMessage = error.localizedDescription
@@ -7516,6 +7535,14 @@ final class DiffsplitterBatchCreation: ObservableObject {
                     }
                 )
             }
+#elseif DEBOOGEY_MAC_LIVE_ACTIVITIES
+            if DiffsplitterCompletionFeedback.isEnabled {
+                self.macLiveActivity?.end(success: false)
+                self.macLiveActivity = await DiffsplitterMacLiveActivity.begin(
+                    label: L10n.t("Batch Composer"),
+                    status: L10n.t("Creating Diffsplitter Batch…")
+                )
+            }
 #endif
             do {
                 let outputURL = FileManager.default.temporaryDirectory
@@ -7528,6 +7555,8 @@ final class DiffsplitterBatchCreation: ObservableObject {
                             self.progress = snapshot
 #if os(iOS)
                             self.continuedProcessing?.update(snapshot)
+#elseif DEBOOGEY_MAC_LIVE_ACTIVITIES
+                            self.macLiveActivity?.update(snapshot)
 #endif
                         }
                     }
@@ -7556,7 +7585,9 @@ final class DiffsplitterBatchCreation: ObservableObject {
                         preferredFilename: destination.lastPathComponent
                     )
                     self.recordExport(named: destination.lastPathComponent)
-                    DocumentSaveFeedback.playSoundIfEnabled()
+                    if !DiffsplitterCompletionFeedback.suppressesBatchExportSaveSound {
+                        DocumentSaveFeedback.playSoundIfEnabled()
+                    }
                     self.finish(success: true, url: openURL)
                 } else {
                     let saving = DiffsplitterIndexProgress(
@@ -7566,6 +7597,8 @@ final class DiffsplitterBatchCreation: ObservableObject {
                     self.progress = saving
 #if os(iOS)
                     self.continuedProcessing?.update(saving)
+#elseif DEBOOGEY_MAC_LIVE_ACTIVITIES
+                    self.macLiveActivity?.update(saving)
 #endif
                     self.pendingExport = PendingExport(
                         suggestedName: suggestedName,
@@ -7601,6 +7634,9 @@ final class DiffsplitterBatchCreation: ObservableObject {
 #if os(iOS)
         continuedProcessing?.finish(success: success)
         continuedProcessing = nil
+#elseif DEBOOGEY_MAC_LIVE_ACTIVITIES
+        macLiveActivity?.end(success: success)
+        macLiveActivity = nil
 #endif
         if success, let url {
             callback?(url)

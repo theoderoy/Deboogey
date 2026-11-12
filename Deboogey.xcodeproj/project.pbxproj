@@ -50,6 +50,20 @@
 			remoteGlobalIDString = F0CD00063021C00000CD0006;
 			remoteInfo = DeboogeyCDMHelperMCE;
 		};
+		F0LA000E2E9CC3B200AE8D0E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F07EDA7A2E9CC3B200AE8D4A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F0LA000C2E9CC3B200AE8D0C;
+			remoteInfo = DeboogeyLiveActivity;
+		};
+		F0LA000F2E9CC3B200AE8D0F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F07EDA7A2E9CC3B200AE8D4A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F0LA000D2E9CC3B200AE8D0D;
+			remoteInfo = DeboogeyLiveActivityMCE;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -120,6 +134,8 @@
 		F0ACE0023021B00000ACE001 /* DeboogeyLoupeMCE */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = DeboogeyLoupeMCE; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0ACE0063021B00000ACE001 /* Deboogey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Deboogey.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0CD00043021C00000CD0004 /* DeboogeyCDMHelperMCE */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = DeboogeyCDMHelperMCE; sourceTree = BUILT_PRODUCTS_DIR; };
+		F0LA00012E9CC3B200AE8D01 /* DeboogeyLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DeboogeyLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F0LA00022E9CC3B200AE8D02 /* DeboogeyLiveActivityMCE.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DeboogeyLiveActivityMCE.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -196,6 +212,26 @@
 			);
 			target = F0CD00063021C00000CD0006 /* DeboogeyCDMHelperMCE */;
 		};
+		F0LA00042E9CC3B200AE8D04 /* Exceptions for "DeboogeyLiveActivity" folder in "DeboogeyClient" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
+				DeboogeyLiveActivityBundle.swift,
+				DiffsplitterActivityWidget.swift,
+				LoupeMachineActivityWidget.swift,
+			);
+			target = F07EDA812E9CC3B200AE8D4A /* DeboogeyClient */;
+		};
+		F0LA00052E9CC3B200AE8D05 /* Exceptions for "DeboogeyLiveActivity" folder in "DeboogeyClientMCE" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
+				DeboogeyLiveActivityBundle.swift,
+				DiffsplitterActivityWidget.swift,
+				LoupeMachineActivityWidget.swift,
+			);
+			target = F0ACE0093021B00000ACE001 /* DeboogeyClientMCE */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -220,6 +256,15 @@
 				F0CD00053021C00000CD0005 /* Exceptions for "Helpers" folder in "DeboogeyCDMHelperMCE" target */,
 			);
 			path = Helpers;
+			sourceTree = "<group>";
+		};
+		F0LA00032E9CC3B200AE8D03 /* DeboogeyLiveActivity */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F0LA00042E9CC3B200AE8D04 /* Exceptions for "DeboogeyLiveActivity" folder in "DeboogeyClient" target */,
+				F0LA00052E9CC3B200AE8D05 /* Exceptions for "DeboogeyLiveActivity" folder in "DeboogeyClientMCE" target */,
+			);
+			path = DeboogeyLiveActivity;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -274,12 +319,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F0LA00072E9CC3B200AE8D07 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F0LA000A2E9CC3B200AE8D0A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		F07EDA792E9CC3B200AE8D4A = {
 			isa = PBXGroup;
 			children = (
+				F0LA00032E9CC3B200AE8D03 /* DeboogeyLiveActivity */,
 				F092A1622FE2DECC00178A03 /* Helpers */,
 				F07EDA842E9CC3B200AE8D4A /* DeboogeyClient */,
 				F07EDA832E9CC3B200AE8D4A /* Products */,
@@ -296,6 +356,8 @@
 				F07EDA942E9CC69200AE8D4A /* DeboogeySDHelper */,
 				F05C722D2E9D687A00C13AEC /* DeboogeyCDMHelper */,
 				F06E45E530042E6400E4C289 /* DeboogeyLoupe */,
+				F0LA00012E9CC3B200AE8D01 /* DeboogeyLiveActivity.appex */,
+				F0LA00022E9CC3B200AE8D02 /* DeboogeyLiveActivityMCE.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -348,6 +410,7 @@
 				F07EDA7E2E9CC3B200AE8D4A /* Sources */,
 				F07EDA7F2E9CC3B200AE8D4A /* Frameworks */,
 				F07EDA802E9CC3B200AE8D4A /* Resources */,
+				F0LA00122E9CC3B200AE8D12 /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -355,10 +418,12 @@
 				F06E45F130042EE800E4C289 /* PBXTargetDependency */,
 				F05C72352E9D688300C13AEC /* PBXTargetDependency */,
 				F0A6F90D2E9CCF8400AFAC9F /* PBXTargetDependency */,
+				F0LA00102E9CC3B200AE8D10 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				F07EDA842E9CC3B200AE8D4A /* DeboogeyClient */,
 				F092A1622FE2DECC00178A03 /* Helpers */,
+				F0LA00032E9CC3B200AE8D03 /* DeboogeyLiveActivity */,
 			);
 			name = DeboogeyClient;
 			packageProductDependencies = (
@@ -413,16 +478,19 @@
 				F0ACE00D3021B00000ACE001 /* Frameworks */,
 				F0ACE0133021B00000ACE001 /* Resources */,
 				F0ACE0053021B00000ACE001 /* Copy MCE Executables */,
+				F0LA00132E9CC3B200AE8D13 /* ShellScript */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				F0ACE0143021B00000ACE001 /* PBXTargetDependency */,
 				F0CD000A3021C00000CD000A /* PBXTargetDependency */,
+				F0LA00112E9CC3B200AE8D11 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				F07EDA842E9CC3B200AE8D4A /* DeboogeyClient */,
 				F092A1622FE2DECC00178A03 /* Helpers */,
+				F0LA00032E9CC3B200AE8D03 /* DeboogeyLiveActivity */,
 			);
 			name = DeboogeyClientMCE;
 			packageProductDependencies = (
@@ -453,6 +521,50 @@
 			productReference = F0CD00043021C00000CD0004 /* DeboogeyCDMHelperMCE */;
 			productType = "com.apple.product-type.tool";
 		};
+		F0LA000C2E9CC3B200AE8D0C /* DeboogeyLiveActivity */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F0LA00182E9CC3B200AE8D18 /* Build configuration list for PBXNativeTarget "DeboogeyLiveActivity" */;
+			buildPhases = (
+				F0LA00062E9CC3B200AE8D06 /* Sources */,
+				F0LA00072E9CC3B200AE8D07 /* Frameworks */,
+				F0LA00082E9CC3B200AE8D08 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F0LA00032E9CC3B200AE8D03 /* DeboogeyLiveActivity */,
+			);
+			name = DeboogeyLiveActivity;
+			packageProductDependencies = (
+			);
+			productName = DeboogeyLiveActivity;
+			productReference = F0LA00012E9CC3B200AE8D01 /* DeboogeyLiveActivity.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		F0LA000D2E9CC3B200AE8D0D /* DeboogeyLiveActivityMCE */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F0LA00192E9CC3B200AE8D19 /* Build configuration list for PBXNativeTarget "DeboogeyLiveActivityMCE" */;
+			buildPhases = (
+				F0LA00092E9CC3B200AE8D09 /* Sources */,
+				F0LA000A2E9CC3B200AE8D0A /* Frameworks */,
+				F0LA000B2E9CC3B200AE8D0B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F0LA00032E9CC3B200AE8D03 /* DeboogeyLiveActivity */,
+			);
+			name = DeboogeyLiveActivityMCE;
+			packageProductDependencies = (
+			);
+			productName = DeboogeyLiveActivityMCE;
+			productReference = F0LA00022E9CC3B200AE8D02 /* DeboogeyLiveActivityMCE.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -481,6 +593,12 @@
 					F0ACE0093021B00000ACE001 = {
 						CreatedOnToolsVersion = 27.0;
 					};
+					F0LA000C2E9CC3B200AE8D0C = {
+						CreatedOnToolsVersion = 27.3;
+					};
+					F0LA000D2E9CC3B200AE8D0D = {
+						CreatedOnToolsVersion = 27.3;
+					};
 				};
 			};
 			buildConfigurationList = F07EDA7D2E9CC3B200AE8D4A /* Build configuration list for PBXProject "Deboogey" */;
@@ -508,6 +626,8 @@
 				F07EDA932E9CC69200AE8D4A /* DeboogeySDHelper */,
 				F0ACE0043021B00000ACE001 /* DeboogeyLoupeMCE */,
 				F0CD00063021C00000CD0006 /* DeboogeyCDMHelperMCE */,
+				F0LA000C2E9CC3B200AE8D0C /* DeboogeyLiveActivity */,
+				F0LA000D2E9CC3B200AE8D0D /* DeboogeyLiveActivityMCE */,
 			);
 		};
 /* End PBXProject section */
@@ -530,7 +650,60 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F0LA00082E9CC3B200AE8D08 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F0LA000B2E9CC3B200AE8D0B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		F0LA00122E9CC3B200AE8D12 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\n# Do not declare Contents/PlugIns outputPaths: Xcode mkdir's them and leaves an\n# empty macOS Contents/ tree in iOS .app bundles, which codesign rejects as\n# \"unsealed contents present in the bundle root\".\nif [ \"${PLATFORM_NAME}\" != \"macosx\" ]; then\n    rm -rf \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}/Contents\"\n    exit 0\nfi\ncase \"${SDK_VERSION}\" in\n    27.3*) ;;\n    *) exit 0 ;;\nesac\nsrc=\"${BUILT_PRODUCTS_DIR}/${LIVE_ACTIVITY_APPEX_NAME}\"\ndest_dir=\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}/Contents/PlugIns\"\ndest=\"${dest_dir}/${LIVE_ACTIVITY_APPEX_NAME}\"\nif [ ! -d \"${src}\" ]; then\n    echo \"error: Live Activity appex not built at ${src}\" >&2\n    exit 1\nfi\nmkdir -p \"${dest_dir}\"\nrm -rf \"${dest}\"\ncp -R \"${src}\" \"${dest}\"\nif [ \"${CODE_SIGNING_ALLOWED:-YES}\" != \"NO\" ] && [ -n \"${EXPANDED_CODE_SIGN_IDENTITY:-}\" ]; then\n    /usr/bin/codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" --preserve-metadata=identifier,entitlements,flags --generate-entitlement-der \"${dest}\"\nfi\n";
+		};
+		F0LA00132E9CC3B200AE8D13 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\n# Do not declare Contents/PlugIns outputPaths: Xcode mkdir's them and leaves an\n# empty macOS Contents/ tree in iOS .app bundles, which codesign rejects as\n# \"unsealed contents present in the bundle root\".\nif [ \"${PLATFORM_NAME}\" != \"macosx\" ]; then\n    rm -rf \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}/Contents\"\n    exit 0\nfi\ncase \"${SDK_VERSION}\" in\n    27.3*) ;;\n    *) exit 0 ;;\nesac\nsrc=\"${BUILT_PRODUCTS_DIR}/${LIVE_ACTIVITY_APPEX_NAME}\"\ndest_dir=\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}/Contents/PlugIns\"\ndest=\"${dest_dir}/${LIVE_ACTIVITY_APPEX_NAME}\"\nif [ ! -d \"${src}\" ]; then\n    echo \"error: Live Activity appex not built at ${src}\" >&2\n    exit 1\nfi\nmkdir -p \"${dest_dir}\"\nrm -rf \"${dest}\"\ncp -R \"${src}\" \"${dest}\"\nif [ \"${CODE_SIGNING_ALLOWED:-YES}\" != \"NO\" ] && [ -n \"${EXPANDED_CODE_SIGN_IDENTITY:-}\" ]; then\n    /usr/bin/codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" --preserve-metadata=identifier,entitlements,flags --generate-entitlement-der \"${dest}\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		F05C72292E9D687A00C13AEC /* Sources */ = {
@@ -582,6 +755,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F0LA00062E9CC3B200AE8D06 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F0LA00092E9CC3B200AE8D09 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -615,6 +802,22 @@
 			);
 			target = F0CD00063021C00000CD0006 /* DeboogeyCDMHelperMCE */;
 			targetProxy = F0CD00023021C00000CD0002 /* PBXContainerItemProxy */;
+		};
+		F0LA00102E9CC3B200AE8D10 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilters = (
+				macos,
+			);
+			target = F0LA000C2E9CC3B200AE8D0C /* DeboogeyLiveActivity */;
+			targetProxy = F0LA000E2E9CC3B200AE8D0E /* PBXContainerItemProxy */;
+		};
+		F0LA00112E9CC3B200AE8D11 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilters = (
+				macos,
+			);
+			target = F0LA000D2E9CC3B200AE8D0D /* DeboogeyLiveActivityMCE */;
+			targetProxy = F0LA000F2E9CC3B200AE8D0F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -886,8 +1089,15 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIVE_ACTIVITY_APPEX_NAME = DeboogeyLiveActivity.appex;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MARKETING_VERSION = Development;
+				"OTHER_LDFLAGS[sdk=macosx27.3*]" = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
+				"OTHER_SWIFT_FLAGS[sdk=macosx27.3*]" = "$(inherited) -D DEBOOGEY_MAC_LIVE_ACTIVITIES";
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.DeboogeyClient;
 				PRODUCT_NAME = DeboogeyClient;
 				REGISTER_APP_GROUPS = YES;
@@ -936,8 +1146,15 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIVE_ACTIVITY_APPEX_NAME = DeboogeyLiveActivity.appex;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MARKETING_VERSION = Development;
+				"OTHER_LDFLAGS[sdk=macosx27.3*]" = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
+				"OTHER_SWIFT_FLAGS[sdk=macosx27.3*]" = "$(inherited) -D DEBOOGEY_MAC_LIVE_ACTIVITIES";
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey;
 				PRODUCT_MODULE_NAME = DeboogeyClient;
 				PRODUCT_NAME = Deboogey;
@@ -1103,7 +1320,7 @@
 				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				"EXCLUDED_SOURCE_FILE_NAMES[sdk=iphoneos*]" = (
 					DeboogeyCDMHelper/main.swift,
 					DeboogeyLoupe/main.swift,
@@ -1157,7 +1374,14 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIVE_ACTIVITY_APPEX_NAME = DeboogeyLiveActivityMCE.appex;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				"OTHER_LDFLAGS[sdk=macosx27.3*]" = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
+				"OTHER_SWIFT_FLAGS[sdk=macosx27.3*]" = "$(inherited) -D DEBOOGEY_MAC_LIVE_ACTIVITIES";
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey.MCE;
 				PRODUCT_MODULE_NAME = DeboogeyClientMCE;
 				PRODUCT_NAME = Deboogey;
@@ -1206,7 +1430,7 @@
 				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				"EXCLUDED_SOURCE_FILE_NAMES[sdk=iphoneos*]" = (
 					DeboogeyCDMHelper/main.swift,
 					DeboogeyLoupe/main.swift,
@@ -1260,7 +1484,14 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIVE_ACTIVITY_APPEX_NAME = DeboogeyLiveActivityMCE.appex;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				"OTHER_LDFLAGS[sdk=macosx27.3*]" = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
+				"OTHER_SWIFT_FLAGS[sdk=macosx27.3*]" = "$(inherited) -D DEBOOGEY_MAC_LIVE_ACTIVITIES";
 				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey.MCE;
 				PRODUCT_MODULE_NAME = DeboogeyClientMCE;
 				PRODUCT_NAME = Deboogey;
@@ -1348,6 +1579,150 @@
 			};
 			name = Release;
 		};
+		F0LA00142E9CC3B200AE8D14 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Config/DeboogeyLiveActivity.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 14;
+				DEVELOPMENT_TEAM = 7Z88K9GUU8;
+				ENABLE_DEBUG_DYLIB = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/DeboogeyLiveActivity-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				"MACOSX_DEPLOYMENT_TARGET[sdk=macosx27.3*]" = 27.3;
+				MARKETING_VERSION = Development;
+				"OTHER_LDFLAGS[sdk=macosx27.3*]" = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
+				"OTHER_SWIFT_FLAGS[sdk=macosx27.3*]" = "$(inherited) -D DEBOOGEY_MAC_LIVE_ACTIVITIES";
+				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.DeboogeyClient.LiveActivity;
+				PRODUCT_NAME = DeboogeyLiveActivity;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F0LA00152E9CC3B200AE8D15 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Config/DeboogeyLiveActivity.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 14;
+				DEVELOPMENT_TEAM = 7Z88K9GUU8;
+				ENABLE_DEBUG_DYLIB = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/DeboogeyLiveActivity-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				"MACOSX_DEPLOYMENT_TARGET[sdk=macosx27.3*]" = 27.3;
+				MARKETING_VERSION = Development;
+				"OTHER_LDFLAGS[sdk=macosx27.3*]" = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
+				"OTHER_SWIFT_FLAGS[sdk=macosx27.3*]" = "$(inherited) -D DEBOOGEY_MAC_LIVE_ACTIVITIES";
+				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey.LiveActivity;
+				PRODUCT_NAME = DeboogeyLiveActivity;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		F0LA00162E9CC3B200AE8D16 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Config/DeboogeyLiveActivity.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 14;
+				DEVELOPMENT_TEAM = 7Z88K9GUU8;
+				ENABLE_DEBUG_DYLIB = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/DeboogeyLiveActivity-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				"MACOSX_DEPLOYMENT_TARGET[sdk=macosx27.3*]" = 27.3;
+				MARKETING_VERSION = Development;
+				"OTHER_LDFLAGS[sdk=macosx27.3*]" = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
+				"OTHER_SWIFT_FLAGS[sdk=macosx27.3*]" = "$(inherited) -D DEBOOGEY_MAC_LIVE_ACTIVITIES";
+				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey.MCE.LiveActivity;
+				PRODUCT_NAME = DeboogeyLiveActivityMCE;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F0LA00172E9CC3B200AE8D17 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Config/DeboogeyLiveActivity.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 14;
+				DEVELOPMENT_TEAM = 7Z88K9GUU8;
+				ENABLE_DEBUG_DYLIB = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/DeboogeyLiveActivity-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				"MACOSX_DEPLOYMENT_TARGET[sdk=macosx27.3*]" = 27.3;
+				MARKETING_VERSION = Development;
+				"OTHER_LDFLAGS[sdk=macosx27.3*]" = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
+				"OTHER_SWIFT_FLAGS[sdk=macosx27.3*]" = "$(inherited) -D DEBOOGEY_MAC_LIVE_ACTIVITIES";
+				PRODUCT_BUNDLE_IDENTIFIER = theoderoy.Deboogey.MCE.LiveActivity;
+				PRODUCT_NAME = DeboogeyLiveActivityMCE;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1419,6 +1794,24 @@
 			buildConfigurations = (
 				F0CD000B3021C00000CD000B /* Debug */,
 				F0CD000C3021C00000CD000C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F0LA00182E9CC3B200AE8D18 /* Build configuration list for PBXNativeTarget "DeboogeyLiveActivity" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F0LA00142E9CC3B200AE8D14 /* Debug */,
+				F0LA00152E9CC3B200AE8D15 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F0LA00192E9CC3B200AE8D19 /* Build configuration list for PBXNativeTarget "DeboogeyLiveActivityMCE" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F0LA00162E9CC3B200AE8D16 /* Debug */,
+				F0LA00172E9CC3B200AE8D17 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

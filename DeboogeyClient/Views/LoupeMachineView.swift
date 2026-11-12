@@ -200,6 +200,9 @@ struct LoupeMachineView: View {
     @State private var hasFlags = false
     @State private var selectedFlagID: String?
     @State private var isInspecting = false
+#if os(macOS)
+    @StateObject private var loupeIndexActivity = LoupeIndexActivity()
+#endif
     @State private var documentURL: URL?
     @State private var savedDocumentData: Data?
     @State private var documentError: String?
@@ -347,7 +350,10 @@ struct LoupeMachineView: View {
                     saveAs: { saveDocument(forceSaveAs: true) }
                 ),
                 saveDraft: saveDraftForClosing,
-                didClose: { inspection?.cancel() }
+                didClose: {
+                    inspection?.cancel()
+                    loupeIndexActivity.end(success: false, status: nil)
+                }
             )
         )
 #endif
@@ -668,24 +674,20 @@ struct LoupeMachineView: View {
             let currentInspection = DeboogeyLoupeInspection()
             inspection = currentInspection
             let hasSourceAccess = sourceURL.startAccessingSecurityScopedResource()
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = Result {
-                    try DeboogeyLoupeLauncher.inspect(
-                        appURL: sourceURL,
-                        inspection: currentInspection
-                    )
-                }
-                if hasSourceAccess { sourceURL.stopAccessingSecurityScopedResource() }
-                DispatchQueue.main.async {
-                    isInspecting = false
-                    switch result {
-                    case .success(let upstreamFlags):
-                        recordCompletedIndex(for: sourceURL)
-                        reconcileIfNeeded(document: document, upstreamFlags: upstreamFlags)
-                    case .failure(let error):
-                        try? adopt(document, sourceApplicationURL: sourceURL)
-                        documentError = error.localizedDescription
-                    }
+            runIndexedInspection(
+                at: sourceURL,
+                inspection: currentInspection,
+                hasAccess: hasSourceAccess
+            ) { result in
+                isInspecting = false
+                switch result {
+                case .success(let upstreamFlags):
+                    finishIndexedInspection(success: true, applicationURL: sourceURL)
+                    reconcileIfNeeded(document: document, upstreamFlags: upstreamFlags)
+                case .failure(let error):
+                    finishIndexedInspection(success: false, applicationURL: sourceURL)
+                    try? adopt(document, sourceApplicationURL: sourceURL)
+                    documentError = error.localizedDescription
                 }
             }
 #endif
@@ -1095,34 +1097,34 @@ struct LoupeMachineView: View {
         let currentInspection = DeboogeyLoupeInspection()
         inspection = currentInspection
         let hasAccess = url.startAccessingSecurityScopedResource()
-        DispatchQueue.global(qos: .userInitiated).async {
-            let result = Result {
-                try DeboogeyLoupeLauncher.inspect(appURL: url, inspection: currentInspection) { batch in
-                    DispatchQueue.main.async {
-                        flagStore.append(batch)
-                        if !hasFlags, !flagStore.isEmpty { hasFlags = true }
-                        if selectedFlagID == nil { selectedFlagID = flagStore.names.first }
-                    }
-                }
+        runIndexedInspection(
+            at: url,
+            inspection: currentInspection,
+            hasAccess: hasAccess,
+            onBatch: { batch in
+                flagStore.append(batch)
+                if !hasFlags, !flagStore.isEmpty { hasFlags = true }
+                if selectedFlagID == nil { selectedFlagID = flagStore.names.first }
+                loupeIndexActivity.update(flagCount: flagStore.flags.count)
             }
-            if hasAccess { url.stopAccessingSecurityScopedResource() }
-            DispatchQueue.main.async {
-                isInspecting = false
-                switch result {
-                case .success(let inspectedFlags):
-                    flagStore.replace(with: inspectedFlags)
-                    hasFlags = !flagStore.isEmpty
-                    if selectedFlagID == nil { selectedFlagID = inspectedFlags.first?.id }
-                    if inspectedFlags.isEmpty {
-                        discardSelectedApplication()
-                        presentNoFlagsAlert()
-                    } else {
-                        recordCompletedIndex(for: url)
-                    }
-                case .failure(let error):
+        ) { result in
+            isInspecting = false
+            switch result {
+            case .success(let inspectedFlags):
+                flagStore.replace(with: inspectedFlags)
+                hasFlags = !flagStore.isEmpty
+                if selectedFlagID == nil { selectedFlagID = inspectedFlags.first?.id }
+                if inspectedFlags.isEmpty {
+                    finishIndexedInspection(success: false, applicationURL: url)
                     discardSelectedApplication()
-                    importError = error.localizedDescription
+                    presentNoFlagsAlert()
+                } else {
+                    finishIndexedInspection(success: true, applicationURL: url)
                 }
+            case .failure(let error):
+                finishIndexedInspection(success: false, applicationURL: url)
+                discardSelectedApplication()
+                importError = error.localizedDescription
             }
         }
     }
@@ -1147,11 +1149,57 @@ struct LoupeMachineView: View {
         alert.runModal()
     }
 
-    private func recordCompletedIndex(for applicationURL: URL) {
+    private func runIndexedInspection(
+        at url: URL,
+        inspection currentInspection: DeboogeyLoupeInspection,
+        hasAccess: Bool,
+        onBatch: (([LoupeFlag]) -> Void)? = nil,
+        completion: @escaping (Result<[LoupeFlag], Error>) -> Void
+    ) {
+        let applicationName = applicationDisplayName(for: url)
+        Task { @MainActor in
+            await loupeIndexActivity.begin(applicationName: applicationName)
+            guard self.inspection === currentInspection else { return }
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = Result {
+                    try DeboogeyLoupeLauncher.inspect(
+                        appURL: url,
+                        inspection: currentInspection,
+                        didLoad: onBatch.map { handler in
+                            { batch in
+                                DispatchQueue.main.async {
+                                    guard self.inspection === currentInspection else { return }
+                                    handler(batch)
+                                }
+                            }
+                        }
+                    )
+                }
+                if hasAccess { url.stopAccessingSecurityScopedResource() }
+                DispatchQueue.main.async {
+                    guard self.inspection === currentInspection else { return }
+                    completion(result)
+                }
+            }
+        }
+    }
+
+    private func finishIndexedInspection(success: Bool, applicationURL: URL) {
+        let applicationName = applicationDisplayName(for: applicationURL)
+        if success {
+            let showedActivity = loupeIndexActivity.end(
+                success: true,
+                status: L10n.f("%@ was completely indexed", applicationName)
+            )
+            recordCompletedIndex(for: applicationURL, includeBanner: !showedActivity)
+        } else {
+            loupeIndexActivity.end(success: false, status: nil)
+        }
+    }
+
+    private func recordCompletedIndex(for applicationURL: URL, includeBanner: Bool) {
+        let applicationName = applicationDisplayName(for: applicationURL)
         let bundle = Bundle(url: applicationURL)
-        let applicationName = (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
-            ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
-            ?? applicationURL.deletingPathExtension().lastPathComponent
         let identifier = bundle?.bundleIdentifier ?? ""
         EntityTracker.shared.record(
             source: .loupeMachine,
@@ -1161,7 +1209,17 @@ struct LoupeMachineView: View {
                 identifier
             ]
         )
-        IndexCompletionFeedback.notifyIndexingFinished(for: applicationName)
+        IndexCompletionFeedback.notifyIndexingFinished(
+            for: applicationName,
+            includeBanner: includeBanner
+        )
+    }
+
+    private func applicationDisplayName(for applicationURL: URL) -> String {
+        let bundle = Bundle(url: applicationURL)
+        return (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+            ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
+            ?? applicationURL.deletingPathExtension().lastPathComponent
     }
 #endif
 }

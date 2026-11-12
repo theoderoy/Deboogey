@@ -41,6 +41,9 @@ enum DiffsplitterCompletionFeedback {
     static var usesLiveActivityUX: Bool {
 #if os(iOS)
         !ProcessInfo.processInfo.isiOSAppOnVision
+#elseif DEBOOGEY_MAC_LIVE_ACTIVITIES
+        if #available(macOS 27.3, *) { return true }
+        return false
 #else
         false
 #endif
@@ -48,6 +51,10 @@ enum DiffsplitterCompletionFeedback {
 
     static var isEnabled: Bool {
         UserDefaults.standard.bool(forKey: soundPreferenceKey)
+    }
+
+    static var suppressesBatchExportSaveSound: Bool {
+        usesLiveActivityUX && isEnabled
     }
 
     static var completionNotifySectionHeader: String {

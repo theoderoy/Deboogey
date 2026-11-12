@@ -294,35 +294,26 @@ private struct GeneralPanelView: View {
     
     @ViewBuilder
     private var panels: some View {
-#if os(iOS)
-        if configurationShowsDiffsplitter, DiffsplitterCompletionFeedback.usesLiveActivityUX {
+        if DiffsplitterCompletionFeedback.usesLiveActivityUX {
             configurationSection(header: DiffsplitterCompletionFeedback.completionNotifySectionHeader) {
-                diffsplitterCompletionControls
+#if os(macOS)
+                loupeIndexingControls
+#endif
+                if configurationShowsDiffsplitter {
+                    diffsplitterCompletionControls
+                }
             }
         }
-#endif
 
         configurationSection(header: "In-App Tones") {
 #if os(macOS)
-            Toggle(isOn: $vm.playIndexingDoneSound) {
-                Label {
-                    Text(L10n.t("Play a sound when Loupe Machine finishes an index cycle"))
-                } icon: {
-                    Image(systemName: "loupe")
-                }
+            if !IndexCompletionFeedback.usesLiveActivityUX {
+                loupeIndexingControls
             }
-            configurationSecondaryCaption(
-                L10n.t("Notify with a sound and banner when Loupe Machine finishes an index cycle.")
-            )
-
-            if configurationShowsDiffsplitter {
-                diffsplitterCompletionControls
-            }
-#else
+#endif
             if configurationShowsDiffsplitter, !DiffsplitterCompletionFeedback.usesLiveActivityUX {
                 diffsplitterCompletionControls
             }
-#endif
 
             documentSaveSoundControls
 
@@ -450,12 +441,25 @@ private struct GeneralPanelView: View {
     }
 
     @ViewBuilder
+    private var loupeIndexingControls: some View {
+        Toggle(isOn: $vm.playIndexingDoneSound) {
+            Label {
+                Text(IndexCompletionFeedback.completionNotifyTitle)
+            } icon: {
+                Image(systemName: "loupe")
+            }
+        }
+        configurationSecondaryCaption(IndexCompletionFeedback.completionNotifyCaption)
+    }
+
+    @ViewBuilder
     private var diffsplitterCompletionControls: some View {
         Toggle(isOn: $vm.playDiffsplitterDoneSound) {
             Label {
                 Text(DiffsplitterCompletionFeedback.completionNotifyTitle)
             } icon: {
-                if DiffsplitterCompletionFeedback.usesLiveActivityUX {
+                if DiffsplitterCompletionFeedback.usesLiveActivityUX,
+                   !IndexCompletionFeedback.usesLiveActivityUX {
                     Image(systemName: DiffsplitterCompletionFeedback.completionNotifySymbolName)
                 } else {
                     Image("DiffsplitterIconIPOSF")

@@ -12,6 +12,7 @@
 "%d MB" = "%d MB";
 "%d changed" = "%d gewijzigd";
 "%d entries" = "%d items";
+"%d flags found" = "%d vlaggen gevonden";
 "%d indexed item(s)" = "%d geïndexeerd(e) item(s)";
 "%d item(s)" = "%d item(s)";
 "%d levels" = "%d niveaus";
@@ -44,6 +45,7 @@
 "Apply All Pending" = "Alles in behandeling toepassen";
 "Apply Currently Viewed" = "Huidige weergave toepassen";
 "Apply changes to application data?" = "Wijzigingen toepassen op appgegevens?";
+"Architecture" = "Architectuur";
 "Archive Entry Limit" = "Limiet archiefitems";
 "Archive Nest Depth" = "Nestingsdiepte archief";
 "Archiving upgrade" = "Upgrade archiveren";
@@ -211,6 +213,7 @@
 "Inspect Dump" = "Dump inspecteren";
 "Inspect and adjust Cocoa debugging parameters." = "Inspecteer en pas Cocoa-foutopsporingsparameters aan.";
 "Inspect the sandbox of individual programs and adjust parameters." = "Inspecteer de sandbox van afzonderlijke programma’s en pas parameters aan.";
+"Inspecting %@…" = "%@ inspecteren…";
 "Inspecting flags…" = "Vlaggen inspecteren…";
 "Install" = "Installeer";
 "Installing upgrade" = "Upgrade installeren";
@@ -222,6 +225,7 @@
 "Invalid arguments. Unknown flag: %@" = "Ongeldige argumenten. Onbekende vlag: %@";
 "Keep Local Changes" = "Lokale wijzigingen behouden";
 "Keeps comparison progress visible in the background. Manage Live Activities and sounds in Settings." = "Houdt de voortgang van de vergelijking zichtbaar op de achtergrond. Beheer Live Activities en geluiden in Instellingen.";
+"Keeps indexing progress visible in the background. Manage Live Activities and sounds in Settings." = "Houdt de voortgang van het indexeren zichtbaar op de achtergrond. Beheer Live Activities en geluiden in Instellingen.";
 "Large File Hex Conversion" = "Hex-conversie grote bestanden";
 "Large File Size Threshold" = "Drempel grootte grote bestanden";
 "Learn More" = "Meer info";
@@ -374,6 +378,7 @@
 "Settings" = "Instellingen";
 "Show Sidebar" = "Zijbalk tonen";
 "Show a Live Activity while Diffsplitter compares" = "Toon een Live Activity tijdens een Diffsplitter-vergelijking";
+"Show a Live Activity while Loupe Machine indexes" = "Toon een Live Activity tijdens indexeren met Loupe Machine";
 "Show a notice when a feature requires Command Line Tools for Xcode to be installed." = "Toon een melding wanneer een functie vereist dat Command Line Tools for Xcode zijn geïnstalleerd.";
 "Show a notice when network connection is required for upgrades." = "Toon een melding wanneer een netwerkverbinding vereist is voor upgrades.";
 "Show a notice when utilities require security adjustments." = "Toon een melding wanneer hulpprogramma’s beveiligingsaanpassingen vereisen.";
@@ -385,6 +390,7 @@
 "Sourced Article" = "Bronartikel";
 "Sources" = "Bronnen";
 "Special Thanks" = "Speciale dank";
+"Starting from Release 9 and Internal 31, Deboogey will no longer support Intel-based Macs." = "Vanaf Release 9 en Internal 31 ondersteunt Deboogey geen Intel-Macs meer.";
 "Step %d of %d" = "Stap %d van %d";
 "Superseded" = "Vervangen";
 "Swap" = "Wissel";
