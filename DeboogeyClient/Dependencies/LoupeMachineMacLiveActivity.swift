@@ -104,7 +104,7 @@ final class LoupeIndexActivity: ObservableObject {
 
     func update(flagCount: Int) {
         handle?.update(
-            status: L10n.f("%d flags found", flagCount),
+            status: L10n.f("%d flag(s) found", flagCount),
             indexedItemCount: flagCount
         )
     }

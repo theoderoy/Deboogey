@@ -94,13 +94,13 @@ private struct DeboogeyLoupeWindowGroup: Scene {
             L10n.t("Loupe Machine"),
             id: LoupeMachineNavigation.windowID,
             for: LoupeMachineWindowRequest.self
-        ) { request in
+        ) { $request in
             NavigationStack {
-                if let request = request.wrappedValue {
-                    LoupeMachineView(request: request)
-                }
+                LoupeMachineView(request: request)
             }
             .environment(\.locale, L10n.locale)
+        } defaultValue: {
+            LoupeMachineWindowRequest(action: .create)
         }
         .deboogeyWindowPlacement(AppWindowSizing.loupeMachine)
         .windowResizability(.contentMinSize)
@@ -130,13 +130,11 @@ struct DeboogeyDiffsplitterScene: Scene {
             L10n.t("Diffsplitter"),
             id: DiffsplitterNavigation.windowID,
             for: DiffsplitterWindowRequest.self
-        ) { request in
-            Group {
-                if let request = request.wrappedValue {
-                    DiffsplitterView(request: request)
-                }
-            }
-            .environment(\.locale, L10n.locale)
+        ) { $request in
+            DiffsplitterView(request: request)
+                .environment(\.locale, L10n.locale)
+        } defaultValue: {
+            DiffsplitterWindowRequest(action: .create)
         }
         .commandsRemoved()
         .deboogeyWindowPlacement(AppWindowSizing.diffsplitter)

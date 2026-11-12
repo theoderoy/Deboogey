@@ -12,7 +12,7 @@
 "%d MB" = "%d Mo";
 "%d changed" = "%d modifié(s)";
 "%d entries" = "%d entrées";
-"%d flags found" = "%d drapeaux trouvés";
+"%d flag(s) found" = "%d drapeaux trouvés";
 "%d indexed item(s)" = "%d élément(s) indexé(s)";
 "%d item(s)" = "%d élément(s)";
 "%d levels" = "%d niveaux";
