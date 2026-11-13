@@ -5,6 +5,7 @@
 //  Created by Théo De Roy on 15/10/2026.
 //
 
+import Combine
 import SwiftUI
 
 #if os(macOS)
@@ -39,11 +40,15 @@ enum DeboogeyLegacyRootLaunch {
 
 enum DeboogeyRootNavigation {
     static let windowID = "deboogey-root"
+    static let didRequestOpen = PassthroughSubject<Void, Never>()
 
     @available(macOS 13.0, *)
     static func open(using openWindow: OpenWindowAction) {
         openWindow(id: windowID)
+        notePresented()
     }
+
+    static func notePresented() { didRequestOpen.send() }
 }
 
 @available(macOS 13.0, *)

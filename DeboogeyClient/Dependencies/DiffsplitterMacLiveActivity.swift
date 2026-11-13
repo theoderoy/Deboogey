@@ -14,11 +14,11 @@ import ActivityKit
 enum DiffsplitterMacLiveActivity {
     final class Handle {
         private let updateImpl: (DiffsplitterIndexProgress) -> Void
-        private let endImpl: (Bool) -> Void
+        private let endImpl: (Bool, String?) -> Void
 
         fileprivate init(
             update: @escaping (DiffsplitterIndexProgress) -> Void,
-            end: @escaping (Bool) -> Void
+            end: @escaping (Bool, String?) -> Void
         ) {
             updateImpl = update
             endImpl = end
@@ -28,8 +28,8 @@ enum DiffsplitterMacLiveActivity {
             updateImpl(progress)
         }
 
-        func end(success: Bool) {
-            endImpl(success)
+        func end(success: Bool, status: String? = nil) {
+            endImpl(success, status)
         }
     }
 
@@ -63,15 +63,16 @@ enum DiffsplitterMacLiveActivity {
                     )
                 )
             },
-            end: { success in
-                let successState = DiffsplitterActivityAttributes.ContentState(
-                    status: activity.content.state.status,
-                    fractionCompleted: 1
-                )
+            end: { success, endStatus in
                 DeboogeyMacLiveActivities.publishEnd(
                     activity,
                     success: success,
-                    successState: success ? successState : nil
+                    successState: success
+                        ? DiffsplitterActivityAttributes.ContentState(
+                            status: endStatus ?? activity.content.state.status,
+                            fractionCompleted: 1
+                        )
+                        : nil
                 )
             }
         )

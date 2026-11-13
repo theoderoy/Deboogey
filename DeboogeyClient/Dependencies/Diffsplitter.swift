@@ -6533,12 +6533,15 @@ final class DiffsplitterSession: ObservableObject {
             return true
 #endif
         }()
-#if os(iOS)
+#if DEBOOGEY_MAC_LIVE_ACTIVITIES
+        macLiveActivity?.end(
+            success: true,
+            status: L10n.f("%@ finished comparing", label)
+        )
+        macLiveActivity = nil
+#elseif os(iOS)
         let continued = continuedProcessing
         continuedProcessing = nil
-#elseif DEBOOGEY_MAC_LIVE_ACTIVITIES
-        let macActivity = macLiveActivity
-        macLiveActivity = nil
 #endif
         let elapsed = Date().timeIntervalSince(startedAt)
         Task { @MainActor in
@@ -6549,8 +6552,6 @@ final class DiffsplitterSession: ObservableObject {
             )
 #if os(iOS)
             continued?.finish(success: true)
-#elseif DEBOOGEY_MAC_LIVE_ACTIVITIES
-            macActivity?.end(success: true)
 #endif
         }
         EntityTracker.shared.record(

@@ -116,6 +116,9 @@ public final class PersistentVariables: ObservableObject {
         DocumentSaveFeedback.migrateIfNeeded(defaults: defaults)
         defaults.register(defaults: registeredDefaults)
         AppFeedback.install()
+#if DEBOOGEY_MAC_LIVE_ACTIVITIES
+        DeboogeyMacLiveActivities.bounceExtensionIfBundleReplaced(defaults: defaults)
+#endif
         if defaults.bool(forKey: Keys.playIndexingDoneSound)
             || defaults.bool(forKey: Keys.playDiffsplitterDoneSound) {
             AppFeedback.requestNoticePermissionIfNeeded()

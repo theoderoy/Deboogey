@@ -8,6 +8,7 @@
 import SwiftUI
 #if canImport(AppKit)
 import AppKit
+import QuartzCore
 #endif
 
 struct AppWindowSize {
@@ -98,6 +99,53 @@ extension NSWindow {
         minSize = frameRect(forContentRect: NSRect(origin: .zero, size: sizing.minimumSize)).size
     }
 
+    func setFixedLauncherContentSize(_ contentSize: CGSize, animated: Bool) {
+        guard contentSize.width > 0, contentSize.height > 0 else { return }
+
+        var targetFrame = frameRect(forContentRect: NSRect(origin: .zero, size: contentSize))
+        let currentFrame = frame
+        targetFrame.origin.x = currentFrame.origin.x
+        targetFrame.origin.y = currentFrame.origin.y + (currentFrame.height - targetFrame.height)
+
+        if let visible = (screen ?? NSScreen.main)?.visibleFrame {
+            targetFrame.origin.y = max(
+                visible.minY,
+                min(targetFrame.origin.y, visible.maxY - targetFrame.height)
+            )
+            targetFrame.origin.x = max(
+                visible.minX,
+                min(targetFrame.origin.x, visible.maxX - targetFrame.width)
+            )
+        }
+
+        let sizeDelta = abs(currentFrame.width - targetFrame.width)
+            + abs(currentFrame.height - targetFrame.height)
+        let originDelta = abs(currentFrame.origin.x - targetFrame.origin.x)
+            + abs(currentFrame.origin.y - targetFrame.origin.y)
+        guard sizeDelta > 0.5 || originDelta > 0.5 else { return }
+
+        minSize = .zero
+        maxSize = NSSize(
+            width: max(currentFrame.width, targetFrame.width),
+            height: max(currentFrame.height, targetFrame.height)
+        )
+
+        guard animated else {
+            setFrame(targetFrame, display: true)
+            lockFixedLauncherSize(targetFrame.size)
+            return
+        }
+
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.32
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            context.allowsImplicitAnimation = true
+            animator().setFrame(targetFrame, display: true)
+        }, completionHandler: { [weak self] in
+            self?.lockFixedLauncherSize(targetFrame.size)
+        })
+    }
+
     func applyFixedLauncherChrome() {
         var mask = styleMask
         mask.remove(.resizable)
@@ -117,8 +165,20 @@ extension NSWindow {
     }
 
     func refreshFixedLauncherLayout() {
+        unlockFixedLauncherSize()
         sizeToFittingContentAndCenter()
         applyFixedLauncherChrome()
+        lockFixedLauncherSize(frame.size)
+    }
+
+    private func unlockFixedLauncherSize() {
+        minSize = .zero
+        maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+    }
+
+    private func lockFixedLauncherSize(_ size: NSSize) {
+        minSize = size
+        maxSize = size
     }
 }
 #endif

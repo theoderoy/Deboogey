@@ -74,6 +74,7 @@ private final class MCEWindowController: NSWindowController, NSWindowDelegate {
         controller.showWindow(nil)
         controller.window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        DeboogeyRootNavigation.notePresented()
     }
 
     func windowWillClose(_ notification: Notification) {

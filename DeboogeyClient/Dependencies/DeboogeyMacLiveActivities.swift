@@ -15,9 +15,48 @@ enum DeboogeyMacLiveActivities {
 #if DEBOOGEY_MAC_LIVE_ACTIVITIES
     private static let logger = Logger(subsystem: "theoderoy.Deboogey", category: "LiveActivity")
     private static let successDismissalDelay: TimeInterval = 5
+    private static let lastAppexStampKey = "theoderoy.Deboogey.LiveActivity.lastAppexStamp"
+    private static let extensionProcessNames = [
+        "DeboogeyLiveActivity",
+        "DeboogeyLiveActivityMCE"
+    ]
 
     static func logRequestFailure(_ label: String, error: Error) {
         logger.error("\(label) Activity.request failed: \(error.localizedDescription, privacy: .public)")
+    }
+
+    static func bounceExtensionIfBundleReplaced(defaults: UserDefaults = .standard) {
+        let stamp = embeddedLiveActivityAppexStamp()
+        let previous = defaults.double(forKey: lastAppexStampKey)
+        defaults.set(stamp, forKey: lastAppexStampKey)
+        guard previous > 0, stamp > 0, abs(previous - stamp) > 0.5 else { return }
+        logger.info("Live Activity appex changed; terminating stale extension processes")
+        terminateExtensionProcesses()
+    }
+
+    private static func embeddedLiveActivityAppexStamp() -> TimeInterval {
+        guard let plugins = Bundle.main.builtInPlugInsURL,
+              let contents = try? FileManager.default.contentsOfDirectory(
+                at: plugins,
+                includingPropertiesForKeys: [.contentModificationDateKey]
+              )
+        else { return 0 }
+        return contents
+            .filter { $0.pathExtension == "appex" && $0.lastPathComponent.contains("LiveActivity") }
+            .compactMap {
+                try? $0.resourceValues(forKeys: [.contentModificationDateKey])
+                    .contentModificationDate?
+                    .timeIntervalSince1970
+            }
+            .max() ?? 0
+    }
+
+    static func terminateExtensionProcesses() {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+        process.arguments = extensionProcessNames
+        try? process.run()
+        process.waitUntilExit()
     }
 
     @available(macOS 27.3, *)

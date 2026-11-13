@@ -93,6 +93,7 @@ final class DeboogeyWindowController: NSWindowController, NSWindowDelegate {
         controller.showWindow(nil)
         controller.window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        if kind == .main { DeboogeyRootNavigation.notePresented() }
     }
 
     func windowWillClose(_ notification: Notification) {

@@ -35,7 +35,7 @@ struct DiffsplitterActivityWidget: Widget {
             } compactLeading: {
                 EmptyView()
             } compactTrailing: {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     DiffsplitterActivityIcon()
                     DiffsplitterActivityProgress(fraction: context.state.fractionCompleted)
                 }
@@ -74,13 +74,17 @@ private struct DiffsplitterActivityExpandedView: View {
     }
 }
 
+private enum DiffsplitterActivityCompactMetrics {
+    static let size: CGFloat = 18
+}
+
 private struct DiffsplitterActivityIcon: View {
     var prominent = false
 
     private static let glyphAspect = 60.06 / 99.9
 
     var body: some View {
-        let height: CGFloat = prominent ? 22 : 14
+        let height = prominent ? 22 : DiffsplitterActivityCompactMetrics.size
         DiffsplitterMark()
             .fill(Color.primary, style: FillStyle(eoFill: true))
             .frame(width: height * Self.glyphAspect, height: height)
@@ -157,6 +161,10 @@ private struct DiffsplitterActivityProgress: View {
         ProgressView(value: min(max(fraction, 0), 1))
             .progressViewStyle(.circular)
             .controlSize(.small)
+            .frame(
+                width: DiffsplitterActivityCompactMetrics.size,
+                height: DiffsplitterActivityCompactMetrics.size
+            )
     }
 }
 #endif
