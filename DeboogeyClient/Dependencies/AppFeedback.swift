@@ -22,7 +22,7 @@ enum AppFeedback {
     enum Sound: String {
         case processDone = "ProcessDone"
         case documentSaved = "FufillDeploymentTask"
-        case batchComposerStart = "BatchComposerStart"
+        case batchCommence = "BatchCommence"
         case toolCycleComplete = "ToolCycleComplete"
         case toolCycleHalt = "ToolCycleHalt"
     }

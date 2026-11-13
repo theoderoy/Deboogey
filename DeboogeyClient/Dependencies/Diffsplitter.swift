@@ -6646,7 +6646,7 @@ final class DiffsplitterSession: ObservableObject {
             status: L10n.t("Preparing Diffsplitter Batch…")
         )
         documentTransferProgress = initial
-        AppFeedback.play(.batchComposerStart)
+        AppFeedback.play(.batchCommence)
         let entries = directoryEntries
         let leftMap = leftFileMap
         let rightMap = rightFileMap
@@ -7515,7 +7515,7 @@ final class DiffsplitterBatchCreation: ObservableObject {
             fractionCompleted: 0,
             status: L10n.t("Preparing Diffsplitter Batch…")
         )
-        AppFeedback.play(.batchComposerStart)
+        AppFeedback.play(.batchCommence)
         let leftAccess = left.startAccessingSecurityScopedResource()
         let rightAccess = right.startAccessingSecurityScopedResource()
         task = Task { @MainActor [weak self] in

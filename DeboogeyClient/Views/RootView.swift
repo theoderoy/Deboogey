@@ -1019,9 +1019,7 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
     var forceEducation: Bool = false
     @ViewBuilder let education: (@escaping () -> Void) -> Education
 
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingEducation = false
-    @State private var showingActions = false
     @State private var pendingAction: Action = .open
 
     private enum Action {
@@ -1030,92 +1028,33 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
         case supplemental
     }
 
-    private var prefersActionAlert: Bool {
-        #if os(iOS)
-        horizontalSizeClass == .compact
-        #else
-        false
-        #endif
-    }
-
-    private func showingActionsPresentation(_ matchesAlertPreference: Bool) -> Binding<Bool> {
-        Binding(
-            get: { showingActions && prefersActionAlert == matchesAlertPreference },
-            set: { if prefersActionAlert == matchesAlertPreference { showingActions = $0 } }
-        )
-    }
-
     var body: some View {
-        LauncherButton(
-            title: title,
-            icon: icon,
-            color: .accentColor,
-            prominent: prominent
-        ) {
-            showingActions = true
-        }
-        .popover(
-            isPresented: showingActionsPresentation(false),
-            arrowEdge: .bottom
-        ) {
-            VStack(alignment: .leading, spacing: 0) {
-                Button {
-                    request(.open)
-                } label: {
-                    Label(L10n.t(openLabel), systemImage: openIcon)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(12)
-                .padding(.horizontal, 4)
+        ZStack {
+            Button(action: {}) {
+                launcherLabel
+            }
+            .deboogeyButtonStyle(tint: .accentColor, prominent: prominent)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
 
-                Divider()
-
-                Button {
-                    request(.create)
-                } label: {
-                    Label(L10n.t("Create New Document…"), systemImage: "plus.app")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(12)
-                .padding(.horizontal, 4)
-
+            Menu {
+                menuButton(openLabel, openIcon) { request(.open) }
+                menuButton("Create New Document…", "plus.app") { request(.create) }
                 if let supplementalTitle, supplementalAction != nil {
-                    Divider()
-                    Button {
-                        request(.supplemental)
-                    } label: {
-                        Label(L10n.t(supplementalTitle), systemImage: supplementalIcon)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .padding(12)
-                    .padding(.horizontal, 4)
+                    menuButton(supplementalTitle, supplementalIcon) { request(.supplemental) }
                 }
+            } label: {
+                launcherLabel
+                    .opacity(0)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Capsule())
             }
-            .frame(minWidth: 280)
+            .buttonStyle(.plain)
         }
-        .alert(
-            "",
-            isPresented: showingActionsPresentation(true)
-        ) {
-            Button(L10n.t(openLabel)) {
-                request(.open)
-            }
-            Button(L10n.t("Create New Document…")) {
-                request(.create)
-            }
-            if let supplementalTitle, supplementalAction != nil {
-                Button(L10n.t(supplementalTitle)) {
-                    request(.supplemental)
-                }
-            }
-            Button(L10n.t("Cancel"), role: .cancel) {}
-        }
+        .fixedSize()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L10n.t(title))
+        .accessibilityAddTraits(.isButton)
         .sheet(isPresented: $showingEducation) {
             education {
                 hasShownEducation = true
@@ -1127,8 +1066,24 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
         }
     }
 
+    private var launcherLabel: some View {
+        Label {
+            Text(L10n.t(title))
+        } icon: {
+            LauncherIcon(name: icon)
+        }
+        .deboogeyStandardButtonLabel()
+    }
+
+    @ViewBuilder
+    private func menuButton(_ title: String, _ systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(L10n.t(title), systemImage: systemImage)
+        }
+        .tint(.primary)
+    }
+
     private func request(_ action: Action) {
-        showingActions = false
         pendingAction = action
         if hasShownEducation && !forceEducation {
             perform(action)
