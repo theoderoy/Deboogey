@@ -106,6 +106,7 @@
 "Date (Oldest First)" = "Datum (oudste eerst)";
 "Deboogey" = "Deboogey";
 "Deboogey now supports displaying itself in Dutch. Visibility will depend on the system language to simplify user experience." = "Deboogey ondersteunt nu weergave in het Nederlands. Zichtbaarheid hangt af van de systeemtaal om de gebruikerservaring te vereenvoudigen.";
+"Deboogey will no longer support Intel-based Macs in future versions." = "Deboogey ondersteunt in toekomstige versies geen Intel-Macs meer.";
 "DeboogeyCDMHelper exists but is not executable. (path: %@)" = "DeboogeyCDMHelper bestaat, maar is niet uitvoerbaar. (pad: %@)";
 "DeboogeyCDMHelper was not found in the app bundle." = "DeboogeyCDMHelper is niet gevonden in de appbundel.";
 "DeboogeyLoupe could not inspect the application." = "DeboogeyLoupe kon de app niet inspecteren.";

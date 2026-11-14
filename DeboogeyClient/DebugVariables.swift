@@ -53,8 +53,17 @@ enum DebugVariables {
     static var pseudoSystemIntegrityProtection = false
     static var forceDiffsplitterOnUnsupportedPhones = false
     static var forceDiffsplitterOnUnsupportedChips = false
+    static var omitMacLiveActivities = false
     nonisolated(unsafe) static var forcedLanguage: Language? = nil
     static var forcedVersionType: VersionType? = nil
+
+    static var includesMacLiveActivities: Bool {
+#if DEBOOGEY_MAC_LIVE_ACTIVITIES
+        true
+#else
+        false
+#endif
+    }
 
     static var bundledVersionType: VersionType? {
         let marketingVersion = Bundle.main.object(
