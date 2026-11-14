@@ -64,24 +64,53 @@ private struct RootBannerMotion {
     }
 }
 
+private struct RootLauncherContentSizeKey: PreferenceKey {
+    static var defaultValue: CGSize = .zero
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+        value = nextValue()
+    }
+}
+
 private final class RootWindowChromeProbe: NSView {
+    private var lastAppliedContentSize: CGSize = .zero
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         guard let window else { return }
         window.applyFixedLauncherChrome()
         if window.alphaValue < 1 { window.alphaValue = 1 }
     }
+
+    func applyContentSize(_ contentSize: CGSize, animated: Bool) {
+        guard contentSize.width > 0, contentSize.height > 0,
+              abs(contentSize.width - lastAppliedContentSize.width)
+                + abs(contentSize.height - lastAppliedContentSize.height) > 0.5,
+              let window
+        else { return }
+        window.applyFixedLauncherChrome()
+        window.setFixedLauncherContentSize(
+            contentSize,
+            animated: animated && lastAppliedContentSize != .zero
+        )
+        lastAppliedContentSize = contentSize
+    }
 }
 
 private struct RootWindowChrome: NSViewRepresentable {
+    var contentSize: CGSize
+    var animate: Bool
+
     func makeNSView(context: Context) -> RootWindowChromeProbe {
         let view = RootWindowChromeProbe(frame: .zero)
         view.isHidden = true
         return view
     }
 
-    func updateNSView(_ nsView: RootWindowChromeProbe, context: Context) {}
+    func updateNSView(_ nsView: RootWindowChromeProbe, context: Context) {
+        nsView.applyContentSize(contentSize, animated: animate)
+    }
 }
+
 private struct RootLauncherBranding: View {
     var body: some View {
         VStack(spacing: 8) {
@@ -98,12 +127,20 @@ private struct RootLauncherBranding: View {
 }
 
 private struct RootLauncherCanvas<Content: View>: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ViewBuilder let content: () -> Content
+    @State private var contentSize: CGSize = .zero
 
     var body: some View {
         content()
             .fixedSize()
-            .background(RootWindowChrome())
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.preference(key: RootLauncherContentSizeKey.self, value: proxy.size)
+                }
+            }
+            .onPreferenceChange(RootLauncherContentSizeKey.self) { contentSize = $0 }
+            .background(RootWindowChrome(contentSize: contentSize, animate: !reduceMotion))
     }
 }
 #endif
@@ -281,6 +318,7 @@ struct RootView: View {
             didPrepareStartupFlow = true
             showingWhatsNew = vars.shouldPresentWhatsNew
         }
+        .modifier(DiffsplitterBatchCreationOverlay())
     }
 
     private var branding: some View {
@@ -387,8 +425,9 @@ struct RootView: View {
                 }
                 .padding(RootLauncherMetrics.actionsPadding)
             }
-            .padding(.horizontal, RootLauncherMetrics.horizontalPadding)
-            .padding(.vertical, RootLauncherMetrics.verticalPadding)
+            .padding(.horizontal, RootLauncherMetrics.horizontalPadding + 8)
+            .padding(.vertical, RootLauncherMetrics.verticalPadding + 8)
+            .frame(width: AppWindowSizing.root.defaultSize.width, alignment: .top)
         }
         .sheet(isPresented: $showingEntityTracker) {
             NavigationView {
@@ -413,6 +452,7 @@ struct RootView: View {
             didPrepareStartupFlow = true
             showingWhatsNew = vars.shouldPresentWhatsNew
         }
+        .modifier(DiffsplitterBatchCreationOverlay())
     }
 #endif
 #else
@@ -485,8 +525,13 @@ struct RootView: View {
         isOfflineWithoutUpgrade ? .orange : .accentColor
     }
 
+    private var showsUpdateBannerSlot: Bool {
+        shouldShowUpdateCard || DebugVariables.auxiliaryUpgrades
+    }
+
     private var updateBannerHeight: CGFloat {
-        shouldShowUpdateCard && !updateCardExpanded
+        guard showsUpdateBannerSlot else { return 0 }
+        return shouldShowUpdateCard && !updateCardExpanded
             ? RootLauncherMetrics.bottomBannerCollapsedHeight
             : RootLauncherMetrics.bottomBannerHeight
     }
@@ -508,39 +553,36 @@ struct RootView: View {
         let motion = bannerMotion
         RootLauncherCanvas {
             VStack(spacing: RootLauncherMetrics.bannerContentSpacing) {
-                ZStack {
-                    if shouldShowExperimentalBuildCard {
-                        ZStack(alignment: .topTrailing) {
-                            HStack(alignment: .center, spacing: 10) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(upgradeChecker.isDevelopmentBuild ? .red : .orange)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(L10n.t(upgradeChecker.isDevelopmentBuild ? "PlaceholderText1" : "This version of Deboogey is experimental."))
-                                        .font(.headline)
-                                    Text(L10n.t(upgradeChecker.isDevelopmentBuild ? "PlaceholderText2" : "This build contains experimental features and is not officially notarised by Apple. Use caution when running it."))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(2)
-                                }
-                                Spacer(minLength: 22)
+                if shouldShowExperimentalBuildCard {
+                    ZStack(alignment: .topTrailing) {
+                        HStack(alignment: .center, spacing: 10) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(upgradeChecker.isDevelopmentBuild ? .red : .orange)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(L10n.t(upgradeChecker.isDevelopmentBuild ? "PlaceholderText1" : "This version of Deboogey is experimental."))
+                                    .font(.headline)
+                                Text(L10n.t(upgradeChecker.isDevelopmentBuild ? "PlaceholderText2" : "This build contains experimental features and is not officially notarised by Apple. Use caution when running it."))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
                             }
-                            Button {
-                                withAnimation(motion.pop) { hideExperimentalBuildCard = true }
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                            .padding(6)
+                            Spacer(minLength: 22)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background((upgradeChecker.isDevelopmentBuild ? Color.red : Color.orange).opacity(0.12), in: RoundedRectangle(cornerRadius: 16))
-                        .transition(motion.popTransition)
+                        Button {
+                            withAnimation(motion.pop) { hideExperimentalBuildCard = true }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(6)
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(width: RootLauncherMetrics.bannerWidth, height: RootLauncherMetrics.topBannerHeight)
+                    .background((upgradeChecker.isDevelopmentBuild ? Color.red : Color.orange).opacity(0.12), in: RoundedRectangle(cornerRadius: 16))
+                    .transition(motion.popTransition)
                 }
-                .frame(width: RootLauncherMetrics.bannerWidth, height: RootLauncherMetrics.topBannerHeight)
 
                 if !DebugVariables.isMarketplaceCandidateEditionBuild,
                    sipSatisfied == true,
@@ -607,126 +649,125 @@ struct RootView: View {
                     .padding(RootLauncherMetrics.actionsPadding)
                 }
 
-                ZStack {
-                    if shouldShowUpdateCard {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: updateBannerCornerRadius)
-                                .foregroundColor(updateCardAccent)
-                                .opacity(0.1)
-                            if upgradeChecker.isUpdating {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack {
-                                        Text(L10n.t(upgradeChecker.updateStep.isEmpty ? "Preparing upgrade" : upgradeChecker.updateStep))
-                                            .font(.headline)
-                                        Spacer()
-                                        Text("\(Int((boundedUpdateProgress * 100).rounded()))%")
-                                            .font(.caption.monospacedDigit())
-                                            .foregroundColor(.secondary)
+                if showsUpdateBannerSlot {
+                    ZStack {
+                        if shouldShowUpdateCard {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: updateBannerCornerRadius)
+                                    .foregroundColor(updateCardAccent)
+                                    .opacity(0.1)
+                                if upgradeChecker.isUpdating {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack {
+                                            Text(L10n.t(upgradeChecker.updateStep.isEmpty ? "Preparing upgrade" : upgradeChecker.updateStep))
+                                                .font(.headline)
+                                            Spacer()
+                                            Text("\(Int((boundedUpdateProgress * 100).rounded()))%")
+                                                .font(.caption.monospacedDigit())
+                                                .foregroundColor(.secondary)
+                                        }
+                                        ProgressView(value: boundedUpdateProgress, total: 1)
+                                            .progressViewStyle(.linear)
                                     }
-                                    ProgressView(value: boundedUpdateProgress, total: 1)
-                                        .progressViewStyle(.linear)
-                                }
-                                .padding(.horizontal, 12)
-                                .transition(motion.unfoldTransition)
-                            } else if updateCardExpanded {
-                                HStack(spacing: 10) {
-                                    VStack(alignment: .leading, spacing: 1) {
-                                        if isOfflineWithoutUpgrade {
-                                            Text(L10n.t("Network connection required")).font(.headline)
-                                            Text(L10n.t("Connect to check for upgrades")).font(.caption).foregroundColor(.orange)
-                                        } else {
-                                            Text(L10n.f("%@ is available", upgradeChecker.formattedLatestVersion)).font(.headline)
-                                            if !networkMonitor.isConnected {
-                                                Text(L10n.t("Network connection required to download upgrade")).font(.caption).foregroundColor(.orange)
+                                    .padding(.horizontal, 12)
+                                    .transition(motion.unfoldTransition)
+                                } else if updateCardExpanded {
+                                    HStack(spacing: 10) {
+                                        VStack(alignment: .leading, spacing: 1) {
+                                            if isOfflineWithoutUpgrade {
+                                                Text(L10n.t("Network connection required")).font(.headline)
+                                                Text(L10n.t("Connect to check for upgrades")).font(.caption).foregroundColor(.orange)
                                             } else {
-                                                Text(L10n.t("You might need to manually code-sign after upgrading.")).font(.caption).foregroundColor(.secondary)
+                                                Text(L10n.f("%@ is available", upgradeChecker.formattedLatestVersion)).font(.headline)
+                                                if !networkMonitor.isConnected {
+                                                    Text(L10n.t("Network connection required to download upgrade")).font(.caption).foregroundColor(.orange)
+                                                } else {
+                                                    Text(L10n.t("You might need to manually code-sign after upgrading.")).font(.caption).foregroundColor(.secondary)
+                                                }
                                             }
                                         }
-                                    }
-                                    Spacer(minLength: 8)
-                                    if upgradeChecker.upgradeAvailable {
-                                        HStack(spacing: 8) {
-                                            Button(L10n.t("Upgrade")) {
-                                                beginUpgrade()
-                                            }
-                                            .buttonStyle(.bordered)
-                                            .controlSize(.small)
-                                            .disabled(!networkMonitor.isConnected)
+                                        Spacer(minLength: 8)
+                                        if upgradeChecker.upgradeAvailable {
+                                            HStack(spacing: 8) {
+                                                Button(L10n.t("Upgrade")) {
+                                                    beginUpgrade()
+                                                }
+                                                .buttonStyle(.bordered)
+                                                .controlSize(.small)
+                                                .disabled(!networkMonitor.isConnected)
 
-                                            if !networkMonitor.isConnected {
-                                                Image(systemName: "wifi.slash")
-                                                    .foregroundColor(.orange)
-                                                    .help(L10n.t("No network connection"))
+                                                if !networkMonitor.isConnected {
+                                                    Image(systemName: "wifi.slash")
+                                                        .foregroundColor(.orange)
+                                                        .help(L10n.t("No network connection"))
+                                                }
                                             }
                                         }
                                     }
-                                }
-                                .padding(.horizontal, 12)
-                                .transition(motion.unfoldTransition)
-                            } else {
-                                HStack(spacing: 6) {
-                                    Button {
-                                        withAnimation(motion.unfold) { updateCardOpen = true }
-                                    } label: {
-                                        HStack(spacing: 5) {
-                                            Text(L10n.t("Upgrade available"))
-                                                .font(.caption.weight(.semibold))
-                                            if !networkMonitor.isConnected {
-                                                Image(systemName: "wifi.slash")
-                                                    .foregroundColor(.orange)
-                                                    .font(.caption2)
+                                    .padding(.horizontal, 12)
+                                    .transition(motion.unfoldTransition)
+                                } else {
+                                    HStack(spacing: 6) {
+                                        Button {
+                                            withAnimation(motion.unfold) { updateCardOpen = true }
+                                        } label: {
+                                            HStack(spacing: 5) {
+                                                Text(L10n.t("Upgrade available"))
+                                                    .font(.caption.weight(.semibold))
+                                                if !networkMonitor.isConnected {
+                                                    Image(systemName: "wifi.slash")
+                                                        .foregroundColor(.orange)
+                                                        .font(.caption2)
+                                                }
+                                                Image(systemName: "chevron.down")
+                                                    .font(.caption2.weight(.semibold))
                                             }
-                                            Image(systemName: "chevron.down")
-                                                .font(.caption2.weight(.semibold))
-                                        }
-                                    }
-                                    .buttonStyle(.plain)
-                                    Spacer(minLength: 4)
-                                    Button(action: dismissUpdateCard) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                                .padding(.horizontal, 10)
-                                .transition(motion.unfoldTransition)
-                            }
-                            if updateCardExpanded && !upgradeChecker.isUpdating {
-                                VStack {
-                                    HStack {
-                                        Spacer()
-                                        Button(action: dismissUpdateCard) {
-                                            Image(systemName: "xmark.circle.fill").foregroundColor(.secondary)
                                         }
                                         .buttonStyle(.plain)
-                                        .padding(4)
+                                        Spacer(minLength: 4)
+                                        Button(action: dismissUpdateCard) {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .buttonStyle(.plain)
                                     }
-                                    Spacer()
+                                    .padding(.horizontal, 10)
+                                    .transition(motion.unfoldTransition)
                                 }
-                                .transition(motion.unfoldTransition)
+                            }
+                            .overlay(alignment: .topTrailing) {
+                                if updateCardExpanded && !upgradeChecker.isUpdating {
+                                    Button(action: dismissUpdateCard) {
+                                        Image(systemName: "xmark.circle.fill").foregroundColor(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .padding(4)
+                                    .transition(motion.unfoldTransition)
+                                }
+                            }
+                            .overlay(
+                                RoundedRectangle(cornerRadius: updateBannerCornerRadius)
+                                    .stroke(updateCardAccent.opacity(highlightUpdateCard ? 0.9 : 0), lineWidth: 2)
+                            )
+                            .scaleEffect(highlightUpdateCard ? 1.02 : 1)
+                            .animation(.easeInOut(duration: 0.35), value: highlightUpdateCard)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .transition(motion.popTransition)
+                        }
+
+                        if DebugVariables.auxiliaryUpgrades {
+                            VStack {
+                                Spacer()
+                                Text(L10n.t("Auxiliary upgrades have been enabled."))
+                                    .foregroundStyle(.orange)
                             }
                         }
-                        .overlay(
-                            RoundedRectangle(cornerRadius: updateBannerCornerRadius)
-                                .stroke(updateCardAccent.opacity(highlightUpdateCard ? 0.9 : 0), lineWidth: 2)
-                        )
-                        .scaleEffect(highlightUpdateCard ? 1.02 : 1)
-                        .animation(.easeInOut(duration: 0.35), value: highlightUpdateCard)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .transition(motion.popTransition)
                     }
-
-                    if DebugVariables.auxiliaryUpgrades {
-                        VStack {
-                            Spacer()
-                            Text(L10n.t("Auxiliary upgrades have been enabled."))
-                                .foregroundStyle(.orange)
-                        }
-                    }
+                    .frame(width: RootLauncherMetrics.bannerWidth, height: updateBannerHeight)
+                    .animation(motion.unfold, value: updateCardExpanded)
+                    .transition(motion.popTransition)
                 }
-                .frame(width: RootLauncherMetrics.bannerWidth, height: updateBannerHeight)
-                .animation(motion.unfold, value: updateCardExpanded)
 
                 if let forced = DebugVariables.forcedVersionType {
                     Text(L10n.f("Parameters pose this build type as %@.", forced.localizedName))
@@ -735,11 +776,7 @@ struct RootView: View {
             }
             .padding(.horizontal, RootLauncherMetrics.horizontalPadding)
             .padding(.vertical, RootLauncherMetrics.verticalPadding)
-            .frame(
-                width: AppWindowSizing.root.defaultSize.width,
-                height: AppWindowSizing.root.defaultSize.height,
-                alignment: .top
-            )
+            .frame(width: AppWindowSizing.root.defaultSize.width, alignment: .top)
         }
         .sheet(isPresented: $showingDeboogeySDLauncher) {
             NavigationView {
@@ -806,8 +843,15 @@ struct RootView: View {
             }
         }
         .onAppear {
+            let reappear = didRunStartupFlow
             prepareStartupFlowIfNeeded()
+            revealUpdateCard(resetDismiss: reappear)
         }
+#if os(macOS)
+        .onReceive(DeboogeyRootNavigation.didRequestOpen) { _ in
+            revealUpdateCard(resetDismiss: true)
+        }
+#endif
         .onReceive(upgradeChecker.manualCheck) { _ in
             runManualCheck()
         }
@@ -815,12 +859,8 @@ struct RootView: View {
             activeAlert = .message(L10n.f("%@ has been baked successfully.", filename))
         }
         .onChange(of: upgradeChecker.upgradeAvailable) { available in
-            guard available, !vars.hideUpgradeAlerts else { return }
-            withAnimation(bannerMotion.pop) {
-                hideUpdateCard = false
-                showUpdateCardOverride = false
-                updateCardOpen = true
-            }
+            guard available else { return }
+            revealUpdateCard(resetDismiss: true)
         }
         .onChange(of: vars.hideUpgradeAlerts) { hide in
             guard hide else { return }
@@ -830,6 +870,7 @@ struct RootView: View {
                 showUpdateCardOverride = false
             }
         }
+        .modifier(DiffsplitterBatchCreationOverlay())
     }
 
     private func prepareStartupFlowIfNeeded() {
@@ -931,6 +972,23 @@ struct RootView: View {
         }
     }
 
+    private func revealUpdateCard(resetDismiss: Bool) {
+        guard !DebugVariables.areUpdatesDisabled, !vars.hideUpgradeAlerts else { return }
+        let upgrade = upgradeChecker.upgradeAvailable
+        let offline = !networkMonitor.isConnected && vars.showNetworkNotices
+        guard upgrade || (resetDismiss && offline) else { return }
+        if !resetDismiss {
+            guard upgrade, !hideUpdateCard, !updateCardOpen else { return }
+        }
+        withAnimation(bannerMotion.pop) {
+            if resetDismiss {
+                hideUpdateCard = false
+                showUpdateCardOverride = false
+            }
+            if upgrade { updateCardOpen = true }
+        }
+    }
+
     private func beginUpgrade() {
         if upgradeChecker.shouldConfirmInternalUpgrade {
             activeAlert = .internalUpgradeNotice
@@ -954,36 +1012,36 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
     let openIcon: String
     let openDocument: () -> Void
     let createDocument: () -> Void
+    var supplementalTitle: String? = nil
+    var supplementalIcon: String = "archivebox"
+    var supplementalAction: (() -> Void)? = nil
     @Binding var hasShownEducation: Bool
     var forceEducation: Bool = false
     @ViewBuilder let education: (@escaping () -> Void) -> Education
 
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingEducation = false
+#if os(macOS)
     @State private var showingActions = false
+#endif
     @State private var pendingAction: Action = .open
 
     private enum Action {
-        case open
-        case create
+        case open, create, supplemental
     }
 
-    private var prefersActionAlert: Bool {
-        #if os(iOS)
-        horizontalSizeClass == .compact
-        #else
-        false
-        #endif
-    }
-
-    private func showingActionsPresentation(_ matchesAlertPreference: Bool) -> Binding<Bool> {
-        Binding(
-            get: { showingActions && prefersActionAlert == matchesAlertPreference },
-            set: { if prefersActionAlert == matchesAlertPreference { showingActions = $0 } }
-        )
+    private var menuActions: [(title: String, icon: String, action: Action)] {
+        var items: [(title: String, icon: String, action: Action)] = [
+            (openLabel, openIcon, .open),
+            ("Create New Document…", "plus.app", .create),
+        ]
+        if let supplementalTitle, supplementalAction != nil {
+            items.append((supplementalTitle, supplementalIcon, .supplemental))
+        }
+        return items
     }
 
     var body: some View {
+#if os(macOS)
         LauncherButton(
             title: title,
             icon: icon,
@@ -992,62 +1050,70 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
         ) {
             showingActions = true
         }
-        .popover(
-            isPresented: showingActionsPresentation(false),
-            arrowEdge: .bottom
-        ) {
+        .popover(isPresented: $showingActions, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: 0) {
-                Button {
-                    request(.open)
-                } label: {
-                    Label(L10n.t(openLabel), systemImage: openIcon)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
+                ForEach(Array(menuActions.enumerated()), id: \.element.title) { index, item in
+                    if index > 0 { Divider() }
+                    Button { request(item.action) } label: {
+                        Label(L10n.t(item.title), systemImage: item.icon)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(12)
+                    .padding(.horizontal, 4)
                 }
-                .buttonStyle(.plain)
-                .padding(12)
-                .padding(.horizontal, 4)
-
-                Divider()
-
-                Button {
-                    request(.create)
-                } label: {
-                    Label(L10n.t("Create New Document…"), systemImage: "plus.app")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(12)
-                .padding(.horizontal, 4)
             }
             .frame(minWidth: 280)
         }
-        .alert(
-            "",
-            isPresented: showingActionsPresentation(true)
-        ) {
-            Button(L10n.t(openLabel)) {
-                request(.open)
+        .sheet(isPresented: $showingEducation, content: educationSheet)
+#else
+        Button(action: {}) {
+            Label {
+                Text(L10n.t(title))
+            } icon: {
+                LauncherIcon(name: icon)
             }
-            Button(L10n.t("Create New Document…")) {
-                request(.create)
-            }
-            Button(L10n.t("Cancel"), role: .cancel) {}
+            .deboogeyStandardButtonLabel()
         }
-        .sheet(isPresented: $showingEducation) {
-            education {
-                hasShownEducation = true
-                showingEducation = false
-                DispatchQueue.main.async {
-                    perform(pendingAction)
+        .deboogeyButtonStyle(tint: .accentColor, prominent: prominent)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .overlay {
+            Menu {
+                ForEach(menuActions, id: \.title) { item in
+                    Button { request(item.action) } label: {
+                        Label(L10n.t(item.title), systemImage: item.icon)
+                    }
+                    .tint(.primary)
                 }
+            } label: {
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Capsule())
             }
+            .buttonStyle(.plain)
+        }
+        .fixedSize()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L10n.t(title))
+        .accessibilityAddTraits(.isButton)
+        .sheet(isPresented: $showingEducation, content: educationSheet)
+#endif
+    }
+
+    private func educationSheet() -> some View {
+        education {
+            hasShownEducation = true
+            showingEducation = false
+            DispatchQueue.main.async { perform(pendingAction) }
         }
     }
 
     private func request(_ action: Action) {
+#if os(macOS)
         showingActions = false
+#endif
         pendingAction = action
         if hasShownEducation && !forceEducation {
             perform(action)
@@ -1060,6 +1126,7 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
         switch action {
         case .open: openDocument()
         case .create: createDocument()
+        case .supplemental: supplementalAction?()
         }
     }
 }
@@ -1090,6 +1157,7 @@ private struct DeboogeyLoupeLauncherMenu: View {
 private struct DeboogeyDiffsplitterLauncherMenu: View {
     let openDocument: () -> Void
     let createDocument: () -> Void
+    let createBatch: () -> Void
     var prominent: Bool = false
     @AppStorage("theoderoy.Deboogey.Diffsplitter.hasShownEducation")
     private var hasShownEducation = false
@@ -1103,6 +1171,9 @@ private struct DeboogeyDiffsplitterLauncherMenu: View {
             openIcon: "doc.text",
             openDocument: openDocument,
             createDocument: createDocument,
+            supplementalTitle: "Batch Composer",
+            supplementalIcon: "archivebox",
+            supplementalAction: createBatch,
             hasShownEducation: $hasShownEducation
         ) { onContinue in
             DiffsplitterEducationView(onDismiss: onContinue)
@@ -1115,16 +1186,39 @@ private extension View {
     func mceDocumentImporter(
         isPresented: Binding<Bool>,
         contentTypes: [UTType],
-        onOpen: @escaping (URL) -> Void
+        onOpen: @escaping (URL) -> Void,
+        onFailure: @escaping (String) -> Void
     ) -> some View {
         fileImporter(
             isPresented: isPresented,
             allowedContentTypes: contentTypes,
             allowsMultipleSelection: false
         ) { result in
-            guard case .success(let urls) = result, let url = urls.first else { return }
-            _ = url.startAccessingSecurityScopedResource()
-            onOpen(url)
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                do {
+                    onOpen(try DeboogeyDocumentLifecycle.prepareForOpening(url))
+                } catch {
+                    onFailure(error.localizedDescription)
+                }
+            case .failure(let error):
+                onFailure(error.localizedDescription)
+            }
+        }
+    }
+
+    func mceImportErrorAlert(_ message: Binding<String?>) -> some View {
+        alert(
+            L10n.t("Couldn’t Open Document"),
+            isPresented: Binding(
+                get: { message.wrappedValue != nil },
+                set: { if !$0 { message.wrappedValue = nil } }
+            )
+        ) {
+            Button(L10n.t("OK"), role: .cancel) {}
+        } message: {
+            Text(message.wrappedValue ?? "")
         }
     }
 }
@@ -1135,6 +1229,7 @@ private struct DeboogeyLoupeIOSLauncher: View {
     private var hasShownEducation = false
     @State private var showingEducation = false
     @State private var isOpeningDocument = false
+    @State private var importError: String?
 
     var body: some View {
         LauncherButton(
@@ -1156,10 +1251,13 @@ private struct DeboogeyLoupeIOSLauncher: View {
         }
         .mceDocumentImporter(
             isPresented: $isOpeningDocument,
-            contentTypes: [.loupeMachineDocument]
-        ) { url in
-            navigate(.loupe(LoupeMachineWindowRequest(action: .open, documentURL: url)))
-        }
+            contentTypes: [.loupeMachineDocument],
+            onOpen: { url in
+                navigate(.loupe(LoupeMachineWindowRequest(action: .open, documentURL: url)))
+            },
+            onFailure: { importError = $0 }
+        )
+        .mceImportErrorAlert($importError)
     }
 
     private func requestOpen() {
@@ -1174,6 +1272,7 @@ private struct DeboogeyLoupeIOSLauncher: View {
 private struct DeboogeyDiffsplitterIOSLauncher: View {
     let navigate: (MCEIOSRoute) -> Void
     @State private var isOpeningDocument = false
+    @State private var importError: String?
 
     var body: some View {
         DeboogeyDiffsplitterLauncherMenu(
@@ -1181,14 +1280,22 @@ private struct DeboogeyDiffsplitterIOSLauncher: View {
             createDocument: {
                 navigate(.diffsplitter(DiffsplitterWindowRequest(action: .create, documentURL: nil)))
             },
+            createBatch: {
+                DiffsplitterBatchCreation.shared.presentComposer { url in
+                    navigate(.diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: url)))
+                }
+            },
             prominent: true
         )
         .mceDocumentImporter(
             isPresented: $isOpeningDocument,
-            contentTypes: [.diffsplitterDocument, .diffsplitterXDocument]
-        ) { url in
-            navigate(.diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: url)))
-        }
+            contentTypes: [.diffsplitterDocument, .diffsplitterXDocument, .diffsplitterBatchDocument],
+            onOpen: { url in
+                navigate(.diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: url)))
+            },
+            onFailure: { importError = $0 }
+        )
+        .mceImportErrorAlert($importError)
     }
 }
 #endif
@@ -1222,7 +1329,12 @@ private struct DeboogeyDiffsplitterWindowLauncher: View {
     var body: some View {
         DeboogeyDiffsplitterLauncherMenu(
             openDocument: { DiffsplitterNavigation.chooseDocument(using: openWindow) },
-            createDocument: { DiffsplitterNavigation.open(documentAt: nil, using: openWindow) }
+            createDocument: { DiffsplitterNavigation.open(documentAt: nil, using: openWindow) },
+            createBatch: {
+                DiffsplitterBatchCreation.shared.presentComposer { url in
+                    DiffsplitterNavigation.open(documentAt: url, using: openWindow)
+                }
+            }
         )
     }
 }
@@ -1231,7 +1343,12 @@ private struct DeboogeyDiffsplitterLegacyWindowLauncher: View {
     var body: some View {
         DeboogeyDiffsplitterLauncherMenu(
             openDocument: DiffsplitterNavigation.chooseDocumentLegacy,
-            createDocument: { DiffsplitterNavigation.openLegacy(documentAt: nil) }
+            createDocument: { DiffsplitterNavigation.openLegacy(documentAt: nil) },
+            createBatch: {
+                DiffsplitterBatchCreation.shared.presentComposer { url in
+                    DiffsplitterNavigation.openLegacy(documentAt: url)
+                }
+            }
         )
     }
 }
@@ -1301,6 +1418,110 @@ private struct ModernSettingsLauncher: View {
     }
 }
 #endif
+
+#if os(iOS)
+private struct DiffsplitterBatchExportFile: FileDocument {
+    static var readableContentTypes: [UTType] { [.diffsplitterBatchDocument] }
+    static var writableContentTypes: [UTType] { [.diffsplitterBatchDocument] }
+    let data: Data
+    init(data: Data) { self.data = data }
+    init(configuration: ReadConfiguration) throws {
+        guard let data = configuration.file.regularFileContents else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        self.data = data
+    }
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
+    }
+}
+#endif
+
+private struct DiffsplitterBatchCreationOverlay: ViewModifier {
+    @ObservedObject private var creation = DiffsplitterBatchCreation.shared
+#if os(iOS)
+    @State private var isExporting = false
+    @State private var exportFile: DiffsplitterBatchExportFile?
+    @State private var exportName = "Diffsplitter Batch"
+#endif
+
+    func body(content: Content) -> some View {
+        content
+            .allowsHitTesting(!creation.isRunning)
+            .overlay {
+                if let progress = creation.progress {
+                    DiffsplitterBlockingProgress(
+                        progress: progress,
+                        showsCancel: true,
+                        onCancel: { creation.cancel() }
+                    )
+                }
+            }
+            .alert(
+                L10n.t("Diffsplitter Error"),
+                isPresented: Binding(
+                    get: { creation.errorMessage != nil },
+                    set: { if !$0 { creation.errorMessage = nil } }
+                )
+            ) {
+                Button(L10n.t("OK"), role: .cancel) {}
+            } message: {
+                Text(creation.errorMessage ?? "")
+            }
+            .sheet(isPresented: $creation.isComposerPresented, onDismiss: {
+                creation.abandonComposer()
+            }) {
+#if os(macOS)
+                NavigationView {
+                    DiffsplitterBatchComposer()
+                }
+                .frame(
+                    width: AppWindowSizing.batchComposer.defaultSize.width,
+                    height: AppWindowSizing.batchComposer.defaultSize.height
+                )
+#else
+                NavigationStack {
+                    DiffsplitterBatchComposer()
+                }
+#endif
+            }
+#if os(iOS)
+            .onChange(of: creation.pendingExport?.id) { _, newID in
+                if newID != nil {
+                    presentPendingExportIfNeeded()
+                } else if isExporting {
+                    isExporting = false
+                    exportFile = nil
+                }
+            }
+            .fileExporter(
+                isPresented: $isExporting,
+                document: exportFile,
+                contentType: .diffsplitterBatchDocument,
+                defaultFilename: exportName
+            ) { result in
+                creation.consumeExport(result)
+                exportFile = nil
+                isExporting = false
+            }
+#endif
+    }
+
+#if os(iOS)
+    private func presentPendingExportIfNeeded() {
+        guard let pending = creation.pendingExport, !isExporting else { return }
+        exportFile = DiffsplitterBatchExportFile(data: pending.data)
+        let base = (pending.suggestedName as NSString).deletingPathExtension
+        exportName = base.isEmpty ? "Diffsplitter Batch" : base
+        let exportID = pending.id
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            guard creation.pendingExport?.id == exportID, !isExporting else { return }
+            isExporting = true
+        }
+    }
+#endif
+}
 
 #Preview {
     RootView()

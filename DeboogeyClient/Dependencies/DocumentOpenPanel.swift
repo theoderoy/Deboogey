@@ -12,6 +12,13 @@ import AppKit
 
 enum DocumentOpenPanel {
 #if canImport(AppKit)
+    static let deboogeyDocumentTypes: [UTType] = [
+        .loupeMachineDocument,
+        .diffsplitterDocument,
+        .diffsplitterXDocument,
+        .diffsplitterBatchDocument,
+    ]
+
     static func choose(
         title: String,
         contentTypes: [UTType],
@@ -25,6 +32,33 @@ enum DocumentOpenPanel {
         panel.begin { response in
             guard response == .OK, let url = panel.url else { return }
             open(url)
+        }
+    }
+
+    static func chooseDeboogeyDocument(
+        openLoupe: @escaping (URL) -> Void,
+        openDiffsplitter: @escaping (URL) -> Void
+    ) {
+        choose(
+            title: L10n.t("Open"),
+            contentTypes: deboogeyDocumentTypes
+        ) { url in
+            route(url, openLoupe: openLoupe, openDiffsplitter: openDiffsplitter)
+        }
+    }
+
+    static func route(
+        _ url: URL,
+        openLoupe: (URL) -> Void,
+        openDiffsplitter: (URL) -> Void
+    ) {
+        switch DeboogeyDocumentKind.resolve(for: url) {
+        case .loum:
+            openLoupe(url)
+        case .dsplt, .dspltx, .dspltb:
+            openDiffsplitter(url)
+        case .none:
+            break
         }
     }
 #endif

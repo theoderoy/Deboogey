@@ -32,7 +32,7 @@ enum DiffsplitterContinuedProcessing {
             task.progress.completedUnitCount = Int64((clamped * 1000).rounded())
             guard lastSubtitle != progress.status else { return }
             lastSubtitle = progress.status
-            task.updateTitle(L10n.t("Diffsplitter"), subtitle: progress.status)
+            task.updateTitle(task.title, subtitle: progress.status)
         }
 
         func finish(success: Bool) {
@@ -77,7 +77,7 @@ enum DiffsplitterContinuedProcessing {
                 title: title,
                 subtitle: subtitle
             )
-            request.strategy = .queue
+            request.strategy = .fail
 
             Task.detached {
                 do {

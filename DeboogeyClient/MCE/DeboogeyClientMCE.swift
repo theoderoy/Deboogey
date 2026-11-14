@@ -74,6 +74,7 @@ private final class MCEWindowController: NSWindowController, NSWindowDelegate {
         controller.showWindow(nil)
         controller.window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        DeboogeyRootNavigation.notePresented()
     }
 
     func windowWillClose(_ notification: Notification) {
@@ -89,23 +90,22 @@ private struct MCEAboutCommands: Commands {
     }
 }
 
-private struct MCELegacyCommands: Commands {
+private struct MCERootCommands: Commands {
+    let openMain: () -> Void
+
     var body: some Commands {
-        DocumentToolCommandSet(
-            createLoupeDocument: { LoupeMachineNavigation.openLegacy(documentAt: nil) },
-            openLoupeDocument: LoupeMachineNavigation.chooseDocumentLegacy,
-            createDiffsplitterDocument: { DiffsplitterNavigation.openLegacy(documentAt: nil) },
-            openDiffsplitterDocument: DiffsplitterNavigation.chooseDocumentLegacy,
-            openMain: { MCEWindowController.open(.main) }
-        )
+        MCEAboutCommands()
+        LegacyDocumentToolCommands(openMain: openMain)
+        LegacyWindowLauncherCommands(openMain: openMain)
     }
 }
 
-private struct MCERootCommands: Commands {
+@available(macOS 13.0, *)
+private struct MCEModernRootCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+
     var body: some Commands {
-        MCEAboutCommands()
-        MCELegacyCommands()
-        LegacyWindowLauncherCommands(openMain: { MCEWindowController.open(.main) })
+        MCERootCommands(openMain: { DeboogeyRootNavigation.open(using: openWindow) })
     }
 }
 
@@ -123,16 +123,23 @@ struct DeboogeyClientMCE: App {
                 DeboogeyRootContentView()
                     .environment(\.locale, L10n.locale)
             }
+            .commands {
+                MCEModernRootCommands()
+            }
         }
         ConfigurationLegacy()
-            .commands { MCERootCommands() }
+            .commands {
+                if #unavailable(macOS 13.0) {
+                    MCERootCommands(openMain: { MCEWindowController.open(.main) })
+                }
+            }
 
         if #available(macOS 14.0, *) {
             ConfigurationModern()
         }
 
         if #available(macOS 13.0, *) {
-            DeboogeyLoupeCommandsScene(openMain: { MCEWindowController.open(.main) })
+            DeboogeyLoupeCommandsScene()
             DeboogeyDiffsplitterScene()
             EntityTrackerScene()
         }
@@ -228,6 +235,7 @@ struct DeboogeyClientMCE: App {
 private struct MCEIOSRootHost: View {
     @Binding var path: NavigationPath
     @ObservedObject private var diffsplitterAvailability = MCEIOSFeatureSupport.Model.shared
+    @State private var openURLError: String?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -251,19 +259,35 @@ private struct MCEIOSRootHost: View {
         }
         .modifier(MCEIOSHingeDiffsplitterSupport())
         .onOpenURL { url in
-            let ext = url.pathExtension.lowercased()
-            let route: MCEIOSRoute?
-            switch ext {
-            case "loum":
-                route = .loupe(LoupeMachineWindowRequest(action: .open, documentURL: url))
-            case "dsplt", "dspltx":
-                guard diffsplitterAvailability.diffsplitter else { return }
-                route = .diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: url))
-            default:
+            let prepared: URL
+            do {
+                prepared = try DeboogeyDocumentLifecycle.prepareForOpening(url)
+            } catch {
+                openURLError = error.localizedDescription
                 return
             }
-            _ = url.startAccessingSecurityScopedResource()
+            let route: MCEIOSRoute?
+            switch DeboogeyDocumentKind.resolve(for: prepared) {
+            case .loum:
+                route = .loupe(LoupeMachineWindowRequest(action: .open, documentURL: prepared))
+            case .dsplt, .dspltx, .dspltb:
+                guard diffsplitterAvailability.diffsplitter else { return }
+                route = .diffsplitter(DiffsplitterWindowRequest(action: .open, documentURL: prepared))
+            case .none:
+                return
+            }
             if let route { path.append(route) }
+        }
+        .alert(
+            L10n.t("Couldn’t Open Document"),
+            isPresented: Binding(
+                get: { openURLError != nil },
+                set: { if !$0 { openURLError = nil } }
+            )
+        ) {
+            Button(L10n.t("OK"), role: .cancel) {}
+        } message: {
+            Text(openURLError ?? "")
         }
     }
 }

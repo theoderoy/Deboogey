@@ -17,6 +17,8 @@
 			<string>LoumDocumentIcon</string>
 			<key>CFBundleTypeName</key>
 			<string>Loupe Machine Document</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<false/>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSHandlerRank</key>
@@ -35,6 +37,8 @@
 			<string>DiffsplitterDocumentIcon</string>
 			<key>CFBundleTypeName</key>
 			<string>Diffsplitter Document</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<false/>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSHandlerRank</key>
@@ -53,6 +57,8 @@
 			<string>DiffsplitterXDocumentIcon</string>
 			<key>CFBundleTypeName</key>
 			<string>DiffsplitterX Document</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<false/>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSHandlerRank</key>
@@ -60,6 +66,26 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>theoderoy.Deboogey.DiffsplitterX</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>dspltb</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>DiffsplitterBatchDocumentIcon</string>
+			<key>CFBundleTypeName</key>
+			<string>Diffsplitter Batch</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<false/>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>theoderoy.Deboogey.DiffsplitterBatch</string>
 			</array>
 		</dict>
 	</array>
@@ -87,6 +113,10 @@
 	<string>public.app-category.developer-tools</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSLiveActivityDisplayName</key>
+	<string>Deboogey</string>
 	<key>NSAccentColorName</key>
 	<string>AccentColor</string>
 	<key>NSHumanReadableCopyright</key>
@@ -157,6 +187,28 @@
 				</array>
 				<key>public.mime-type</key>
 				<string>application/vnd.deboogey.diffsplitterx+json</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+				<string>public.content</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Diffsplitter Batch</string>
+			<key>UTTypeIconFile</key>
+			<string>DiffsplitterBatchDocumentIcon</string>
+			<key>UTTypeIdentifier</key>
+			<string>theoderoy.Deboogey.DiffsplitterBatch</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>dspltb</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/vnd.deboogey.diffsplitter-batch</string>
 			</dict>
 		</dict>
 	</array>

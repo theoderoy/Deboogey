@@ -30,7 +30,6 @@ public final class PersistentVariables: ObservableObject {
         static let playDocumentSaveSound = DocumentSaveFeedback.preferenceKey
         static let playToolCycleSound = "theoderoy.Deboogey.Tools.playCycleSound"
         static let playDiffsplitterDoneSound = DiffsplitterCompletionFeedback.soundPreferenceKey
-        static let diffsplitterNotifyWhenBackgrounded = DiffsplitterCompletionFeedback.notifyWhenBackgroundedKey
         static let diffsplitterNotifyMinimumSeconds = DiffsplitterCompletionFeedback.minimumSecondsKey
         static let diffsplitterStatusPriority = "theoderoy.Deboogey.Diffsplitter.statusPriority"
         static let diffsplitterIncludeHiddenFiles = DiffsplitterSettings.Keys.includeHiddenFiles
@@ -99,7 +98,6 @@ public final class PersistentVariables: ObservableObject {
         Keys.playDocumentSaveSound: true,
         Keys.playToolCycleSound: true,
         Keys.playDiffsplitterDoneSound: true,
-        Keys.diffsplitterNotifyWhenBackgrounded: true,
         Keys.diffsplitterNotifyMinimumSeconds: DiffsplitterCompletionFeedback.defaultMinimumSeconds,
         Keys.diffsplitterStatusPriority: defaultDiffsplitterStatusPriority,
         Keys.diffsplitterIncludeHiddenFiles: DiffsplitterSettings.defaultIncludeHiddenFiles,
@@ -117,6 +115,21 @@ public final class PersistentVariables: ObservableObject {
     static func registerDefaults(in defaults: UserDefaults = .standard) {
         DocumentSaveFeedback.migrateIfNeeded(defaults: defaults)
         defaults.register(defaults: registeredDefaults)
+        AppFeedback.install()
+#if DEBOOGEY_MAC_LIVE_ACTIVITIES
+        DeboogeyMacLiveActivities.bounceExtensionIfBundleReplaced(defaults: defaults)
+#endif
+        if defaults.bool(forKey: Keys.playIndexingDoneSound)
+            || defaults.bool(forKey: Keys.playDiffsplitterDoneSound) {
+            AppFeedback.requestNoticePermissionIfNeeded()
+        }
+    }
+
+    private func setNoticeSound(_ enabled: Bool, forKey key: String) {
+        defaults.set(enabled, forKey: key)
+        if enabled {
+            AppFeedback.requestNoticePermissionIfNeeded()
+        }
     }
 
     @Published public var pesterMeWithSipping: Bool {
@@ -176,7 +189,7 @@ public final class PersistentVariables: ObservableObject {
     }
 
     @Published public var playIndexingDoneSound: Bool {
-        didSet { defaults.set(playIndexingDoneSound, forKey: Keys.playIndexingDoneSound) }
+        didSet { setNoticeSound(playIndexingDoneSound, forKey: Keys.playIndexingDoneSound) }
     }
 
     @Published public var playDocumentSaveSound: Bool {
@@ -188,11 +201,7 @@ public final class PersistentVariables: ObservableObject {
     }
 
     @Published public var playDiffsplitterDoneSound: Bool {
-        didSet { defaults.set(playDiffsplitterDoneSound, forKey: Keys.playDiffsplitterDoneSound) }
-    }
-
-    @Published public var diffsplitterNotifyWhenBackgrounded: Bool {
-        didSet { defaults.set(diffsplitterNotifyWhenBackgrounded, forKey: Keys.diffsplitterNotifyWhenBackgrounded) }
+        didSet { setNoticeSound(playDiffsplitterDoneSound, forKey: Keys.playDiffsplitterDoneSound) }
     }
 
     @Published public var diffsplitterNotifyMinimumSeconds: Double {
@@ -325,7 +334,6 @@ public final class PersistentVariables: ObservableObject {
         self.playDocumentSaveSound = false
         self.playToolCycleSound = false
         self.playDiffsplitterDoneSound = false
-        self.diffsplitterNotifyWhenBackgrounded = false
         self.diffsplitterNotifyMinimumSeconds = 0
         self.diffsplitterStatusPriority = []
         self.diffsplitterIncludeHiddenFiles = false
@@ -382,7 +390,6 @@ public final class PersistentVariables: ObservableObject {
         playDocumentSaveSound = defaults.bool(forKey: Keys.playDocumentSaveSound)
         playToolCycleSound = defaults.bool(forKey: Keys.playToolCycleSound)
         playDiffsplitterDoneSound = defaults.bool(forKey: Keys.playDiffsplitterDoneSound)
-        diffsplitterNotifyWhenBackgrounded = defaults.bool(forKey: Keys.diffsplitterNotifyWhenBackgrounded)
         diffsplitterNotifyMinimumSeconds = DiffsplitterCompletionFeedback.preferredMinimumSeconds(
             defaults: defaults
         )

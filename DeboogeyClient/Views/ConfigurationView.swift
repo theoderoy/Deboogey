@@ -294,35 +294,26 @@ private struct GeneralPanelView: View {
     
     @ViewBuilder
     private var panels: some View {
-#if os(iOS)
-        if configurationShowsDiffsplitter, DiffsplitterCompletionFeedback.usesLiveActivityUX {
+        if DiffsplitterCompletionFeedback.usesLiveActivityUX {
             configurationSection(header: DiffsplitterCompletionFeedback.completionNotifySectionHeader) {
-                diffsplitterCompletionControls
-            }
-        }
-#endif
-
-        configurationSection(header: "Sounds") {
 #if os(macOS)
-            Toggle(isOn: $vm.playIndexingDoneSound) {
-                Label {
-                    Text(L10n.t("Play a sound when Loupe Machine finishes an index cycle"))
-                } icon: {
-                    Image(systemName: "loupe")
+                loupeIndexingControls
+#endif
+                if configurationShowsDiffsplitter {
+                    diffsplitterCompletionControls
                 }
             }
-            configurationSecondaryCaption(
-                L10n.t("Notify with a sound and banner when Loupe Machine finishes an index cycle.")
-            )
+        }
 
-            if configurationShowsDiffsplitter {
-                diffsplitterCompletionControls
+        configurationSection(header: "In-App Tones") {
+#if os(macOS)
+            if !IndexCompletionFeedback.usesLiveActivityUX {
+                loupeIndexingControls
             }
-#else
+#endif
             if configurationShowsDiffsplitter, !DiffsplitterCompletionFeedback.usesLiveActivityUX {
                 diffsplitterCompletionControls
             }
-#endif
 
             documentSaveSoundControls
 
@@ -450,12 +441,25 @@ private struct GeneralPanelView: View {
     }
 
     @ViewBuilder
+    private var loupeIndexingControls: some View {
+        Toggle(isOn: $vm.playIndexingDoneSound) {
+            Label {
+                Text(IndexCompletionFeedback.completionNotifyTitle)
+            } icon: {
+                Image(systemName: "loupe")
+            }
+        }
+        configurationSecondaryCaption(IndexCompletionFeedback.completionNotifyCaption)
+    }
+
+    @ViewBuilder
     private var diffsplitterCompletionControls: some View {
         Toggle(isOn: $vm.playDiffsplitterDoneSound) {
             Label {
                 Text(DiffsplitterCompletionFeedback.completionNotifyTitle)
             } icon: {
-                if DiffsplitterCompletionFeedback.usesLiveActivityUX {
+                if DiffsplitterCompletionFeedback.usesLiveActivityUX,
+                   !IndexCompletionFeedback.usesLiveActivityUX {
                     Image(systemName: DiffsplitterCompletionFeedback.completionNotifySymbolName)
                 } else {
                     Image("DiffsplitterIconIPOSF")
@@ -468,10 +472,9 @@ private struct GeneralPanelView: View {
         }
         configurationSecondaryCaption(DiffsplitterCompletionFeedback.completionNotifyCaption)
 
-        if vm.playDiffsplitterDoneSound {
+        if vm.playDiffsplitterDoneSound, !DiffsplitterCompletionFeedback.usesLiveActivityUX {
             DiffsplitterCompletionDurationControls(
                 minimumSeconds: $vm.diffsplitterNotifyMinimumSeconds,
-                notifyWhenBackgrounded: $vm.diffsplitterNotifyWhenBackgrounded,
                 showsResetButton: true
             )
         }
@@ -1093,10 +1096,6 @@ final class ConfigurationViewModel: ObservableObject {
         didSet { vars.playDiffsplitterDoneSound = playDiffsplitterDoneSound }
     }
 
-    @Published var diffsplitterNotifyWhenBackgrounded: Bool {
-        didSet { vars.diffsplitterNotifyWhenBackgrounded = diffsplitterNotifyWhenBackgrounded }
-    }
-
     @Published var diffsplitterNotifyMinimumSeconds: Double {
         didSet { vars.diffsplitterNotifyMinimumSeconds = diffsplitterNotifyMinimumSeconds }
     }
@@ -1163,7 +1162,6 @@ final class ConfigurationViewModel: ObservableObject {
         self.playDocumentSaveSound = false
         self.playToolCycleSound = false
         self.playDiffsplitterDoneSound = false
-        self.diffsplitterNotifyWhenBackgrounded = false
         self.diffsplitterNotifyMinimumSeconds = 0
         self.diffsplitterStatusPriority = []
         self.diffsplitterIncludeHiddenFiles = false
@@ -1245,7 +1243,6 @@ final class ConfigurationViewModel: ObservableObject {
         playDocumentSaveSound = vars.playDocumentSaveSound
         playToolCycleSound = vars.playToolCycleSound
         playDiffsplitterDoneSound = vars.playDiffsplitterDoneSound
-        diffsplitterNotifyWhenBackgrounded = vars.diffsplitterNotifyWhenBackgrounded
         diffsplitterNotifyMinimumSeconds = vars.diffsplitterNotifyMinimumSeconds
         diffsplitterStatusPriority = vars.diffsplitterStatusPriority
         diffsplitterIncludeHiddenFiles = vars.diffsplitterIncludeHiddenFiles

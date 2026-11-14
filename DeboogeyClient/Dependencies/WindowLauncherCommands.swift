@@ -43,13 +43,15 @@ struct LegacyWindowLauncherCommands: Commands {
                 Button(action: openCocoaDebugMenu) {
                     Label(L10n.t("Cocoa Debug Menu"), systemImage: "wrench.and.screwdriver")
                 }
+                .keyboardShortcut("3", modifiers: .command)
             }
 
             if let openSkyLightDiagnostics {
                 Button(action: openSkyLightDiagnostics) {
                     Label(L10n.t("SkyLight Diagnostics"), systemImage: "macwindow")
                 }
-                    .disabled(skyLightDiagnosticsDisabled)
+                .keyboardShortcut("4", modifiers: .command)
+                .disabled(skyLightDiagnosticsDisabled)
             }
         }
     }

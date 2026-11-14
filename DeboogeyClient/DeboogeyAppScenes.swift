@@ -5,6 +5,7 @@
 //  Created by Théo De Roy on 15/10/2026.
 //
 
+import Combine
 import SwiftUI
 
 #if os(macOS)
@@ -22,8 +23,8 @@ struct DeboogeyRootContentView: View {
             RootView().modifier(ExternalDocumentWindowHandler())
         } else {
             RootView().modifier(ExternalDocumentHandler(
-                openLoupe: { LoupeMachineNavigation.openLegacy(documentAt: $0) },
-                openDiffsplitter: { DiffsplitterNavigation.openLegacy(documentAt: $0) }
+                openLoupe: { LegacyDocumentRoutes.openLoupe($0) },
+                openDiffsplitter: { LegacyDocumentRoutes.openDiffsplitter($0) }
             ))
         }
     }
@@ -37,13 +38,28 @@ enum DeboogeyLegacyRootLaunch {
     }
 }
 
+enum DeboogeyRootNavigation {
+    static let windowID = "deboogey-root"
+    static let didRequestOpen = PassthroughSubject<Void, Never>()
+
+    @available(macOS 13.0, *)
+    static func open(using openWindow: OpenWindowAction) {
+        openWindow(id: windowID)
+        notePresented()
+    }
+
+    static func notePresented() { didRequestOpen.send() }
+}
+
 @available(macOS 13.0, *)
 struct DeboogeyRootWindowScene<Content: View>: Scene {
     @ViewBuilder var content: () -> Content
 
     var body: some Scene {
-        WindowGroup(content: content)
-            .deboogeyRootWindowPlacement()
+        Window(appName ?? "Deboogey", id: DeboogeyRootNavigation.windowID) {
+            content()
+        }
+        .deboogeyRootWindowPlacement()
     }
 }
 
@@ -59,16 +75,19 @@ private struct RootLauncherSceneChrome: ViewModifier {
 }
 @available(macOS 13.0, *)
 struct DeboogeyLoupeDocumentCommands: Commands {
-    let openMain: () -> Void
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
         DocumentToolCommandSet(
             createLoupeDocument: { LoupeMachineNavigation.open(documentAt: nil, using: openWindow) },
-            openLoupeDocument: { LoupeMachineNavigation.chooseDocument(using: openWindow) },
             createDiffsplitterDocument: { DiffsplitterNavigation.open(documentAt: nil, using: openWindow) },
-            openDiffsplitterDocument: { DiffsplitterNavigation.chooseDocument(using: openWindow) },
-            openMain: openMain
+            openDocument: {
+                DocumentOpenPanel.chooseDeboogeyDocument(
+                    openLoupe: { DocumentWindowRoutes.openLoupe($0, using: openWindow) },
+                    openDiffsplitter: { DocumentWindowRoutes.openDiffsplitter($0, using: openWindow) }
+                )
+            },
+            openMain: { DeboogeyRootNavigation.open(using: openWindow) }
         )
     }
 }
@@ -80,13 +99,13 @@ private struct DeboogeyLoupeWindowGroup: Scene {
             L10n.t("Loupe Machine"),
             id: LoupeMachineNavigation.windowID,
             for: LoupeMachineWindowRequest.self
-        ) { request in
+        ) { $request in
             NavigationStack {
-                if let request = request.wrappedValue {
-                    LoupeMachineView(request: request)
-                }
+                LoupeMachineView(request: request)
             }
             .environment(\.locale, L10n.locale)
+        } defaultValue: {
+            LoupeMachineWindowRequest(action: .create)
         }
         .deboogeyWindowPlacement(AppWindowSizing.loupeMachine)
         .windowResizability(.contentMinSize)
@@ -102,11 +121,9 @@ struct DeboogeyLoupeScene: Scene {
 
 @available(macOS 13.0, *)
 struct DeboogeyLoupeCommandsScene: Scene {
-    let openMain: () -> Void
-
     var body: some Scene {
         DeboogeyLoupeWindowGroup().commands {
-            DeboogeyLoupeDocumentCommands(openMain: openMain)
+            DeboogeyLoupeDocumentCommands()
         }
     }
 }
@@ -118,13 +135,11 @@ struct DeboogeyDiffsplitterScene: Scene {
             L10n.t("Diffsplitter"),
             id: DiffsplitterNavigation.windowID,
             for: DiffsplitterWindowRequest.self
-        ) { request in
-            Group {
-                if let request = request.wrappedValue {
-                    DiffsplitterView(request: request)
-                }
-            }
-            .environment(\.locale, L10n.locale)
+        ) { $request in
+            DiffsplitterView(request: request)
+                .environment(\.locale, L10n.locale)
+        } defaultValue: {
+            DiffsplitterWindowRequest(action: .create)
         }
         .commandsRemoved()
         .deboogeyWindowPlacement(AppWindowSizing.diffsplitter)
