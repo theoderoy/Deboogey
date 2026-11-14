@@ -1020,32 +1020,75 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
     @ViewBuilder let education: (@escaping () -> Void) -> Education
 
     @State private var showingEducation = false
+#if os(macOS)
+    @State private var showingActions = false
+#endif
     @State private var pendingAction: Action = .open
 
     private enum Action {
-        case open
-        case create
-        case supplemental
+        case open, create, supplemental
+    }
+
+    private var menuActions: [(title: String, icon: String, action: Action)] {
+        var items: [(title: String, icon: String, action: Action)] = [
+            (openLabel, openIcon, .open),
+            ("Create New Document…", "plus.app", .create),
+        ]
+        if let supplementalTitle, supplementalAction != nil {
+            items.append((supplementalTitle, supplementalIcon, .supplemental))
+        }
+        return items
     }
 
     var body: some View {
-        ZStack {
-            Button(action: {}) {
-                launcherLabel
+#if os(macOS)
+        LauncherButton(
+            title: title,
+            icon: icon,
+            color: .accentColor,
+            prominent: prominent
+        ) {
+            showingActions = true
+        }
+        .popover(isPresented: $showingActions, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(menuActions.enumerated()), id: \.element.title) { index, item in
+                    if index > 0 { Divider() }
+                    Button { request(item.action) } label: {
+                        Label(L10n.t(item.title), systemImage: item.icon)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(12)
+                    .padding(.horizontal, 4)
+                }
             }
-            .deboogeyButtonStyle(tint: .accentColor, prominent: prominent)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-
+            .frame(minWidth: 280)
+        }
+        .sheet(isPresented: $showingEducation, content: educationSheet)
+#else
+        Button(action: {}) {
+            Label {
+                Text(L10n.t(title))
+            } icon: {
+                LauncherIcon(name: icon)
+            }
+            .deboogeyStandardButtonLabel()
+        }
+        .deboogeyButtonStyle(tint: .accentColor, prominent: prominent)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .overlay {
             Menu {
-                menuButton(openLabel, openIcon) { request(.open) }
-                menuButton("Create New Document…", "plus.app") { request(.create) }
-                if let supplementalTitle, supplementalAction != nil {
-                    menuButton(supplementalTitle, supplementalIcon) { request(.supplemental) }
+                ForEach(menuActions, id: \.title) { item in
+                    Button { request(item.action) } label: {
+                        Label(L10n.t(item.title), systemImage: item.icon)
+                    }
+                    .tint(.primary)
                 }
             } label: {
-                launcherLabel
-                    .opacity(0)
+                Color.clear
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .contentShape(Capsule())
             }
@@ -1055,35 +1098,22 @@ private struct DeboogeyDocumentToolLauncherMenu<Education: View>: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L10n.t(title))
         .accessibilityAddTraits(.isButton)
-        .sheet(isPresented: $showingEducation) {
-            education {
-                hasShownEducation = true
-                showingEducation = false
-                DispatchQueue.main.async {
-                    perform(pendingAction)
-                }
-            }
-        }
+        .sheet(isPresented: $showingEducation, content: educationSheet)
+#endif
     }
 
-    private var launcherLabel: some View {
-        Label {
-            Text(L10n.t(title))
-        } icon: {
-            LauncherIcon(name: icon)
+    private func educationSheet() -> some View {
+        education {
+            hasShownEducation = true
+            showingEducation = false
+            DispatchQueue.main.async { perform(pendingAction) }
         }
-        .deboogeyStandardButtonLabel()
-    }
-
-    @ViewBuilder
-    private func menuButton(_ title: String, _ systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(L10n.t(title), systemImage: systemImage)
-        }
-        .tint(.primary)
     }
 
     private func request(_ action: Action) {
+#if os(macOS)
+        showingActions = false
+#endif
         pendingAction = action
         if hasShownEducation && !forceEducation {
             perform(action)

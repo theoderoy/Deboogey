@@ -82,6 +82,7 @@
 "Command Line Tools for Xcode" = "Command Line Tools for Xcode";
 "Command Line Tools for Xcode are not installed." = "Command Line Tools for Xcode zijn niet geïnstalleerd.";
 "Compare Metadata" = "Metagegevens vergelijken";
+"Compare two folders or archives into a self-contained Diffsplitter Batch you can reopen later without the original sides, and save time using the new Batch Composer. Diffsplitter also now behaves more consistently across iPhone, iPad, and Apple Vision." = "Vergelijk twee mappen of archieven in een zelfstandige Diffsplitter-batch die je later opnieuw kunt openen zonder de oorspronkelijke zijden, en bespaar tijd met de nieuwe Batch Composer. Diffsplitter gedraagt zich nu ook consistenter op iPhone, iPad en Apple Vision.";
 "Comparing files…" = "Bestanden vergelijken…";
 "Comparing…" = "Vergelijken…";
 "Comparison" = "Vergelijking";
@@ -119,6 +120,7 @@
 "Delete Persistent Storage" = "Persistente opslag verwijderen";
 "Delete Persistent Storage?" = "Persistente opslag verwijderen?";
 "Diffsplitter" = "Diffsplitter";
+"Diffsplitter Batch" = "Diffsplitter-batch";
 "Diffsplitter Document Error" = "Diffsplitter-documentfout";
 "Diffsplitter Document Saved" = "Diffsplitter-document bewaard";
 "Diffsplitter Error" = "Diffsplitter-fout";
@@ -131,6 +133,7 @@
 "Disassembled" = "Gedemonteerd";
 "Display Scale" = "Weergaveschaal";
 "Distribution" = "Distributie";
+"Document type icons have been redesigned, you can now open all Deboogey document types through one picker and In-App Tones and completion feedback have been unified." = "Documenttypepictogrammen zijn herontworpen, je kunt nu alle Deboogey-documenttypes via één kiezer openen en In-App Tones en voltooiingsfeedback zijn samengevoegd.";
 "Document unavailable" = "Document niet beschikbaar";
 "Don't Save" = "Bewaar niet";
 "Done" = "Klaar";
@@ -202,6 +205,7 @@
 "Importing Diffsplitter Batch…" = "Diffsplitter-batch importeren…";
 "Importing DiffsplitterX Document…" = "DiffsplitterX-document importeren…";
 "Import…" = "Importeer…";
+"Improvements" = "Verbeteringen";
 "In-App Tones" = "In-app tonen";
 "Include Hidden Files" = "Verborgen bestanden opnemen";
 "Indexing" = "Indexeren";
@@ -235,6 +239,7 @@
 "License" = "Licentie";
 "Listing left archive…" = "Linkerarchief weergeven…";
 "Listing right archive…" = "Rechterarchief weergeven…";
+"Live Activities" = "Live Activities";
 "Live Activity" = "Live Activity";
 "Loading left…" = "Links laden…";
 "Loading right…" = "Rechts laden…";
@@ -245,6 +250,7 @@
 "Loupe Machine" = "Loupe Machine";
 "Loupe Machine Document Error" = "Loupe Machine-documentfout";
 "Loupe Machine applied %d value(s) successfully." = "Loupe Machine heeft %d waarde(n) succesvol toegepast.";
+"Loupe Machine indexing and Diffsplitter comparisons can now stay visible on Mac with Live Activities, so long-running work remains glanceable while Deboogey is in the background." = "Loupe Machine-indexering en Diffsplitter-vergelijkingen kunnen nu zichtbaar blijven op de Mac met Live Activities, zodat langlopend werk overzichtelijk blijft terwijl Deboogey op de achtergrond staat.";
 "Loupe Machine lets you select an application, discover binary preference flags, inspect and edit them, and prepare a change set to apply elsewhere." = "Met Loupe Machine selecteer je een app, ontdek je binaire voorkeursvlaggen, inspecteer en bewerk je ze, en bereid je een wijzigingsset voor om elders toe te passen.";
 "Loupe Machine lets you select an application, discover its system-modifiable flags, and inspect or edit them." = "Met Loupe Machine selecteer je een app, ontdek je de door het systeem wijzigbare vlaggen, en inspecteer of bewerk je ze.";
 "Loupe Machine will apply %d value(s) to the selected application." = "Loupe Machine past %d waarde(n) toe op de geselecteerde app.";

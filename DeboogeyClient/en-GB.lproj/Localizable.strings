@@ -82,6 +82,7 @@
 "Command Line Tools for Xcode" = "Command Line Tools for Xcode";
 "Command Line Tools for Xcode are not installed." = "Command Line Tools for Xcode are not installed.";
 "Compare Metadata" = "Compare Metadata";
+"Compare two folders or archives into a self-contained Diffsplitter Batch you can reopen later without the original sides, and save time using the new Batch Composer. Diffsplitter also now behaves more consistently across iPhone, iPad, and Apple Vision." = "Compare two folders or archives into a self-contained Diffsplitter Batch you can reopen later without the original sides, and save time using the new Batch Composer. Diffsplitter also now behaves more consistently across iPhone, iPad, and Apple Vision.";
 "Comparing files…" = "Comparing files…";
 "Comparing…" = "Comparing…";
 "Comparison" = "Comparison";
@@ -119,6 +120,7 @@
 "Delete Persistent Storage" = "Delete Persistent Storage";
 "Delete Persistent Storage?" = "Delete Persistent Storage?";
 "Diffsplitter" = "Diffsplitter";
+"Diffsplitter Batch" = "Diffsplitter Batch";
 "Diffsplitter Document Error" = "Diffsplitter Document Error";
 "Diffsplitter Document Saved" = "Diffsplitter Document Saved";
 "Diffsplitter Error" = "Diffsplitter Error";
@@ -131,6 +133,7 @@
 "Disassembled" = "Disassembled";
 "Display Scale" = "Display Scale";
 "Distribution" = "Distribution";
+"Document type icons have been redesigned, you can now open all Deboogey document types through one picker and In-App Tones and completion feedback have been unified." = "Document type icons have been redesigned, you can now open all Deboogey document types through one picker and In-App Tones and completion feedback have been unified.";
 "Document unavailable" = "Document unavailable";
 "Don't Save" = "Don't Save";
 "Done" = "Done";
@@ -202,6 +205,7 @@
 "Importing Diffsplitter Batch…" = "Importing Diffsplitter Batch…";
 "Importing DiffsplitterX Document…" = "Importing DiffsplitterX Document…";
 "Import…" = "Import…";
+"Improvements" = "Improvements";
 "In-App Tones" = "In-App Tones";
 "Include Hidden Files" = "Include Hidden Files";
 "Indexing" = "Indexing";
@@ -235,6 +239,7 @@
 "License" = "License";
 "Listing left archive…" = "Listing left archive…";
 "Listing right archive…" = "Listing right archive…";
+"Live Activities" = "Live Activities";
 "Live Activity" = "Live Activity";
 "Loading left…" = "Loading left…";
 "Loading right…" = "Loading right…";
@@ -245,6 +250,7 @@
 "Loupe Machine" = "Loupe Machine";
 "Loupe Machine Document Error" = "Loupe Machine Document Error";
 "Loupe Machine applied %d value(s) successfully." = "Loupe Machine applied %d value(s) successfully.";
+"Loupe Machine indexing and Diffsplitter comparisons can now stay visible on Mac with Live Activities, so long-running work remains glanceable while Deboogey is in the background." = "Loupe Machine indexing and Diffsplitter comparisons can now stay visible on Mac with Live Activities, so long-running work remains glanceable while Deboogey is in the background.";
 "Loupe Machine lets you select an application, discover binary preference flags, inspect and edit them, and prepare a change set to apply elsewhere." = "Loupe Machine lets you select an application, discover binary preference flags, inspect and edit them, and prepare a change set to apply elsewhere.";
 "Loupe Machine lets you select an application, discover its system-modifiable flags, and inspect or edit them." = "Loupe Machine lets you select an application, discover its system-modifiable flags, and inspect or edit them.";
 "Loupe Machine will apply %d value(s) to the selected application." = "Loupe Machine will apply %d value(s) to the selected application.";
