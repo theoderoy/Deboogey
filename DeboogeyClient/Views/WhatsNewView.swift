@@ -39,6 +39,15 @@ struct WhatsNewView: View {
         entries.append(
             WhatsNewEntry(
                 scope: .unified,
+                icon: "flag",
+                color: .accentColor,
+                title: "Localisation",
+                description: "Deboogey now supports displaying itself in Dutch. Visibility will depend on the system language to simplify user experience."
+            )
+        )
+        entries.append(
+            WhatsNewEntry(
+                scope: .unified,
                 icon: "info.circle",
                 color: .accentColor,
                 title: "Improvements",

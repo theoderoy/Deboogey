@@ -105,6 +105,7 @@
 "Date (Newest First)" = "Datum (nieuwste eerst)";
 "Date (Oldest First)" = "Datum (oudste eerst)";
 "Deboogey" = "Deboogey";
+"Deboogey now supports displaying itself in Dutch. Visibility will depend on the system language to simplify user experience." = "Deboogey ondersteunt nu weergave in het Nederlands. Zichtbaarheid hangt af van de systeemtaal om de gebruikerservaring te vereenvoudigen.";
 "DeboogeyCDMHelper exists but is not executable. (path: %@)" = "DeboogeyCDMHelper bestaat, maar is niet uitvoerbaar. (pad: %@)";
 "DeboogeyCDMHelper was not found in the app bundle." = "DeboogeyCDMHelper is niet gevonden in de appbundel.";
 "DeboogeyLoupe could not inspect the application." = "DeboogeyLoupe kon de app niet inspecteren.";
@@ -246,6 +247,7 @@
 "Loading window…" = "Venster laden…";
 "Loading…" = "Laden…";
 "Local values have changed" = "Lokale waarden zijn gewijzigd";
+"Localisation" = "Lokalisatie";
 "Log actions" = "Logboekacties";
 "Loupe Machine" = "Loupe Machine";
 "Loupe Machine Document Error" = "Loupe Machine-documentfout";
