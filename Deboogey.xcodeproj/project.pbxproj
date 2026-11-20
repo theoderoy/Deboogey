@@ -1167,6 +1167,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 8;
 				DEBOOGEY_APPICON_SUFFIX = "$(DEBOOGEY_APPICON_SUFFIX_$(MARKETING_VERSION:c99extidentifier))";
 				DEBOOGEY_APPICON_SUFFIX_Security_Research_Preview = SRP;
 				DEBOOGEY_EXCLUDED_ICON = AppIconSRP.icon;
@@ -1187,7 +1188,7 @@
 				);
 				LIVE_ACTIVITY_APPEX_NAME = DeboogeyLiveActivity.appex;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = Development;
+				MARKETING_VERSION = Release;
 				"OTHER_LDFLAGS[sdk=macosx27.3*]" = (
 					"$(inherited)",
 					"-weak_framework",
@@ -1224,6 +1225,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 8;
 				DEBOOGEY_APPICON_SUFFIX = "$(DEBOOGEY_APPICON_SUFFIX_$(MARKETING_VERSION:c99extidentifier))";
 				DEBOOGEY_APPICON_SUFFIX_Security_Research_Preview = SRP;
 				DEBOOGEY_EXCLUDED_ICON = AppIconSRP.icon;
@@ -1244,7 +1246,7 @@
 				);
 				LIVE_ACTIVITY_APPEX_NAME = DeboogeyLiveActivity.appex;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = Development;
+				MARKETING_VERSION = Release;
 				"OTHER_LDFLAGS[sdk=macosx27.3*]" = (
 					"$(inherited)",
 					"-weak_framework",
@@ -1472,6 +1474,7 @@
 				);
 				LIVE_ACTIVITY_APPEX_NAME = DeboogeyLiveActivityMCE.appex;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MARKETING_VERSION = 2026.11.14;
 				"OTHER_LDFLAGS[sdk=macosx27.3*]" = (
 					"$(inherited)",
 					"-weak_framework",
@@ -1582,6 +1585,7 @@
 				);
 				LIVE_ACTIVITY_APPEX_NAME = DeboogeyLiveActivityMCE.appex;
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MARKETING_VERSION = 2026.11.14;
 				"OTHER_LDFLAGS[sdk=macosx27.3*]" = (
 					"$(inherited)",
 					"-weak_framework",
