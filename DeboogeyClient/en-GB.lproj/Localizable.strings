@@ -105,6 +105,8 @@
 "Date (Newest First)" = "Date (Newest First)";
 "Date (Oldest First)" = "Date (Oldest First)";
 "Deboogey" = "Deboogey";
+"Deboogey now supports displaying itself in Dutch. Visibility will depend on the system language to simplify user experience." = "Deboogey now supports displaying itself in Dutch. Visibility will depend on the system language to simplify user experience.";
+"Deboogey will no longer support Intel-based Macs in future versions." = "Deboogey will no longer support Intel-based Macs in future versions.";
 "DeboogeyCDMHelper exists but is not executable. (path: %@)" = "DeboogeyCDMHelper exists but is not executable. (path: %@)";
 "DeboogeyCDMHelper was not found in the app bundle." = "DeboogeyCDMHelper was not found in the app bundle.";
 "DeboogeyLoupe could not inspect the application." = "DeboogeyLoupe could not inspect the application.";
@@ -246,6 +248,7 @@
 "Loading window…" = "Loading window…";
 "Loading…" = "Loading…";
 "Local values have changed" = "Local values have changed";
+"Localisation" = "Localisation";
 "Log actions" = "Log actions";
 "Loupe Machine" = "Loupe Machine";
 "Loupe Machine Document Error" = "Loupe Machine Document Error";

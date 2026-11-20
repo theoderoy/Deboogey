@@ -20,11 +20,16 @@ struct WhatsNewView: View {
 #endif
 
     private var entries: [WhatsNewEntry] {
+        #if DEBOOGEY_MCE
+        let architectureDescription = "Deboogey will no longer support Intel-based Macs in future versions."
+        #else
+        let architectureDescription = "Starting from Release 9 and Internal 31, Deboogey will no longer support Intel-based Macs."
+        #endif
         var entries = [
             WhatsNewEntry(
                 scope: .macOnly,
                 title: "Architecture",
-                description: "Starting from Release 9 and Internal 31, Deboogey will no longer support Intel-based Macs.",
+                description: architectureDescription,
                 variant: .notice
             ),
             WhatsNewEntry(
@@ -39,6 +44,15 @@ struct WhatsNewView: View {
         entries.append(
             WhatsNewEntry(
                 scope: .unified,
+                icon: "flag",
+                color: .accentColor,
+                title: "Localisation",
+                description: "Deboogey now supports displaying itself in Dutch. Visibility will depend on the system language to simplify user experience."
+            )
+        )
+        entries.append(
+            WhatsNewEntry(
+                scope: .unified,
                 icon: "info.circle",
                 color: .accentColor,
                 title: "Improvements",
@@ -50,7 +64,7 @@ struct WhatsNewView: View {
 
     private var liveActivitiesEntry: WhatsNewEntry? {
 #if os(macOS)
-        guard #available(macOS 27.3, *) else { return nil }
+        guard DebugVariables.includesMacLiveActivities, #available(macOS 27.3, *) else { return nil }
         return WhatsNewEntry(
             scope: .macOnly,
             icon: "platter.filled.top.and.arrow.up.iphone",

@@ -4754,6 +4754,9 @@ final class DiffsplitterSession: ObservableObject {
 #if os(iOS) || DEBOOGEY_MAC_LIVE_ACTIVITIES
         suppressCompletionBannerForCurrentCompare = false
         guard DiffsplitterCompletionFeedback.isEnabled else { return }
+#if DEBOOGEY_MAC_LIVE_ACTIVITIES
+        guard DiffsplitterCompletionFeedback.usesLiveActivityUX else { return }
+#endif
         guard !isBatchDocument, !isEmbeddedDocument else {
             suppressCompletionBannerForCurrentCompare = true
             return
@@ -7537,7 +7540,8 @@ final class DiffsplitterBatchCreation: ObservableObject {
                 )
             }
 #elseif DEBOOGEY_MAC_LIVE_ACTIVITIES
-            if DiffsplitterCompletionFeedback.isEnabled {
+            if DiffsplitterCompletionFeedback.isEnabled,
+               DiffsplitterCompletionFeedback.usesLiveActivityUX {
                 self.macLiveActivity?.end(success: false)
                 self.macLiveActivity = await DiffsplitterMacLiveActivity.begin(
                     label: L10n.t("Batch Composer"),
